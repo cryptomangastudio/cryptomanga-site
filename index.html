@@ -57,11 +57,10 @@ nav a:hover::after{right:0}
 .glow.g1{width:60vw;height:60vw;right:-12vw;top:-14vw;animation:drift 22s ease-in-out infinite alternate}
 .glow.g2{width:42vw;height:42vw;left:-14vw;bottom:-18vw;opacity:.28;background:radial-gradient(circle,#1b3aa6,transparent 65%);animation:drift 28s ease-in-out infinite alternate-reverse}
 @keyframes drift{to{transform:translate(4vw,3vw) scale(1.12)}}
-.hero-grid{position:absolute;inset:0;z-index:0;opacity:.3;background:
+.hero-grid{position:absolute;inset:0;z-index:0;opacity:.5;background:
    linear-gradient(var(--line-2) 1px,transparent 1px) 0 0/100% 7.69%,
    linear-gradient(90deg,var(--line-2) 1px,transparent 1px) 0 0/8.33% 100%;
    -webkit-mask:radial-gradient(circle at 50% 40%,#000,transparent 78%);mask:radial-gradient(circle at 50% 40%,#000,transparent 78%)}
-#fx{position:absolute;inset:0;width:100%;height:100%;z-index:1;pointer-events:none}
 .hero-inner{position:relative;z-index:3;max-width:1180px}
 .kicker{display:flex;align-items:center;gap:14px;font-family:var(--mono);font-size:12px;font-weight:700;letter-spacing:.26em;text-transform:uppercase;color:var(--blue-soft);margin-bottom:34px}
 .kicker::before{content:"";width:46px;height:1px;background:var(--blue-soft)}
@@ -161,7 +160,6 @@ footer small{font-family:var(--mono);font-size:11px;letter-spacing:.06em;color:v
   <div class="glow g1"></div>
   <div class="glow g2"></div>
   <div class="hero-grid"></div>
-  <canvas id="fx" aria-hidden="true"></canvas>
   <div class="hero-inner">
     <div class="kicker">CryptoManga Studios ／ Tokyo</div>
     <h1>物語を、<br>描く。編む。<span class="b">つなぐ。</span>
@@ -286,44 +284,6 @@ footer small{font-family:var(--mono);font-size:11px;letter-spacing:.06em;color:v
 <script>
 const io=new IntersectionObserver((es)=>{es.forEach(e=>{if(e.isIntersecting){e.target.classList.add('in');io.unobserve(e.target)}})},{threshold:.15});
 document.querySelectorAll('.reveal').forEach(el=>io.observe(el));
-</script>
-<script>
-/* hero particle field — light/data particles that gather, swirl & connect */
-(function(){
-  const c=document.getElementById('fx'); if(!c) return;
-  const reduce=matchMedia('(prefers-reduced-motion: reduce)').matches;
-  const x=c.getContext('2d');
-  let W=0,H=0,DPR=1,ps=[],raf=0,t=0,vis=true;
-  const m={x:0,y:0,on:false};
-  const COL=['#3f7bff','#83a4ff','#cfe0ff'];
-  function size(){DPR=Math.min(devicePixelRatio||1,2);const r=c.getBoundingClientRect();W=r.width;H=r.height;c.width=W*DPR;c.height=H*DPR;x.setTransform(DPR,0,0,DPR,0,0);make();}
-  function make(){const n=Math.min(150,Math.max(70,Math.floor(W*H/8500)));ps=[];for(let i=0;i<n;i++)ps.push({x:Math.random()*W,y:Math.random()*H,vx:0,vy:0,r:Math.random()*1.7+.5,c:COL[i%COL.length],a:Math.random()*.5+.35});}
-  function frame(){
-    t+=16;x.clearRect(0,0,W,H);
-    const cx=W*.66+Math.sin(t*.0004)*W*.12, cy=H*.42+Math.cos(t*.0005)*H*.16;
-    const fx=m.on?m.x:cx, fy=m.on?m.y:cy, pull=m.on?.0075:.0009, sw=m.on?.014:.022;
-    x.globalCompositeOperation='lighter';
-    for(const p of ps){
-      const dx=fx-p.x,dy=fy-p.y,d=Math.hypot(dx,dy)||1;
-      p.vx+=dx*pull+(-dy/d)*sw+(Math.random()-.5)*.06;
-      p.vy+=dy*pull+(dx/d)*sw+(Math.random()-.5)*.06;
-      p.vx*=.95;p.vy*=.95;p.x+=p.vx;p.y+=p.vy;
-      if(p.x<-30)p.x=W+30;if(p.x>W+30)p.x=-30;if(p.y<-30)p.y=H+30;if(p.y>H+30)p.y=-30;
-    }
-    for(let i=0;i<ps.length;i++)for(let j=i+1;j<ps.length;j++){const a=ps[i],b=ps[j],dx=a.x-b.x,dy=a.y-b.y,dd=dx*dx+dy*dy;if(dd<10000){const al=(1-dd/10000)*.15;x.strokeStyle='rgba(99,140,255,'+al+')';x.lineWidth=.6;x.beginPath();x.moveTo(a.x,a.y);x.lineTo(b.x,b.y);x.stroke();}}
-    for(const p of ps){x.globalAlpha=p.a;x.fillStyle=p.c;x.beginPath();x.arc(p.x,p.y,p.r,0,6.283);x.fill();}
-    x.globalAlpha=1;x.globalCompositeOperation='source-over';
-    raf=requestAnimationFrame(frame);
-  }
-  function still(){x.clearRect(0,0,W,H);x.globalCompositeOperation='lighter';for(const p of ps){x.globalAlpha=p.a;x.fillStyle=p.c;x.beginPath();x.arc(p.x,p.y,p.r,0,6.283);x.fill();}x.globalAlpha=1;x.globalCompositeOperation='source-over';}
-  function go(){cancelAnimationFrame(raf);if(reduce){still();}else if(vis){raf=requestAnimationFrame(frame);}}
-  addEventListener('resize',size,{passive:true});
-  addEventListener('mousemove',e=>{const r=c.getBoundingClientRect();const px=e.clientX-r.left,py=e.clientY-r.top;m.on=(px>=0&&py>=0&&px<=r.width&&py<=r.height);if(m.on){m.x=px;m.y=py;}},{passive:true});
-  document.addEventListener('visibilitychange',()=>{if(document.hidden){vis=false;cancelAnimationFrame(raf);}else{vis=true;go();}});
-  const hero=document.getElementById('top');
-  if('IntersectionObserver'in window&&hero){new IntersectionObserver(es=>{es.forEach(en=>{vis=en.isIntersecting&&!document.hidden;go();});},{threshold:0}).observe(hero);}
-  size();go();
-})();
 </script>
 </body>
 </html>
