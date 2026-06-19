@@ -301,7 +301,7 @@ document.querySelectorAll('.reveal').forEach(el=>io.observe(el));
   function frame(){
     t+=16;x.clearRect(0,0,W,H);
     const cx=W*.66+Math.sin(t*.0004)*W*.12, cy=H*.42+Math.cos(t*.0005)*H*.16;
-    const fx=m.on?m.x:cx, fy=m.on?m.y:cy, pull=m.on?.0016:.0009, sw=m.on?.03:.022;
+    const fx=m.on?m.x:cx, fy=m.on?m.y:cy, pull=m.on?.0075:.0009, sw=m.on?.014:.022;
     x.globalCompositeOperation='lighter';
     for(const p of ps){
       const dx=fx-p.x,dy=fy-p.y,d=Math.hypot(dx,dy)||1;
