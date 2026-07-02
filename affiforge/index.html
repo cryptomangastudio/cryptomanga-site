@@ -1,0 +1,239 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>AffiForge — アフィリエイターの武器を、ぜんぶ一つに。</title>
+<meta name="description" content="AffiForge｜商品リンクボックス・比較表・ランキング生成、UTMリンク管理、収益トラッカー、記事構成テンプレ。稼ぐアフィリエイターの作業を1つに統合したオールインワンツールキット。" />
+<meta property="og:title" content="AffiForge — アフィリエイターの武器を、ぜんぶ一つに。" />
+<meta property="og:description" content="リンクボックス・比較表・ランキング生成からUTM管理・収益トラッカーまで。コピペで使えるオールインワンツール。" />
+<meta property="og:type" content="website" />
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%2305070f'/%3E%3Ctext x='16' y='23' font-family='Georgia,serif' font-size='19' fill='%233f7bff' text-anchor='middle'%3EA%3C/text%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Shippori+Mincho+B1:wght@600;700;800&family=Zen+Kaku+Gothic+New:wght@400;500;700;900&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --ink:#05070f; --ink-2:#080c18; --panel:#0c1222;
+  --paper:#eef2fb; --paper-2:#9aa6c6; --muted:#5d6786;
+  --blue:#3f7bff; --blue-soft:#83a4ff; --green:#2ecc8f;
+  --line:rgba(238,242,251,.10); --line-2:rgba(238,242,251,.06);
+  --mincho:"Shippori Mincho B1",serif; --gothic:"Zen Kaku Gothic New",sans-serif; --mono:"Space Mono",monospace;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+body{background:var(--ink);color:var(--paper);font-family:var(--gothic);line-height:1.8;overflow-x:hidden;-webkit-font-smoothing:antialiased}
+::selection{background:var(--blue);color:#fff}
+a{color:inherit}
+
+header{position:fixed;top:0;left:0;right:0;z-index:100;display:flex;align-items:center;justify-content:space-between;padding:22px clamp(24px,5vw,64px);background:linear-gradient(rgba(5,7,15,.9),transparent)}
+.brand{font-family:var(--mono);font-weight:700;font-size:17px;letter-spacing:.08em;text-decoration:none}
+.brand b{color:var(--blue-soft)}
+nav{display:flex;gap:clamp(16px,2.4vw,36px);align-items:center}
+nav a{font-family:var(--mono);font-size:11px;font-weight:700;letter-spacing:.16em;text-transform:uppercase;text-decoration:none;color:var(--paper-2);transition:color .3s}
+nav a:hover{color:var(--paper)}
+@media(max-width:700px){nav a:not(.cta){display:none}}
+nav a.cta{color:#fff;background:var(--blue);padding:10px 18px;border-radius:8px}
+
+.hero{position:relative;min-height:92svh;display:flex;flex-direction:column;justify-content:center;padding:150px clamp(24px,5vw,64px) 80px;overflow:hidden}
+.glow{position:absolute;border-radius:50%;filter:blur(90px);opacity:.45;background:radial-gradient(circle,var(--blue),transparent 65%);width:56vw;height:56vw;right:-12vw;top:-14vw;animation:drift 22s ease-in-out infinite alternate}
+@keyframes drift{to{transform:translate(4vw,3vw) scale(1.1)}}
+.hero-inner{position:relative;z-index:2;max-width:1100px}
+.kicker{display:flex;align-items:center;gap:14px;font-family:var(--mono);font-size:12px;font-weight:700;letter-spacing:.26em;text-transform:uppercase;color:var(--blue-soft);margin-bottom:30px}
+.kicker::before{content:"";width:46px;height:1px;background:var(--blue-soft)}
+h1{font-family:var(--mincho);font-weight:800;font-size:clamp(30px,5.8vw,72px);line-height:1.18;letter-spacing:.02em}
+h1 .b{color:var(--blue-soft)}
+.lead{margin-top:30px;max-width:56ch;color:var(--paper-2);font-size:clamp(14px,1.5vw,17px)}
+.hero-cta{display:flex;gap:14px;flex-wrap:wrap;margin-top:44px;align-items:center}
+.btn{display:inline-flex;align-items:center;gap:12px;font-family:var(--mono);font-weight:700;letter-spacing:.06em;font-size:13px;text-transform:uppercase;padding:17px 32px;text-decoration:none;border:1px solid var(--blue);color:#fff;background:var(--blue);border-radius:10px;transition:.3s}
+.btn:hover{filter:brightness(1.2);box-shadow:0 12px 40px -12px var(--blue)}
+.btn.ghost{background:transparent;color:var(--paper);border-color:var(--line)}
+.btn.ghost:hover{border-color:var(--blue-soft);color:var(--blue-soft);box-shadow:none;filter:none}
+.free-note{font-size:12px;color:var(--muted)}
+
+.strip{border-top:1px solid var(--line);border-bottom:1px solid var(--line);background:var(--ink-2)}
+.strip .row{display:flex;gap:clamp(24px,4.5vw,64px);padding:20px clamp(24px,5vw,64px);flex-wrap:wrap;font-family:var(--mono);font-size:11px;font-weight:700;letter-spacing:.18em;text-transform:uppercase;color:var(--paper-2)}
+.strip .row span{display:flex;align-items:center;gap:12px}
+.strip .row span::before{content:"";width:5px;height:5px;background:var(--blue);border-radius:50%}
+
+.wrap{max-width:1100px;margin:0 auto;padding:clamp(90px,12vw,160px) clamp(24px,5vw,64px)}
+.sec-no{font-family:var(--mono);font-size:12px;font-weight:700;letter-spacing:.2em;color:var(--blue-soft);margin-bottom:26px;display:flex;align-items:center;gap:14px}
+.sec-no::after{content:"";flex:1;height:1px;background:var(--line)}
+.h2{font-family:var(--mincho);font-weight:800;font-size:clamp(26px,4.2vw,50px);line-height:1.25}
+.h2 .b{color:var(--blue-soft)}
+.sec-lead{margin-top:22px;color:var(--paper-2);font-size:15px;max-width:60ch}
+
+.pains{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:16px;margin-top:48px}
+.pain{border:1px solid var(--line);border-radius:14px;padding:26px;background:var(--panel)}
+.pain b{font-size:15px;display:block;margin-bottom:8px}
+.pain p{font-size:13px;color:var(--paper-2)}
+.pain .x{font-family:var(--mono);color:var(--muted);font-size:11px;letter-spacing:.2em;display:block;margin-bottom:14px}
+
+.features{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:18px;margin-top:52px}
+.feature{border:1px solid var(--line);border-radius:16px;padding:30px;background:var(--panel);position:relative;overflow:hidden;transition:.3s}
+.feature:hover{border-color:rgba(63,123,255,.5);transform:translateY(-3px)}
+.feature .n{font-family:var(--mono);font-size:12px;color:var(--blue-soft);letter-spacing:.14em;margin-bottom:16px;display:block}
+.feature h3{font-family:var(--mincho);font-weight:700;font-size:20px;margin-bottom:12px}
+.feature p{font-size:13.5px;color:var(--paper-2)}
+.feature .pt{margin-top:14px;font-size:12px;color:var(--muted)}
+
+.pricing{display:grid;grid-template-columns:repeat(auto-fit,minmax(270px,1fr));gap:18px;margin-top:52px;align-items:stretch}
+.plan{border:1px solid var(--line);border-radius:18px;padding:34px 30px;background:var(--panel);display:flex;flex-direction:column}
+.plan.hot{border-color:var(--blue);box-shadow:0 20px 60px -30px var(--blue);position:relative}
+.plan.hot::before{content:"いちばん人気";position:absolute;top:-13px;left:26px;background:var(--blue);color:#fff;font-size:11px;font-weight:900;padding:3px 14px;border-radius:99px;letter-spacing:.08em}
+.plan h3{font-family:var(--mono);font-size:13px;letter-spacing:.2em;text-transform:uppercase;color:var(--paper-2)}
+.plan .price{font-family:var(--mincho);font-weight:800;font-size:42px;margin:16px 0 2px}
+.plan .price small{font-size:14px;color:var(--muted);font-family:var(--gothic);font-weight:400}
+.plan .per{font-size:12px;color:var(--muted);margin-bottom:22px}
+.plan ul{list-style:none;margin:0 0 28px;flex:1}
+.plan li{font-size:13.5px;color:var(--paper-2);padding:9px 0 9px 26px;border-bottom:1px solid var(--line-2);position:relative}
+.plan li::before{content:"✓";position:absolute;left:2px;color:var(--green);font-weight:900}
+.plan li.no{color:var(--muted)}
+.plan li.no::before{content:"—";color:var(--muted)}
+.plan .btn{justify-content:center}
+.plan .soon{text-align:center;font-size:11px;color:var(--muted);margin-top:10px}
+
+.faq{margin-top:48px;border-top:1px solid var(--line)}
+.faq details{border-bottom:1px solid var(--line)}
+.faq summary{cursor:pointer;padding:22px 4px;font-weight:700;font-size:15px;list-style:none;display:flex;justify-content:space-between;align-items:center;gap:16px}
+.faq summary::after{content:"＋";font-family:var(--mono);color:var(--blue-soft);flex:0 0 auto}
+.faq details[open] summary::after{content:"−"}
+.faq .a{padding:0 4px 24px;font-size:14px;color:var(--paper-2);max-width:64ch}
+
+.final{text-align:center;padding:clamp(90px,12vw,160px) 24px;border-top:1px solid var(--line);background:var(--ink-2)}
+.final .h2{margin-bottom:18px}
+.final p{color:var(--paper-2);font-size:14px;margin-bottom:36px}
+footer{padding:34px;text-align:center;font-size:11px;color:var(--muted);border-top:1px solid var(--line)}
+footer a{color:var(--paper-2);text-decoration:none}
+</style>
+</head>
+<body>
+
+<header>
+  <a class="brand" href="./">Affi<b>Forge</b></a>
+  <nav>
+    <a href="#features">Features</a>
+    <a href="#pricing">Pricing</a>
+    <a href="#faq">FAQ</a>
+    <a class="cta" href="./app/">無料で使ってみる</a>
+  </nav>
+</header>
+
+<section class="hero">
+  <div class="glow"></div>
+  <div class="hero-inner">
+    <p class="kicker">All-in-one Affiliate Toolkit</p>
+    <h1>アフィリエイターの武器を、<br><span class="b">ぜんぶ一つに。</span></h1>
+    <p class="lead">売れる商品リンクボックス、離脱させない比較表、成約するランキング。コピペで貼れるパーツ生成から、UTMリンク管理・収益トラッカー・記事構成づくりまで。バラバラだった作業を AffiForge が1画面に統合します。</p>
+    <div class="hero-cta">
+      <a class="btn" href="./app/">今すぐ無料で試す →</a>
+      <a class="btn ghost" href="#features">機能を見る</a>
+      <span class="free-note">登録不要・インストール不要・β期間中は全機能無料</span>
+    </div>
+  </div>
+</section>
+
+<div class="strip"><div class="row">
+  <span>リンクボックス生成</span><span>比較表</span><span>ランキング</span><span>UTM管理</span><span>収益トラッカー</span><span>記事構成テンプレ</span>
+</div></div>
+
+<section class="wrap">
+  <p class="sec-no">01 / PROBLEM</p>
+  <h2 class="h2">「書く」以外の作業に、<br>時間を溶かしていませんか。</h2>
+  <div class="pains">
+    <div class="pain"><span class="x">CASE 01</span><b>装飾パーツづくりが面倒</b><p>CTAボタンや比較表をつくるたびにHTML/CSSと格闘。プラグインはテーマを変えると崩れる。</p></div>
+    <div class="pain"><span class="x">CASE 02</span><b>どのリンクが踏まれたか分からない</b><p>UTMを付ける習慣がなく、成果が出た記事のどのCTAが効いたのか検証できない。</p></div>
+    <div class="pain"><span class="x">CASE 03</span><b>収益管理がASPごとにバラバラ</b><p>複数ASPの管理画面を巡回してスプレッドシートに手入力。伸びている案件に気づくのが遅れる。</p></div>
+  </div>
+</section>
+
+<section class="wrap" id="features" style="padding-top:0">
+  <p class="sec-no">02 / FEATURES</p>
+  <h2 class="h2">稼ぐための6つのモジュール。<br><span class="b">すべてコピペで完結。</span></h2>
+  <p class="sec-lead">生成されるHTMLはインラインスタイルで完結。WordPress・note・はてなブログなど、貼り付け先のテーマに依存せずそのまま表示されます。</p>
+  <div class="features">
+    <div class="feature"><span class="n">MODULE 01</span><h3>商品リンクボックス</h3><p>Amazon・楽天・Yahoo!・公式サイトのボタンを並べた「Rinker風」商品ボックスを生成。画像・キャッチコピー・アクセントカラーも自由。</p><p class="pt">rel="nofollow sponsored" 自動付与対応</p></div>
+    <div class="feature"><span class="n">MODULE 02</span><h3>比較表ジェネレーター</h3><p>商品×評価項目のマトリクスをフォームで編集。★評価や◎○△×は自動で装飾。スマホでは横スクロールで崩れません。</p><p class="pt">イチオシ列のハイライト機能つき</p></div>
+    <div class="feature"><span class="n">MODULE 03</span><h3>ランキングボックス</h3><p>金銀銅バッジ・星評価・おすすめポイント・CTAボタン付きのランキングを生成。並び替えもワンクリック。</p><p class="pt">1位のCTAだけ塗りボタンで強調</p></div>
+    <div class="feature"><span class="n">MODULE 04</span><h3>UTMビルダー & リンク保管庫</h3><p>計測パラメータ付きリンクを生成し、案件名・タグ付きで保存。検索・コピー・CSV書き出しに対応。</p><p class="pt">「どのCTAが成果を生んだか」を検証可能に</p></div>
+    <div class="feature"><span class="n">MODULE 05</span><h3>収益トラッカー</h3><p>ASP別・月別に発生/確定報酬を記録。月次グラフと承認率で、伸びている案件がひと目で分かる。</p><p class="pt">CSV書き出しで確定申告の下準備にも</p></div>
+    <div class="feature"><span class="n">MODULE 06</span><h3>記事構成ジェネレーター</h3><p>狙うキーワードと記事タイプから、タイトル5案・見出し構成・メタディスクリプションの叩き台をMarkdownで出力。</p><p class="pt">レビュー / 比較 / ランキング / ノウハウの4型</p></div>
+  </div>
+</section>
+
+<section class="wrap" style="padding-top:0">
+  <p class="sec-no">03 / PRIVACY</p>
+  <h2 class="h2">データはあなたのブラウザから<br><span class="b">一歩も外に出ません。</span></h2>
+  <p class="sec-lead">AffiForge は完全クライアントサイドで動作します。入力した案件情報・収益データ・リンクが外部サーバーに送信されることは一切ありません。ワンクリックでJSONバックアップの書き出し/読み込みができます。</p>
+</section>
+
+<section class="wrap" id="pricing" style="padding-top:0">
+  <p class="sec-no">04 / PRICING</p>
+  <h2 class="h2">まずは無料で、今日から。</h2>
+  <div class="pricing">
+    <div class="plan">
+      <h3>Free β</h3>
+      <p class="price">¥0<small> /ずっと</small></p>
+      <p class="per">β期間中は全機能を開放</p>
+      <ul>
+        <li>全6モジュール使い放題</li>
+        <li>HTML/Markdown出力 無制限</li>
+        <li>ローカル保存 + JSONバックアップ</li>
+        <li class="no">クラウド同期</li>
+        <li class="no">優先サポート</li>
+      </ul>
+      <a class="btn" href="./app/">無料で使ってみる</a>
+    </div>
+    <div class="plan hot">
+      <h3>Pro</h3>
+      <p class="price">¥980<small> /月</small></p>
+      <p class="per">正式版リリース時に提供予定</p>
+      <ul>
+        <li>Freeの全機能</li>
+        <li>デザインテンプレート追加(20種以上)</li>
+        <li>クラウド同期・複数デバイス</li>
+        <li>クリック計測ダッシュボード</li>
+        <li>優先サポート</li>
+      </ul>
+      <a class="btn ghost" href="./app/">まずβ版を試す</a>
+      <p class="soon">※ 正式版リリース時、β利用者には優待価格をご案内</p>
+    </div>
+    <div class="plan">
+      <h3>Lifetime</h3>
+      <p class="price">¥19,800<small> /買い切り</small></p>
+      <p class="per">正式版リリース時に提供予定</p>
+      <ul>
+        <li>Proの全機能が永久に</li>
+        <li>今後の追加モジュールも無料</li>
+        <li>先行アクセス権</li>
+      </ul>
+      <a class="btn ghost" href="./app/">まずβ版を試す</a>
+      <p class="soon">※ 数量限定での提供を予定</p>
+    </div>
+  </div>
+</section>
+
+<section class="wrap" id="faq" style="padding-top:0">
+  <p class="sec-no">05 / FAQ</p>
+  <h2 class="h2">よくある質問</h2>
+  <div class="faq">
+    <details><summary>本当に無料ですか？</summary><p class="a">はい。β期間中はすべての機能を無料でお使いいただけます。登録・クレジットカード・インストールは一切不要です。正式版で有料プランを追加する際も、生成済みのHTMLはそのまま使い続けられます。</p></details>
+    <details><summary>生成したHTMLはどこに貼れますか？</summary><p class="a">WordPress(ブロックエディタの「カスタムHTML」)、はてなブログ、note、Wix など、HTML貼り付けに対応したサービスならどこでも使えます。スタイルはすべてインラインで完結しているため、テーマのCSSに依存しません。</p></details>
+    <details><summary>入力したデータはどこに保存されますか？</summary><p class="a">お使いのブラウザのローカルストレージにのみ保存され、外部サーバーには一切送信されません。ブラウザやPCを変える場合は「データ書き出し」でJSONバックアップを取り、移行先で読み込んでください。</p></details>
+    <details><summary>ASPの規約に違反しませんか？</summary><p class="a">AffiForge はリンクの見た目を整え、管理するツールです。リンクの改変や不正なクローキングは行いません。アフィリエイトリンクには広告表記(PR表記)を付けるなど、各ASPおよび景品表示法・ステマ規制のルールに沿ってご利用ください。</p></details>
+    <details><summary>要望・不具合はどこに送ればいいですか？</summary><p class="a">運営元の CryptoManga Studios までお問い合わせください。いただいた要望は正式版の開発ロードマップに反映します。</p></details>
+  </div>
+</section>
+
+<section class="final">
+  <h2 class="h2">次の記事から、<span class="b">武器を持って書こう。</span></h2>
+  <p>登録不要。開いたその瞬間から使えます。</p>
+  <a class="btn" href="./app/">AffiForge を無料で使ってみる →</a>
+</section>
+
+<footer>
+  AffiForge — © CryptoManga Studios LLC ｜ <a href="../">運営会社</a>
+</footer>
+
+</body>
+</html>

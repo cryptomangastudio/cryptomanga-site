@@ -1,0 +1,728 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>AffiForge — アフィリエイト収益最大化ツールキット</title>
+<meta name="description" content="AffiForge｜商品リンクボックス・比較表・ランキング・UTMリンク管理・収益トラッカー・記事構成テンプレ。アフィリエイターの作業を1つに統合したオールインワンツール。" />
+<meta name="robots" content="noindex" />
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%2305070f'/%3E%3Ctext x='16' y='23' font-family='Georgia,serif' font-size='19' fill='%233f7bff' text-anchor='middle'%3EA%3C/text%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Zen+Kaku+Gothic+New:wght@400;500;700;900&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --ink:#05070f; --ink-2:#080c18; --panel:#0c1222; --panel-2:#111930;
+  --paper:#eef2fb; --paper-2:#9aa6c6; --muted:#5d6786;
+  --blue:#3f7bff; --blue-soft:#83a4ff;
+  --green:#2ecc8f; --amber:#ffb648; --red:#ff6b6b;
+  --line:rgba(238,242,251,.10); --line-2:rgba(238,242,251,.06);
+  --gothic:"Zen Kaku Gothic New",sans-serif; --mono:"Space Mono",monospace;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--ink);color:var(--paper);font-family:var(--gothic);line-height:1.7;-webkit-font-smoothing:antialiased;min-height:100vh}
+a{color:var(--blue-soft)}
+button{font-family:var(--gothic);cursor:pointer}
+input,select,textarea{font-family:var(--gothic);background:var(--ink-2);border:1px solid var(--line);color:var(--paper);border-radius:8px;padding:9px 12px;font-size:14px;width:100%}
+input:focus,select:focus,textarea:focus{outline:none;border-color:var(--blue)}
+textarea{resize:vertical;min-height:70px}
+label{display:block;font-size:12px;font-weight:700;color:var(--paper-2);margin:14px 0 5px;letter-spacing:.04em}
+label .opt{color:var(--muted);font-weight:400}
+::selection{background:var(--blue);color:#fff}
+
+/* layout */
+.topbar{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:14px clamp(16px,3vw,32px);border-bottom:1px solid var(--line);position:sticky;top:0;background:rgba(5,7,15,.92);backdrop-filter:blur(10px);z-index:50}
+.brand{font-family:var(--mono);font-weight:700;font-size:16px;letter-spacing:.08em;text-decoration:none;color:var(--paper)}
+.brand b{color:var(--blue-soft)}
+.brand .badge{font-size:9px;background:var(--blue);color:#fff;border-radius:4px;padding:2px 6px;margin-left:8px;letter-spacing:.15em;vertical-align:middle}
+.top-actions{display:flex;gap:8px;align-items:center}
+.tabs{display:flex;gap:4px;padding:10px clamp(16px,3vw,32px) 0;border-bottom:1px solid var(--line);overflow-x:auto;background:var(--ink)}
+.tab{background:none;border:none;border-bottom:2px solid transparent;color:var(--paper-2);font-size:13px;font-weight:700;padding:10px 14px;white-space:nowrap;letter-spacing:.02em}
+.tab:hover{color:var(--paper)}
+.tab.active{color:var(--blue-soft);border-bottom-color:var(--blue)}
+main{padding:clamp(18px,3vw,36px);max-width:1280px;margin:0 auto}
+.panel{display:none}
+.panel.active{display:block}
+.grid2{display:grid;grid-template-columns:minmax(320px,460px) 1fr;gap:clamp(18px,3vw,36px);align-items:start}
+@media(max-width:900px){.grid2{grid-template-columns:1fr}}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:clamp(16px,2.5vw,26px)}
+.card h2{font-size:16px;font-weight:900;letter-spacing:.03em;margin-bottom:4px}
+.card .sub{font-size:12px;color:var(--muted)}
+.sticky{position:sticky;top:118px}
+
+/* buttons */
+.btn{display:inline-flex;align-items:center;gap:8px;background:var(--blue);border:1px solid var(--blue);color:#fff;font-weight:700;font-size:13px;border-radius:8px;padding:10px 18px;transition:.2s}
+.btn:hover{filter:brightness(1.15)}
+.btn.ghost{background:transparent;color:var(--paper-2);border-color:var(--line)}
+.btn.ghost:hover{color:var(--paper);border-color:var(--paper-2)}
+.btn.small{padding:6px 12px;font-size:12px;border-radius:6px}
+.btn.danger{background:transparent;border-color:transparent;color:var(--red);padding:6px 8px}
+.btn.green{background:var(--green);border-color:var(--green);color:#06281b}
+.btnrow{display:flex;gap:8px;flex-wrap:wrap;margin-top:18px}
+
+/* preview + output */
+.preview{background:#fff;border-radius:14px;padding:clamp(16px,2.5vw,30px);color:#1a1a1a;overflow-x:auto}
+.preview-label,.code-label{font-family:var(--mono);font-size:10px;letter-spacing:.25em;text-transform:uppercase;color:var(--muted);margin:0 0 10px}
+.codebox{margin-top:22px}
+.codebox pre{background:var(--ink-2);border:1px solid var(--line);border-radius:10px;padding:16px;font-family:var(--mono);font-size:11px;line-height:1.6;max-height:260px;overflow:auto;white-space:pre-wrap;word-break:break-all;color:var(--paper-2)}
+.copied{position:fixed;left:50%;bottom:30px;transform:translateX(-50%) translateY(20px);background:var(--green);color:#06281b;font-weight:900;font-size:13px;padding:10px 22px;border-radius:99px;opacity:0;pointer-events:none;transition:.25s;z-index:99}
+.copied.show{opacity:1;transform:translateX(-50%) translateY(0)}
+
+/* dynamic list rows */
+.item-block{border:1px solid var(--line);border-radius:10px;padding:14px;margin-top:12px;background:var(--ink-2)}
+.item-block .head{display:flex;justify-content:space-between;align-items:center}
+.item-block .head b{font-size:13px;color:var(--blue-soft)}
+.mini-grid{display:grid;grid-template-columns:1fr 1fr;gap:0 12px}
+@media(max-width:520px){.mini-grid{grid-template-columns:1fr}}
+
+/* data tables */
+table.data{width:100%;border-collapse:collapse;font-size:13px;margin-top:16px}
+table.data th{font-family:var(--mono);font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);text-align:left;padding:8px 10px;border-bottom:1px solid var(--line)}
+table.data td{padding:10px;border-bottom:1px solid var(--line-2);vertical-align:top;word-break:break-all}
+table.data tr:hover td{background:rgba(63,123,255,.05)}
+.tag{display:inline-block;background:rgba(63,123,255,.15);color:var(--blue-soft);font-size:11px;font-weight:700;border-radius:5px;padding:2px 8px;margin:1px 2px 1px 0}
+.num{font-family:var(--mono)}
+.pos{color:var(--green)} .neg{color:var(--red)}
+
+/* stats + chart */
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-top:16px}
+.stat{background:var(--ink-2);border:1px solid var(--line);border-radius:10px;padding:14px 16px}
+.stat b{display:block;font-family:var(--mono);font-size:22px;color:var(--paper)}
+.stat span{font-size:11px;color:var(--muted);letter-spacing:.06em}
+.chart{display:flex;align-items:flex-end;gap:10px;height:180px;margin-top:20px;padding:0 4px;border-bottom:1px solid var(--line)}
+.chart .col{flex:1;display:flex;flex-direction:column;justify-content:flex-end;align-items:center;gap:6px;min-width:0}
+.chart .bars{display:flex;gap:3px;align-items:flex-end;width:100%;justify-content:center;height:140px}
+.chart .bar{width:16px;border-radius:3px 3px 0 0;min-height:2px}
+.chart .bar.b1{background:var(--blue)} .chart .bar.b2{background:var(--green)}
+.chart .lbl{font-family:var(--mono);font-size:10px;color:var(--muted);white-space:nowrap}
+.legend{display:flex;gap:16px;margin-top:10px;font-size:11px;color:var(--paper-2)}
+.legend i{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:6px;vertical-align:-1px}
+
+.empty{color:var(--muted);font-size:13px;padding:26px 0;text-align:center}
+.note{font-size:11px;color:var(--muted);margin-top:14px;line-height:1.7}
+.range-row{display:flex;align-items:center;gap:10px}
+.range-row output{font-family:var(--mono);font-size:13px;color:var(--blue-soft);min-width:34px;text-align:right}
+input[type=range]{padding:0;accent-color:var(--blue)}
+input[type=color]{padding:2px;height:38px;width:56px;cursor:pointer}
+.colorrow{display:flex;gap:10px;align-items:center}
+footer{padding:30px;text-align:center;font-size:11px;color:var(--muted);border-top:1px solid var(--line);margin-top:40px}
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <a class="brand" href="../">Affi<b>Forge</b><span class="badge">FREE β</span></a>
+  <div class="top-actions">
+    <button class="btn ghost small" onclick="AF.backup()">データ書き出し</button>
+    <button class="btn ghost small" onclick="document.getElementById('restoreFile').click()">読み込み</button>
+    <input type="file" id="restoreFile" accept=".json" style="display:none" onchange="AF.restore(this)">
+  </div>
+</div>
+
+<div class="tabs" id="tabs">
+  <button class="tab active" data-panel="p-box">商品リンクボックス</button>
+  <button class="tab" data-panel="p-table">比較表</button>
+  <button class="tab" data-panel="p-rank">ランキング</button>
+  <button class="tab" data-panel="p-links">UTMリンク管理</button>
+  <button class="tab" data-panel="p-rev">収益トラッカー</button>
+  <button class="tab" data-panel="p-tpl">記事構成テンプレ</button>
+</div>
+
+<main>
+
+<!-- ============ 1. 商品リンクボックス ============ -->
+<section class="panel active" id="p-box">
+  <div class="grid2">
+    <div class="card">
+      <h2>商品リンクボックス生成</h2>
+      <p class="sub">Amazon・楽天・Yahoo・公式サイトのボタン付き商品ボックスを生成。コピペでWordPress等に貼るだけ。</p>
+      <label>商品名</label>
+      <input id="bx-name" placeholder="例：ワイヤレスイヤホン XYZ-100" value="ワイヤレスイヤホン XYZ-100">
+      <label>画像URL <span class="opt">(任意)</span></label>
+      <input id="bx-img" placeholder="https://...jpg">
+      <label>キャッチコピー <span class="opt">(任意)</span></label>
+      <input id="bx-copy" placeholder="例：ノイズキャンセリング搭載で通勤が快適に" value="ノイズキャンセリング搭載で通勤が快適に">
+      <label>説明文 <span class="opt">(任意)</span></label>
+      <textarea id="bx-desc" placeholder="商品の説明を入力">最大30時間再生・急速充電対応。編集部が3ヶ月使って手放せなくなった一台。</textarea>
+      <div class="mini-grid">
+        <div><label>Amazon リンクURL</label><input id="bx-amazon" placeholder="https://amzn.to/..." value="https://example.com/amazon"></div>
+        <div><label>楽天 リンクURL</label><input id="bx-rakuten" placeholder="https://a.r10.to/..." value="https://example.com/rakuten"></div>
+        <div><label>Yahoo! リンクURL</label><input id="bx-yahoo" placeholder="https://ck.jp.ap.valuecommerce.com/..."></div>
+        <div><label>公式サイト リンクURL</label><input id="bx-official" placeholder="https://..."></div>
+      </div>
+      <label>公式ボタンのラベル</label>
+      <input id="bx-official-label" value="公式サイトで見る">
+      <div class="mini-grid">
+        <div><label>アクセントカラー</label><div class="colorrow"><input type="color" id="bx-color" value="#3f7bff"></div></div>
+        <div><label>ボタン形状</label><select id="bx-shape"><option value="8px">角丸</option><option value="999px">ピル型</option><option value="0">スクエア</option></select></div>
+      </div>
+      <label><input type="checkbox" id="bx-nofollow" checked style="width:auto;margin-right:8px;vertical-align:-2px">rel="nofollow sponsored" を付与(推奨)</label>
+    </div>
+    <div>
+      <p class="preview-label">Live Preview</p>
+      <div class="preview" id="bx-preview"></div>
+      <div class="codebox">
+        <p class="code-label">HTML (コピペ用)</p>
+        <pre id="bx-code"></pre>
+        <div class="btnrow"><button class="btn" onclick="AF.copy('bx-code')">HTMLをコピー</button></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ 2. 比較表 ============ -->
+<section class="panel" id="p-table">
+  <div class="grid2">
+    <div class="card">
+      <h2>比較表ジェネレーター</h2>
+      <p class="sub">商品×評価項目のマトリクスを作成。スマホでも横スクロールで崩れない比較表HTMLを出力。</p>
+      <label>表タイトル <span class="opt">(任意)</span></label>
+      <input id="tb-title" value="人気ワイヤレスイヤホン3機種を徹底比較">
+      <div id="tb-products"></div>
+      <div class="btnrow" style="margin-top:10px"><button class="btn ghost small" onclick="Cmp.addProduct()">＋ 商品を追加</button></div>
+      <div id="tb-rows"></div>
+      <div class="btnrow" style="margin-top:10px"><button class="btn ghost small" onclick="Cmp.addRow()">＋ 評価項目を追加</button></div>
+      <label>アクセントカラー</label>
+      <div class="colorrow"><input type="color" id="tb-color" value="#3f7bff"></div>
+    </div>
+    <div>
+      <p class="preview-label">Live Preview</p>
+      <div class="preview" id="tb-preview"></div>
+      <div class="codebox">
+        <p class="code-label">HTML (コピペ用)</p>
+        <pre id="tb-code"></pre>
+        <div class="btnrow"><button class="btn" onclick="AF.copy('tb-code')">HTMLをコピー</button></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ 3. ランキング ============ -->
+<section class="panel" id="p-rank">
+  <div class="grid2">
+    <div class="card">
+      <h2>ランキングボックス生成</h2>
+      <p class="sub">1位〜のランキング形式レビューボックス。金銀銅バッジ・星評価・CTA付き。</p>
+      <div id="rk-items"></div>
+      <div class="btnrow" style="margin-top:10px"><button class="btn ghost small" onclick="Rank.addItem()">＋ 順位を追加</button></div>
+      <label>アクセントカラー</label>
+      <div class="colorrow"><input type="color" id="rk-color" value="#3f7bff"></div>
+      <label><input type="checkbox" id="rk-nofollow" checked style="width:auto;margin-right:8px;vertical-align:-2px">rel="nofollow sponsored" を付与(推奨)</label>
+    </div>
+    <div>
+      <p class="preview-label">Live Preview</p>
+      <div class="preview" id="rk-preview"></div>
+      <div class="codebox">
+        <p class="code-label">HTML (コピペ用)</p>
+        <pre id="rk-code"></pre>
+        <div class="btnrow"><button class="btn" onclick="AF.copy('rk-code')">HTMLをコピー</button></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ 4. UTMリンク管理 ============ -->
+<section class="panel" id="p-links">
+  <div class="grid2">
+    <div class="card">
+      <h2>UTMビルダー & リンク保管庫</h2>
+      <p class="sub">計測パラメータ付きリンクを生成し、案件ごとに保存・検索。CSV書き出し対応。</p>
+      <label>リンク先URL</label>
+      <input id="lk-url" placeholder="https://example.com/lp">
+      <div class="mini-grid">
+        <div><label>utm_source</label><input id="lk-source" placeholder="blog / twitter / mail"></div>
+        <div><label>utm_medium</label><input id="lk-medium" placeholder="article / sns / newsletter"></div>
+        <div><label>utm_campaign</label><input id="lk-campaign" placeholder="earbuds-review-2026"></div>
+        <div><label>utm_content <span class="opt">(任意)</span></label><input id="lk-content" placeholder="cta-top / cta-bottom"></div>
+      </div>
+      <label>生成されたURL</label>
+      <pre id="lk-result" style="background:var(--ink-2);border:1px solid var(--line);border-radius:8px;padding:12px;font-family:var(--mono);font-size:11px;white-space:pre-wrap;word-break:break-all;color:var(--blue-soft)">—</pre>
+      <div class="mini-grid">
+        <div><label>管理名</label><input id="lk-name" placeholder="例：イヤホン記事 上部CTA"></div>
+        <div><label>タグ <span class="opt">(カンマ区切り)</span></label><input id="lk-tags" placeholder="A8, イヤホン"></div>
+      </div>
+      <div class="btnrow">
+        <button class="btn" onclick="Links.save()">保存する</button>
+        <button class="btn ghost" onclick="Links.copyResult()">URLだけコピー</button>
+      </div>
+    </div>
+    <div class="card">
+      <h2>保存済みリンク</h2>
+      <label>検索</label>
+      <input id="lk-search" placeholder="名前・タグ・URLで絞り込み" oninput="Links.renderList()">
+      <div id="lk-list"></div>
+      <div class="btnrow"><button class="btn ghost small" onclick="Links.exportCsv()">CSV書き出し</button></div>
+      <p class="note">※データはこのブラウザのローカルストレージにのみ保存されます。上部の「データ書き出し」で定期バックアップを推奨。</p>
+    </div>
+  </div>
+</section>
+
+<!-- ============ 5. 収益トラッカー ============ -->
+<section class="panel" id="p-rev">
+  <div class="grid2">
+    <div class="card">
+      <h2>収益を記録</h2>
+      <p class="sub">ASP別・月別に発生/確定報酬を記録して、伸びている案件を可視化。</p>
+      <div class="mini-grid">
+        <div><label>年月</label><input type="month" id="rv-month"></div>
+        <div><label>ASP / 媒体</label><input id="rv-asp" placeholder="A8.net / もしも / Amazon"></div>
+      </div>
+      <label>案件・サイト名</label>
+      <input id="rv-program" placeholder="例：イヤホン比較サイト / XYZ社案件">
+      <div class="mini-grid">
+        <div><label>発生報酬 (円)</label><input type="number" id="rv-pending" placeholder="12000" min="0"></div>
+        <div><label>確定報酬 (円)</label><input type="number" id="rv-approved" placeholder="9800" min="0"></div>
+      </div>
+      <label>メモ <span class="opt">(任意)</span></label>
+      <input id="rv-note" placeholder="セール期間で伸びた 等">
+      <div class="btnrow"><button class="btn" onclick="Rev.add()">記録する</button></div>
+    </div>
+    <div class="card">
+      <h2>ダッシュボード</h2>
+      <div class="stats" id="rv-stats"></div>
+      <div class="chart" id="rv-chart"></div>
+      <div class="legend"><span><i style="background:var(--blue)"></i>発生</span><span><i style="background:var(--green)"></i>確定</span></div>
+      <div id="rv-list"></div>
+      <div class="btnrow"><button class="btn ghost small" onclick="Rev.exportCsv()">CSV書き出し</button></div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ 6. 記事構成テンプレ ============ -->
+<section class="panel" id="p-tpl">
+  <div class="grid2">
+    <div class="card">
+      <h2>記事構成ジェネレーター</h2>
+      <p class="sub">狙うキーワードから、SEO記事の「タイトル案・見出し構成・メタディスクリプション」の叩き台を生成。</p>
+      <label>記事タイプ</label>
+      <select id="tp-type">
+        <option value="review">商品レビュー記事</option>
+        <option value="compare">比較・おすすめ記事</option>
+        <option value="ranking">ランキング記事</option>
+        <option value="howto">ノウハウ・解決記事</option>
+      </select>
+      <label>狙うキーワード</label>
+      <input id="tp-kw" placeholder="例：ワイヤレスイヤホン おすすめ" value="ワイヤレスイヤホン おすすめ">
+      <label>商品・サービス名 <span class="opt">(レビュー記事の場合)</span></label>
+      <input id="tp-product" placeholder="例：XYZ-100">
+      <label>想定読者の悩み <span class="opt">(任意・入ると精度UP)</span></label>
+      <input id="tp-pain" placeholder="例：安くて音がいいイヤホンがどれか分からない">
+      <div class="btnrow"><button class="btn" onclick="Tpl.gen()">構成を生成する</button></div>
+      <p class="note">※テンプレートベースの叩き台です。実際の検索意図・上位記事を確認して調整してください。</p>
+    </div>
+    <div>
+      <div class="codebox" style="margin-top:0">
+        <p class="code-label">Markdown (コピペ用)</p>
+        <pre id="tp-code" style="max-height:600px">キーワードを入れて「構成を生成する」を押してください。</pre>
+        <div class="btnrow"><button class="btn" onclick="AF.copy('tp-code')">Markdownをコピー</button></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+</main>
+
+<div class="copied" id="copied">コピーしました ✓</div>
+<footer>AffiForge β — © CryptoManga Studios LLC ｜ データはすべてお使いのブラウザ内に保存され、外部送信されません。</footer>
+
+<script>
+/* ================= core ================= */
+const $=id=>document.getElementById(id);
+const esc=s=>String(s??"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");
+const yen=n=>"¥"+Number(n||0).toLocaleString("ja-JP");
+const store={
+  get(k,d){try{const v=localStorage.getItem("affiforge:"+k);return v?JSON.parse(v):d}catch(e){return d}},
+  set(k,v){localStorage.setItem("affiforge:"+k,JSON.stringify(v))}
+};
+const AF={
+  copy(id){
+    const t=$(id).textContent;
+    (navigator.clipboard?navigator.clipboard.writeText(t):Promise.reject()).catch(()=>{
+      const ta=document.createElement("textarea");ta.value=t;document.body.appendChild(ta);ta.select();document.execCommand("copy");ta.remove();
+    }).finally(()=>AF.toast());
+  },
+  toast(msg){const c=$("copied");c.textContent=msg||"コピーしました ✓";c.classList.add("show");clearTimeout(AF._t);AF._t=setTimeout(()=>c.classList.remove("show"),1600)},
+  backup(){
+    const data={};for(let i=0;i<localStorage.length;i++){const k=localStorage.key(i);if(k.startsWith("affiforge:"))data[k]=localStorage.getItem(k)}
+    const blob=new Blob([JSON.stringify(data,null,2)],{type:"application/json"});
+    const a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download="affiforge-backup.json";a.click();URL.revokeObjectURL(a.href);
+  },
+  restore(input){
+    const f=input.files[0];if(!f)return;
+    const r=new FileReader();
+    r.onload=()=>{try{
+      const data=JSON.parse(r.result);
+      Object.entries(data).forEach(([k,v])=>{if(k.startsWith("affiforge:"))localStorage.setItem(k,v)});
+      alert("読み込みました。ページを再読み込みします。");location.reload();
+    }catch(e){alert("読み込みに失敗しました：ファイル形式が不正です")}};
+    r.readAsText(f);input.value="";
+  }
+};
+/* tabs */
+document.querySelectorAll(".tab").forEach(t=>t.addEventListener("click",()=>{
+  document.querySelectorAll(".tab").forEach(x=>x.classList.remove("active"));
+  document.querySelectorAll(".panel").forEach(x=>x.classList.remove("active"));
+  t.classList.add("active");$(t.dataset.panel).classList.add("active");
+}));
+function stars(n){n=Math.max(0,Math.min(5,Number(n)||0));const full=Math.round(n);return "★".repeat(full)+"☆".repeat(5-full)}
+function relAttr(on){return on?' rel="nofollow sponsored noopener"':' rel="noopener"'}
+
+/* ================= 1. product box ================= */
+const Box={
+  ids:["bx-name","bx-img","bx-copy","bx-desc","bx-amazon","bx-rakuten","bx-yahoo","bx-official","bx-official-label","bx-color","bx-shape","bx-nofollow"],
+  build(){
+    const v=id=>$(id).value.trim();
+    const c=v("bx-color"),shape=$("bx-shape").value,rel=relAttr($("bx-nofollow").checked);
+    const btn=(url,label,bg)=>url?`<a href="${esc(url)}"${rel} target="_blank" style="display:inline-block;background:${bg};color:#fff;font-weight:bold;font-size:14px;text-decoration:none;padding:12px 10px;border-radius:${shape};text-align:center;flex:1 1 130px;min-width:130px;">${esc(label)}</a>`:"";
+    const buttons=[
+      btn(v("bx-amazon"),"Amazonで見る","#e88a00"),
+      btn(v("bx-rakuten"),"楽天市場で見る","#bf0000"),
+      btn(v("bx-yahoo"),"Yahoo!で見る","#ff0033"),
+      btn(v("bx-official"),v("bx-official-label")||"公式サイトで見る",c)
+    ].filter(Boolean).join("\n      ");
+    const img=v("bx-img")?`<div style="flex:0 0 140px;"><img src="${esc(v("bx-img"))}" alt="${esc(v("bx-name"))}" style="width:100%;height:auto;border-radius:8px;display:block;"></div>`:"";
+    return `<div style="border:2px solid ${c};border-radius:12px;padding:20px;margin:24px 0;font-family:sans-serif;background:#fff;">
+  ${v("bx-copy")?`<p style="margin:0 0 10px;color:${c};font-weight:bold;font-size:13px;">＼ ${esc(v("bx-copy"))} ／</p>`:""}
+  <div style="display:flex;gap:16px;flex-wrap:wrap;align-items:flex-start;">
+    ${img}
+    <div style="flex:1;min-width:200px;">
+      <p style="margin:0 0 8px;font-size:17px;font-weight:bold;color:#1a1a1a;">${esc(v("bx-name")||"商品名")}</p>
+      ${v("bx-desc")?`<p style="margin:0 0 14px;font-size:13px;line-height:1.7;color:#555;">${esc(v("bx-desc"))}</p>`:""}
+      <div style="display:flex;gap:8px;flex-wrap:wrap;">
+      ${buttons||'<span style="font-size:12px;color:#999;">※リンクURLを入力するとボタンが表示されます</span>'}
+      </div>
+    </div>
+  </div>
+</div>`;
+  },
+  render(){const html=Box.build();$("bx-preview").innerHTML=html;$("bx-code").textContent=html;
+    store.set("box",Object.fromEntries(Box.ids.map(id=>[id,$(id).type==="checkbox"?$(id).checked:$(id).value])));},
+  init(){
+    const saved=store.get("box",null);
+    if(saved)Box.ids.forEach(id=>{if(saved[id]!==undefined){if($(id).type==="checkbox")$(id).checked=saved[id];else $(id).value=saved[id]}});
+    Box.ids.forEach(id=>$(id).addEventListener("input",Box.render));
+    Box.render();
+  }
+};
+
+/* ================= 2. comparison table ================= */
+const Cmp={
+  state:store.get("cmp",{
+    products:[{name:"XYZ-100",best:true},{name:"ABC Pro",best:false},{name:"Sound M2",best:false}],
+    rows:[
+      {label:"価格",cells:["12,800円","19,800円","9,980円"]},
+      {label:"音質",cells:["★4.5","★5","★3.5"]},
+      {label:"ノイズキャンセリング",cells:["○","◎","×"]},
+      {label:"連続再生",cells:["30時間","24時間","18時間"]}
+    ]
+  }),
+  save(){store.set("cmp",Cmp.state)},
+  addProduct(){Cmp.state.products.push({name:"商品"+(Cmp.state.products.length+1),best:false});Cmp.state.rows.forEach(r=>r.cells.push(""));Cmp.renderForm();Cmp.render()},
+  delProduct(i){Cmp.state.products.splice(i,1);Cmp.state.rows.forEach(r=>r.cells.splice(i,1));Cmp.renderForm();Cmp.render()},
+  addRow(){Cmp.state.rows.push({label:"項目",cells:Cmp.state.products.map(()=>"")});Cmp.renderForm();Cmp.render()},
+  delRow(i){Cmp.state.rows.splice(i,1);Cmp.renderForm();Cmp.render()},
+  renderForm(){
+    $("tb-products").innerHTML=Cmp.state.products.map((p,i)=>`
+      <div class="item-block">
+        <div class="head"><b>商品 ${i+1}</b><button class="btn danger small" onclick="Cmp.delProduct(${i})">削除</button></div>
+        <label>商品名</label><input value="${esc(p.name)}" oninput="Cmp.state.products[${i}].name=this.value;Cmp.render()">
+        <label><input type="checkbox" ${p.best?"checked":""} style="width:auto;margin-right:8px;vertical-align:-2px" onchange="Cmp.state.products.forEach((x,j)=>x.best=j===${i}&&this.checked);Cmp.renderForm();Cmp.render()">イチオシとして強調</label>
+      </div>`).join("");
+    $("tb-rows").innerHTML=Cmp.state.rows.map((r,i)=>`
+      <div class="item-block">
+        <div class="head"><b>項目 ${i+1}</b><button class="btn danger small" onclick="Cmp.delRow(${i})">削除</button></div>
+        <label>項目名</label><input value="${esc(r.label)}" oninput="Cmp.state.rows[${i}].label=this.value;Cmp.render()">
+        <div class="mini-grid">
+        ${r.cells.map((c,j)=>`<div><label>${esc(Cmp.state.products[j]?.name||"商品"+(j+1))}</label><input value="${esc(c)}" oninput="Cmp.state.rows[${i}].cells[${j}]=this.value;Cmp.render()"></div>`).join("")}
+        </div>
+      </div>`).join("");
+  },
+  cellHtml(c){
+    c=String(c??"").trim();
+    if(/^★[\d.]+$/.test(c)){const n=parseFloat(c.slice(1));return `<span style="color:#f5a623;letter-spacing:1px;">${stars(n)}</span><span style="font-size:11px;color:#888;"> ${n}</span>`}
+    if(c==="◎")return '<span style="color:#e53935;font-weight:bold;font-size:18px;">◎</span>';
+    if(c==="○"||c==="〇")return '<span style="color:#1e88e5;font-weight:bold;font-size:18px;">○</span>';
+    if(c==="△")return '<span style="color:#f5a623;font-weight:bold;font-size:18px;">△</span>';
+    if(c==="×")return '<span style="color:#999;font-weight:bold;font-size:18px;">×</span>';
+    return esc(c);
+  },
+  build(){
+    const col=$("tb-color").value,s=Cmp.state,title=$("tb-title").value.trim();
+    const bestIdx=s.products.findIndex(p=>p.best);
+    const th=s.products.map((p,i)=>`<th style="padding:12px 14px;font-size:14px;color:#fff;background:${i===bestIdx?col:"#3a3f4b"};white-space:nowrap;position:relative;">${i===bestIdx?'<span style="display:block;font-size:10px;font-weight:normal;opacity:.9;">＼ イチオシ ／</span>':""}${esc(p.name)}</th>`).join("");
+    const rows=s.rows.map(r=>`<tr>
+      <th style="padding:10px 14px;background:#f4f5f7;font-size:13px;color:#333;text-align:left;white-space:nowrap;border-bottom:1px solid #e3e5ea;">${esc(r.label)}</th>
+      ${r.cells.map((c,i)=>`<td style="padding:10px 14px;font-size:13px;text-align:center;border-bottom:1px solid #e3e5ea;${i===bestIdx?`background:${col}14;`:""}">${Cmp.cellHtml(c)}</td>`).join("")}
+    </tr>`).join("\n    ");
+    return `<div style="margin:24px 0;font-family:sans-serif;">
+  ${title?`<p style="font-weight:bold;font-size:16px;margin:0 0 10px;color:#1a1a1a;">${esc(title)}</p>`:""}
+  <div style="overflow-x:auto;-webkit-overflow-scrolling:touch;">
+  <table style="border-collapse:collapse;width:100%;min-width:${180+s.products.length*150}px;background:#fff;">
+    <tr><th style="background:#f4f5f7;"></th>${th}</tr>
+    ${rows}
+  </table>
+  </div>
+</div>`;
+  },
+  render(){const html=Cmp.build();$("tb-preview").innerHTML=html;$("tb-code").textContent=html;Cmp.save()},
+  init(){["tb-title","tb-color"].forEach(id=>$(id).addEventListener("input",Cmp.render));Cmp.renderForm();Cmp.render()}
+};
+
+/* ================= 3. ranking ================= */
+const Rank={
+  state:store.get("rank",{items:[
+    {name:"XYZ-100",img:"",rating:4.8,points:"コスパ最強クラス\nノイズキャンセリング搭載\n最大30時間再生",url:"https://example.com",label:"最安値をチェックする"},
+    {name:"ABC Pro",img:"",rating:4.5,points:"音質はNo.1\n価格はやや高め",url:"https://example.com",label:"詳細を見る"},
+    {name:"Sound M2",img:"",rating:4.0,points:"1万円以下で買える\n入門機に最適",url:"https://example.com",label:"詳細を見る"}
+  ]}),
+  save(){store.set("rank",Rank.state)},
+  addItem(){Rank.state.items.push({name:"商品名",img:"",rating:4.0,points:"",url:"",label:"詳細を見る"});Rank.renderForm();Rank.render()},
+  delItem(i){Rank.state.items.splice(i,1);Rank.renderForm();Rank.render()},
+  move(i,d){const a=Rank.state.items;const j=i+d;if(j<0||j>=a.length)return;[a[i],a[j]]=[a[j],a[i]];Rank.renderForm();Rank.render()},
+  renderForm(){
+    $("rk-items").innerHTML=Rank.state.items.map((it,i)=>`
+      <div class="item-block">
+        <div class="head"><b>${i+1}位</b><span>
+          <button class="btn ghost small" onclick="Rank.move(${i},-1)">↑</button>
+          <button class="btn ghost small" onclick="Rank.move(${i},1)">↓</button>
+          <button class="btn danger small" onclick="Rank.delItem(${i})">削除</button></span></div>
+        <label>商品名</label><input value="${esc(it.name)}" oninput="Rank.state.items[${i}].name=this.value;Rank.render()">
+        <label>画像URL <span class="opt">(任意)</span></label><input value="${esc(it.img)}" oninput="Rank.state.items[${i}].img=this.value;Rank.render()">
+        <label>評価 (0〜5)</label>
+        <div class="range-row"><input type="range" min="0" max="5" step="0.1" value="${it.rating}" oninput="Rank.state.items[${i}].rating=this.value;this.nextElementSibling.value=this.value;Rank.render()"><output>${it.rating}</output></div>
+        <label>おすすめポイント <span class="opt">(1行1項目)</span></label>
+        <textarea oninput="Rank.state.items[${i}].points=this.value;Rank.render()">${esc(it.points)}</textarea>
+        <div class="mini-grid">
+          <div><label>CTAリンクURL</label><input value="${esc(it.url)}" oninput="Rank.state.items[${i}].url=this.value;Rank.render()"></div>
+          <div><label>CTAラベル</label><input value="${esc(it.label)}" oninput="Rank.state.items[${i}].label=this.value;Rank.render()"></div>
+        </div>
+      </div>`).join("");
+  },
+  build(){
+    const c=$("rk-color").value,rel=relAttr($("rk-nofollow").checked);
+    const medal=["#d4a017","#8f9aa8","#b06a3b"];
+    return Rank.state.items.map((it,i)=>{
+      const badge=i<3?medal[i]:"#5a6272";
+      const pts=String(it.points||"").split("\n").map(s=>s.trim()).filter(Boolean)
+        .map(p=>`<li style="margin:4px 0;font-size:13.5px;color:#333;">${esc(p)}</li>`).join("\n        ");
+      const img=it.img?`<div style="flex:0 0 130px;"><img src="${esc(it.img)}" alt="${esc(it.name)}" style="width:100%;height:auto;border-radius:8px;display:block;"></div>`:"";
+      return `<div style="border:1px solid #e3e5ea;border-top:4px solid ${badge};border-radius:12px;padding:20px;margin:20px 0;font-family:sans-serif;background:#fff;box-shadow:0 2px 10px rgba(0,0,0,.05);">
+  <div style="display:flex;align-items:center;gap:12px;margin-bottom:12px;">
+    <span style="background:${badge};color:#fff;font-weight:bold;font-size:15px;border-radius:50%;width:38px;height:38px;display:inline-flex;align-items:center;justify-content:center;flex:0 0 38px;">${i+1}位</span>
+    <span style="font-size:18px;font-weight:bold;color:#1a1a1a;">${esc(it.name)}</span>
+  </div>
+  <div style="display:flex;gap:16px;flex-wrap:wrap;align-items:flex-start;">
+    ${img}
+    <div style="flex:1;min-width:200px;">
+      <p style="margin:0 0 8px;"><span style="color:#f5a623;font-size:16px;letter-spacing:1px;">${stars(it.rating)}</span> <b style="color:#f5a623;">${Number(it.rating).toFixed(1)}</b></p>
+      ${pts?`<ul style="margin:0 0 14px;padding-left:20px;">
+        ${pts}
+      </ul>`:""}
+      ${it.url?`<a href="${esc(it.url)}"${rel} target="_blank" style="display:block;background:${i===0?c:"#fff"};color:${i===0?"#fff":c};border:2px solid ${c};font-weight:bold;font-size:15px;text-decoration:none;padding:13px;border-radius:8px;text-align:center;">${esc(it.label||"詳細を見る")} »</a>`:""}
+    </div>
+  </div>
+</div>`}).join("\n");
+  },
+  render(){const html=Rank.build();$("rk-preview").innerHTML=html;$("rk-code").textContent=html;Rank.save()},
+  init(){["rk-color","rk-nofollow"].forEach(id=>$(id).addEventListener("input",Rank.render));Rank.renderForm();Rank.render()}
+};
+
+/* ================= 4. links ================= */
+const Links={
+  state:store.get("links",[]),
+  buildUrl(){
+    const base=$("lk-url").value.trim();
+    if(!base)return "";
+    try{
+      const u=new URL(base);
+      const p={utm_source:$("lk-source").value.trim(),utm_medium:$("lk-medium").value.trim(),utm_campaign:$("lk-campaign").value.trim(),utm_content:$("lk-content").value.trim()};
+      Object.entries(p).forEach(([k,v])=>{if(v)u.searchParams.set(k,v)});
+      return u.toString();
+    }catch(e){return "⚠ URLの形式が正しくありません（https:// から入力してください）"}
+  },
+  update(){$("lk-result").textContent=Links.buildUrl()||"—"},
+  copyResult(){const t=Links.buildUrl();if(!t||t.startsWith("⚠"))return alert("先に有効なURLを入力してください");
+    (navigator.clipboard?navigator.clipboard.writeText(t):Promise.reject()).catch(()=>{}).finally(()=>AF.toast())},
+  renderList(){
+    const q=$("lk-search").value.trim().toLowerCase();
+    const items=Links.state.filter(l=>!q||[l.name,l.url,(l.tags||[]).join(",")].join(" ").toLowerCase().includes(q));
+    if(!items.length){$("lk-list").innerHTML='<p class="empty">保存されたリンクはまだありません</p>';return}
+    $("lk-list").innerHTML=`<table class="data"><tr><th>名前 / タグ</th><th>URL</th><th></th></tr>${
+      items.map(l=>`<tr>
+        <td><b>${esc(l.name)}</b><br>${(l.tags||[]).map(t=>`<span class="tag">${esc(t)}</span>`).join("")}<br><span style="font-size:11px;color:var(--muted)">${esc(l.date)}</span></td>
+        <td style="font-family:var(--mono);font-size:11px;color:var(--paper-2)">${esc(l.url)}</td>
+        <td style="white-space:nowrap"><button class="btn ghost small" onclick="Links.copyUrl(${l.id})">コピー</button> <button class="btn danger small" onclick="Links.del(${l.id})">削除</button></td>
+      </tr>`).join("")}</table>`;
+  },
+  copyUrl(id){const l=Links.state.find(x=>x.id===id);if(!l)return;
+    (navigator.clipboard?navigator.clipboard.writeText(l.url):Promise.reject()).catch(()=>{}).finally(()=>AF.toast())},
+  del(id){if(!confirm("このリンクを削除しますか？"))return;Links.state=Links.state.filter(x=>x.id!==id);store.set("links",Links.state);Links.renderList()},
+  exportCsv(){
+    if(!Links.state.length)return alert("保存されたリンクがありません");
+    const rows=[["名前","URL","タグ","登録日"],...Links.state.map(l=>[l.name,l.url,(l.tags||[]).join(" / "),l.date])];
+    downloadCsv(rows,"affiforge-links.csv");
+  },
+  init(){
+    ["lk-url","lk-source","lk-medium","lk-campaign","lk-content"].forEach(id=>$(id).addEventListener("input",Links.update));
+    Links.update();Links.renderList();
+  }
+};
+Links.save=function(){
+  const url=Links.buildUrl();
+  if(!url||url.startsWith("⚠"))return alert("先に有効なURLを入力してください");
+  const name=$("lk-name").value.trim()||"無題のリンク";
+  const tags=$("lk-tags").value.split(",").map(s=>s.trim()).filter(Boolean);
+  Links.state.unshift({id:Links.state.length?Math.max(...Links.state.map(l=>l.id))+1:1,name,url,tags,date:new Date().toLocaleDateString("ja-JP")});
+  store.set("links",Links.state);$("lk-name").value="";Links.renderList();AF.toast("保存しました ✓");
+};
+function downloadCsv(rows,filename){
+  const csv="\uFEFF"+rows.map(r=>r.map(c=>`"${String(c??"").replace(/"/g,'""')}"`).join(",")).join("\r\n");
+  const a=document.createElement("a");a.href=URL.createObjectURL(new Blob([csv],{type:"text/csv"}));a.download=filename;a.click();URL.revokeObjectURL(a.href);
+}
+
+/* ================= 5. revenue ================= */
+const Rev={
+  state:store.get("rev",[]),
+  save(){store.set("rev",Rev.state)},
+  add(){
+    const month=$("rv-month").value;
+    if(!month)return alert("年月を選択してください");
+    const e={id:Rev.state.length?Math.max(...Rev.state.map(x=>x.id))+1:1,
+      month,asp:$("rv-asp").value.trim()||"未設定",program:$("rv-program").value.trim(),
+      pending:Number($("rv-pending").value)||0,approved:Number($("rv-approved").value)||0,
+      note:$("rv-note").value.trim()};
+    Rev.state.push(e);Rev.save();
+    ["rv-asp","rv-program","rv-pending","rv-approved","rv-note"].forEach(id=>$(id).value="");
+    Rev.render();AF.toast("記録しました ✓");
+  },
+  del(id){if(!confirm("この記録を削除しますか？"))return;Rev.state=Rev.state.filter(x=>x.id!==id);Rev.save();Rev.render()},
+  render(){
+    const s=Rev.state;
+    const now=new Date(),ym=now.toISOString().slice(0,7);
+    const tot=k=>s.reduce((a,x)=>a+x[k],0);
+    const thisMonth=s.filter(x=>x.month===ym);
+    const rate=tot("pending")?Math.round(tot("approved")/tot("pending")*100):0;
+    $("rv-stats").innerHTML=`
+      <div class="stat"><b>${yen(thisMonth.reduce((a,x)=>a+x.pending,0))}</b><span>今月の発生</span></div>
+      <div class="stat"><b>${yen(thisMonth.reduce((a,x)=>a+x.approved,0))}</b><span>今月の確定</span></div>
+      <div class="stat"><b>${yen(tot("approved"))}</b><span>累計確定</span></div>
+      <div class="stat"><b>${rate}%</b><span>累計承認率</span></div>`;
+    /* chart: last 6 months with data */
+    const byMonth={};s.forEach(x=>{byMonth[x.month]=byMonth[x.month]||{p:0,a:0};byMonth[x.month].p+=x.pending;byMonth[x.month].a+=x.approved});
+    const months=Object.keys(byMonth).sort().slice(-6);
+    const max=Math.max(1,...months.flatMap(m=>[byMonth[m].p,byMonth[m].a]));
+    $("rv-chart").innerHTML=months.length?months.map(m=>`
+      <div class="col"><div class="bars">
+        <div class="bar b1" style="height:${Math.round(byMonth[m].p/max*100)}%" title="発生 ${yen(byMonth[m].p)}"></div>
+        <div class="bar b2" style="height:${Math.round(byMonth[m].a/max*100)}%" title="確定 ${yen(byMonth[m].a)}"></div>
+      </div><span class="lbl">${m.slice(2).replace("-","/")}</span></div>`).join("")
+      :'<p class="empty" style="width:100%">記録を追加するとグラフが表示されます</p>';
+    /* list */
+    const sorted=[...s].sort((a,b)=>b.month.localeCompare(a.month)||b.id-a.id);
+    $("rv-list").innerHTML=sorted.length?`<table class="data"><tr><th>年月</th><th>ASP / 案件</th><th style="text-align:right">発生</th><th style="text-align:right">確定</th><th></th></tr>${
+      sorted.map(x=>`<tr>
+        <td class="num">${esc(x.month)}</td>
+        <td><b>${esc(x.asp)}</b>${x.program?`<br><span style="font-size:12px;color:var(--paper-2)">${esc(x.program)}</span>`:""}${x.note?`<br><span style="font-size:11px;color:var(--muted)">${esc(x.note)}</span>`:""}</td>
+        <td class="num" style="text-align:right">${yen(x.pending)}</td>
+        <td class="num pos" style="text-align:right">${yen(x.approved)}</td>
+        <td><button class="btn danger small" onclick="Rev.del(${x.id})">削除</button></td>
+      </tr>`).join("")}</table>`:'<p class="empty">まだ記録がありません。左のフォームから追加してください。</p>';
+  },
+  exportCsv(){
+    if(!Rev.state.length)return alert("記録がありません");
+    const rows=[["年月","ASP","案件","発生報酬","確定報酬","メモ"],...Rev.state.map(x=>[x.month,x.asp,x.program,x.pending,x.approved,x.note])];
+    downloadCsv(rows,"affiforge-revenue.csv");
+  },
+  init(){$("rv-month").value=new Date().toISOString().slice(0,7);Rev.render()}
+};
+
+/* ================= 6. article templates ================= */
+const Tpl={
+  gen(){
+    const kw=$("tp-kw").value.trim()||"キーワード";
+    const prod=$("tp-product").value.trim()||kw;
+    const pain=$("tp-pain").value.trim();
+    const type=$("tp-type").value;
+    const year=new Date().getFullYear();
+    const painLine=pain?`「${pain}」という悩みに、結論ファーストで答える。`:"読者の悩みに、結論ファーストで答える。";
+    const T={
+      review:{titles:[
+        `【${year}年レビュー】${prod}を3ヶ月使った本音｜メリット・デメリット総まとめ`,
+        `${prod}は買うべき？実際に使って分かった${kw}のリアル`,
+        `${prod}レビュー｜後悔しないために購入前に知るべき5つのこと`,
+        `【正直レビュー】${prod}の悪い口コミは本当か検証してみた`,
+        `${prod}を選んだ理由と${year}年最新の評価【写真付きレビュー】`],
+        outline:[
+          ["h2",`結論：${prod}は「こんな人」におすすめ`],["h3","おすすめできる人"],["h3","おすすめできない人"],
+          ["h2",`${prod}の基本情報・スペック`],
+          ["h2",`実際に使って分かったメリット`],["h3","メリット1（最重要ポイント）"],["h3","メリット2"],["h3","メリット3"],
+          ["h2","正直に伝えたいデメリット・注意点"],["h3","デメリット1と対処法"],["h3","デメリット2と対処法"],
+          ["h2",`${prod}の口コミ・評判まとめ`],["h3","良い口コミ"],["h3","悪い口コミとその実態"],
+          ["h2","競合製品との比較"],
+          ["h2","最安値で買う方法・キャンペーン情報"],
+          ["h2",`まとめ：${prod}レビュー`]]},
+      compare:{titles:[
+        `【${year}年最新】${kw}を徹底比較｜失敗しない選び方とイチオシ`,
+        `${kw}はどれがいい？主要製品を項目別に比較してみた`,
+        `【プロが選ぶ】${kw}の比較まとめ｜目的別のベストはこれ`,
+        `${kw}で迷ったらコレ！比較表で分かる決定版ガイド`,
+        `${kw}の選び方完全ガイド【比較表あり・${year}年版】`],
+        outline:[
+          ["h2",`結論：${kw}のイチオシはこれ`],
+          ["h2",`${kw}の失敗しない選び方【3つの基準】`],["h3","基準1：価格"],["h3","基準2：性能・機能"],["h3","基準3：サポート・保証"],
+          ["h2","主要製品の比較表【一目で分かる】"],
+          ["h2","各製品の詳細レビュー"],["h3","製品A：総合力で選ぶなら"],["h3","製品B：性能重視なら"],["h3","製品C：コスパ重視なら"],
+          ["h2","目的別のおすすめまとめ"],
+          ["h2","よくある質問（FAQ）"],
+          ["h2",`まとめ：${kw}の比較`]]},
+      ranking:{titles:[
+        `【${year}年${new Date().getMonth()+1}月】${kw}ランキングTOP7｜選び方も解説`,
+        `${kw}おすすめランキング！実際に試して選んだベスト`,
+        `【最新版】${kw}人気ランキング｜1位は意外なアレ`,
+        `${kw}ランキングBEST7【用途別の選び方つき】`,
+        `プロ厳選！${kw}おすすめランキング${year}`],
+        outline:[
+          ["h2",`${kw}ランキングの評価基準`],
+          ["h2",`${kw}おすすめランキングTOP7`],["h3","1位：（総合力No.1の理由）"],["h3","2位：（僅差で2位の理由）"],["h3","3位：（コスパ枠）"],["h3","4位〜7位"],
+          ["h2","迷ったらこの3つから選べばOK"],
+          ["h2",`${kw}選びでよくある失敗と回避法`],
+          ["h2","よくある質問（FAQ）"],
+          ["h2",`まとめ：${kw}ランキング`]]},
+      howto:{titles:[
+        `${kw}の方法を初心者向けに完全解説【${year}年版】`,
+        `【簡単】${kw}を最短で解決する手順まとめ`,
+        `${kw}ができない原因と対処法7選`,
+        `${kw}のやり方｜つまずきポイントも画像付きで解説`,
+        `知らないと損！${kw}を成功させるコツ全部見せます`],
+        outline:[
+          ["h2",`結論：${kw}はこの手順でできる`],
+          ["h2",`${kw}の前に知っておくべき基礎知識`],
+          ["h2",`${kw}の具体的な手順`],["h3","STEP1"],["h3","STEP2"],["h3","STEP3"],
+          ["h2","よくあるつまずきポイントと解決策"],
+          ["h2","もっと効率化したい人におすすめのツール・サービス"],
+          ["h2","よくある質問（FAQ）"],
+          ["h2",`まとめ：${kw}`]]}
+    }[type];
+    const meta=`${kw}について、${painLine.replace("。","")}。実体験と比較データをもとに、後悔しない選び方を${year}年最新情報で解説します。`.slice(0,120);
+    const md=[
+      `# タイトル案（5案）`,
+      ...T.titles.map((t,i)=>`${i+1}. ${t}`),
+      ``,`# メタディスクリプション案`,meta,
+      ``,`# リード文の方針`,`- ${painLine}`,`- 「この記事で分かること」を3点で箇条書きにする`,`- 結論(イチオシ/答え)を冒頭で提示し、根拠は本文へ誘導`,
+      ``,`# 見出し構成`,
+      ...T.outline.map(([h,t])=>h==="h2"?`\n## ${t}`:`### ${t}`),
+      ``,``,`# 執筆メモ`,
+      `- 狙うKW:「${kw}」/ 共起語・関連KWをサジェストで確認`,
+      `- 一次情報(実体験・撮影写真・スクショ)を最低3点入れる`,
+      `- 比較表・ランキングは AffiForge の生成ツールで作成して挿入`,
+      `- CTAは「結論直後」「比較表直後」「まとめ直前」の3箇所`,
+    ].join("\n");
+    $("tp-code").textContent=md;
+  }
+};
+
+/* init */
+Box.init();Cmp.init();Rank.init();Links.init();Rev.init();
+</script>
+</body>
+</html>
