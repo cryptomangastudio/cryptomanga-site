@@ -105,6 +105,24 @@ table.data tr:hover td{background:rgba(63,123,255,.05)}
 input[type=range]{padding:0;accent-color:var(--blue)}
 input[type=color]{padding:2px;height:38px;width:56px;cursor:pointer}
 .colorrow{display:flex;gap:10px;align-items:center}
+
+/* easy mode (X post) */
+.stepnum{display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;border-radius:50%;background:var(--blue);color:#fff;font-size:12px;font-weight:900;margin-right:8px;vertical-align:-4px}
+.xwrap{margin-bottom:18px}
+.xlabel{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}
+.xlabel b{font-size:13px;color:var(--blue-soft)}
+.xlabel span{font-size:11px;color:var(--muted)}
+.xcard{background:#fff;color:#0f1419;border-radius:14px;padding:16px 18px;font-size:14px;line-height:1.65;border:1px solid #e3e5ea}
+.xhead{display:flex;gap:10px;align-items:center;margin-bottom:8px}
+.xavatar{width:38px;height:38px;border-radius:50%;background:linear-gradient(135deg,#3f7bff,#83a4ff);flex:0 0 38px}
+.xname{font-weight:900;font-size:14px;line-height:1.2}
+.xid{color:#536471;font-size:12px}
+.xtext{white-space:pre-wrap;word-break:break-word}
+.xmeta{display:flex;justify-content:space-between;align-items:center;margin-top:12px;gap:10px;flex-wrap:wrap}
+.xcount{font-size:12px;color:var(--muted)}
+.xcount.over{color:var(--red);font-weight:900}
+.tips{border:1px solid rgba(63,123,255,.35);background:rgba(63,123,255,.08);border-radius:10px;padding:14px 16px;margin-top:20px;font-size:12.5px;line-height:1.9;color:var(--paper-2)}
+.tips b{color:var(--blue-soft)}
 footer{padding:30px;text-align:center;font-size:11px;color:var(--muted);border-top:1px solid var(--line);margin-top:40px}
 </style>
 </head>
@@ -120,7 +138,8 @@ footer{padding:30px;text-align:center;font-size:11px;color:var(--muted);border-t
 </div>
 
 <div class="tabs" id="tabs">
-  <button class="tab active" data-panel="p-box">商品リンクボックス</button>
+  <button class="tab active" data-panel="p-easy">かんたん投稿づくり(X)</button>
+  <button class="tab" data-panel="p-box">商品リンクボックス</button>
   <button class="tab" data-panel="p-table">比較表</button>
   <button class="tab" data-panel="p-rank">ランキング</button>
   <button class="tab" data-panel="p-links">UTMリンク管理</button>
@@ -130,8 +149,41 @@ footer{padding:30px;text-align:center;font-size:11px;color:var(--muted);border-t
 
 <main>
 
+<!-- ============ 0. かんたん投稿づくり ============ -->
+<section class="panel active" id="p-easy">
+  <div class="grid2">
+    <div class="card">
+      <h2>かんたん投稿づくり</h2>
+      <p class="sub">3つ入力するだけで、X(旧Twitter)で伸びやすい紹介ポストが5パターンできます。気に入ったものを「Xで投稿」するだけ。</p>
+      <label><span class="stepnum">1</span>商品・サービス名</label>
+      <input id="ez-name" placeholder="例：ワイヤレスイヤホン XYZ-100" value="ワイヤレスイヤホン XYZ-100">
+      <label><span class="stepnum">2</span>アフィリエイトリンク</label>
+      <input id="ez-link" placeholder="https://...(ASPで発行したリンク)">
+      <label><span class="stepnum">3</span>一番の推しポイント <span class="opt">(1つだけ)</span></label>
+      <input id="ez-point" placeholder="例：1万円以下なのにノイキャン付き" value="1万円以下なのにノイズキャンセリング付き">
+      <label>ターゲットの悩み <span class="opt">(任意・入れると刺さり方UP)</span></label>
+      <input id="ez-pain" placeholder="例：通勤電車の騒音がストレス">
+      <label>リンクの置き場所</label>
+      <select id="ez-place">
+        <option value="reply">リプ欄に貼る(おすすめ・インプが伸びやすい)</option>
+        <option value="body">本文に入れる(手間なし)</option>
+      </select>
+      <div class="btnrow"><button class="btn" onclick="Easy.gen()">投稿文を5パターン作る →</button></div>
+      <div class="tips">
+        <b>インプを伸ばす3つのコツ</b><br>
+        ① リンクは<b>リプ欄</b>に。本文に外部リンクがあると表示が伸びにくい傾向<br>
+        ② 投稿は<b>朝7〜8時・夜21〜23時</b>がねらい目<br>
+        ③ 同じ商品でも<b>構文を変えて週2〜3回</b>投稿(全部このツールで作れます)
+      </div>
+    </div>
+    <div id="ez-out">
+      <p class="empty" style="padding-top:60px">← 左の3つを入力して「投稿文を5パターン作る」を押してください。<br><br>Xのプレビューそのままの形で、コピー&投稿ボタン付きの文案が出ます。</p>
+    </div>
+  </div>
+</section>
+
 <!-- ============ 1. 商品リンクボックス ============ -->
-<section class="panel active" id="p-box">
+<section class="panel" id="p-box">
   <div class="grid2">
     <div class="card">
       <h2>商品リンクボックス生成</h2>
@@ -727,8 +779,76 @@ const Tpl={
   }
 };
 
+/* ================= 0. easy X post ================= */
+const Easy={
+  ids:["ez-name","ez-link","ez-point","ez-pain","ez-place"],
+  last:[],
+  templates(name,point,pain){
+    const p=pain||"どれを選べばいいか分からない";
+    return [
+      {label:"共感フック型",why:"1行目の「あるある」で手が止まる→保存されやすい",
+       text:`「${p}」って人、これ知らないと損です。\n\n${name}、正直期待してなかったけど使ったら手放せなくなりました。\n\n特に${point}のが強い。`},
+      {label:"実体験レビュー型",why:"箇条書きは流し読みでも刺さる・信頼されやすい",
+       text:`${name}を使い始めて1ヶ月。結論、もっと早く買えばよかった。\n\n・${point}\n・設定も使い方も簡単\n・毎日のストレスが1つ消えた\n\n同じことで悩んでる人は一度見てみてください。`},
+      {label:"断言型",why:"迷っている人の背中を押す→クリック率が高い",
+       text:`迷ってるなら${name}でいいと思う。\n\n理由はシンプルで、${point}から。\n\nいろいろ比較したけど、総合力で頭ひとつ抜けてました。`},
+      {label:"チェックリスト型",why:"✅は視認性が高くリポスト・保存されやすい",
+       text:`${name}を選んだ理由3つ。\n\n✅ ${point}\n✅ 口コミの評価が高い\n✅ 保証・サポートがしっかりしてる\n\n比較で迷ったらチェックリストにすると早いですよ。`},
+      {label:"ストーリー型",why:"「疑い→納得」の流れは最後まで読まれる",
+       text:`正直、最初は疑ってました。\n\nでも「${p}」が限界で${name}を試したら、想像以上でした。\n\n${point}。これだけで十分元が取れます。`}
+    ];
+  },
+  gen(){
+    const v=id=>$(id).value.trim();
+    const name=v("ez-name"),link=v("ez-link"),point=v("ez-point");
+    if(!name||!link||!point)return alert("①商品名・②リンク・③推しポイントの3つを入力してください");
+    try{new URL(link)}catch(e){return alert("②のリンクは https:// から始まるURLを入れてください");}
+    const place=$("ez-place").value;
+    const posts=Easy.templates(name,point,v("ez-pain")).map(t=>{
+      const body=place==="body"?`${t.text}\n\n${link}\n#PR`:`${t.text}\n\n(リンクはリプ欄に👇)\n#PR`;
+      return {...t,body};
+    });
+    Easy.last=posts.map(p=>p.body);
+    Easy.reply=`▼${name}の詳細・最安値はこちら\n${link}\n#PR`;
+    const cards=posts.map((p,i)=>`
+      <div class="xwrap">
+        <div class="xlabel"><b>パターン${i+1}：${p.label}</b><span>${p.why}</span></div>
+        <div class="xcard">
+          <div class="xhead"><div class="xavatar"></div><div><div class="xname">あなた</div><div class="xid">@you · たった今</div></div></div>
+          <div class="xtext">${esc(p.body)}</div>
+        </div>
+        <div class="xmeta">
+          <span class="xcount ${p.body.length>140?"over":""}">${p.body.length}字${p.body.length>140?"(140字を超えています。少し削ってください)":" / 140字"}</span>
+          <span>
+            <button class="btn ghost small" onclick="Easy.copy(${i})">コピー</button>
+            <a class="btn small" target="_blank" rel="noopener" href="https://x.com/intent/post?text=${encodeURIComponent(p.body)}">Xで投稿する</a>
+          </span>
+        </div>
+      </div>`).join("");
+    const replyBox=place==="reply"?`
+      <div class="xwrap" style="border-top:1px solid var(--line);padding-top:18px">
+        <div class="xlabel"><b>リプ欄用のリンク文</b><span>投稿したらすぐ、自分のポストに返信で貼る</span></div>
+        <div class="xcard"><div class="xtext">${esc(Easy.reply)}</div></div>
+        <div class="xmeta"><span></span><span><button class="btn ghost small" onclick="Easy.copyReply()">コピー</button></span></div>
+      </div>`:"";
+    $("ez-out").innerHTML=cards+replyBox+`<p class="note">※「#PR」はステマ規制(景品表示法)対応の広告表記です。外さずに投稿することをおすすめします。<br>※文章は叩き台です。自分の言葉に1〜2割書き換えると、より伸びやすく凍結リスクも下がります。</p>`;
+    store.set("easy",Object.fromEntries(Easy.ids.map(id=>[id,$(id).value])));
+  },
+  copy(i){AF.copyText(Easy.last[i])},
+  copyReply(){AF.copyText(Easy.reply)},
+  init(){
+    const saved=store.get("easy",null);
+    if(saved)Easy.ids.forEach(id=>{if(saved[id]!==undefined)$(id).value=saved[id]});
+  }
+};
+AF.copyText=function(t){
+  (navigator.clipboard?navigator.clipboard.writeText(t):Promise.reject()).catch(()=>{
+    const ta=document.createElement("textarea");ta.value=t;document.body.appendChild(ta);ta.select();document.execCommand("copy");ta.remove();
+  }).finally(()=>AF.toast());
+};
+
 /* init */
-Box.init();Cmp.init();Rank.init();Links.init();Rev.init();
+Easy.init();Box.init();Cmp.init();Rank.init();Links.init();Rev.init();
 </script>
 </body>
 </html>
