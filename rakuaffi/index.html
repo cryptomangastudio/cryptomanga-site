@@ -17,6 +17,7 @@
   --ink:#05070f; --ink-2:#080c18; --panel:#0c1222;
   --paper:#eef2fb; --paper-2:#9aa6c6; --muted:#5d6786;
   --blue:#3f7bff; --blue-soft:#83a4ff; --green:#2ecc8f; --red:#ff6b6b; --amber:#ffb648;
+  --raku:#c4123a; --raku-soft:#f0607f;
   --line:rgba(238,242,251,.10); --line-2:rgba(238,242,251,.06);
   --gothic:"Zen Kaku Gothic New",sans-serif; --mono:"Space Mono",monospace;
 }
@@ -58,6 +59,17 @@ main{max-width:1180px;margin:0 auto;padding:20px clamp(14px,3vw,32px) 60px}
 .modebar button{flex:1;background:var(--ink-2);border:1px solid var(--line);color:var(--paper-2);font-weight:700;font-size:13px;border-radius:10px;padding:12px 8px;line-height:1.4}
 .modebar button.active{border-color:var(--blue);color:var(--paper);background:rgba(63,123,255,.12)}
 .modebar button small{display:block;font-weight:400;font-size:10.5px;color:var(--muted)}
+.platbar{display:flex;gap:8px}
+.platbar button{flex:1;background:var(--ink-2);border:1px solid var(--line);color:var(--paper-2);font-weight:900;font-size:14px;border-radius:12px;padding:14px 10px;line-height:1.35;transition:.15s}
+.platbar button small{display:block;font-weight:400;font-size:10.5px;color:var(--muted);margin-top:3px}
+.platbar #plat-x.active{border-color:var(--blue);color:var(--paper);background:rgba(63,123,255,.14)}
+.platbar #plat-rakuten.active{border-color:var(--raku);color:var(--paper);background:rgba(196,18,58,.14)}
+.platbar #plat-rakuten.active small{color:var(--raku-soft)}
+body.raku .stepnum{background:var(--raku)}
+body.raku .btn.big{background:var(--raku);border-color:var(--raku)}
+body.raku .modebar button.active{border-color:var(--raku);color:var(--paper);background:rgba(196,18,58,.12)}
+body.raku .xlabel b{color:var(--raku-soft)}
+body.raku .xavatar{background:linear-gradient(135deg,#c4123a,#e8607f)}
 .aistatus{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:20px;border:1px solid var(--line);border-radius:10px;padding:10px 14px;font-size:12.5px;color:var(--paper-2)}
 .aistatus .dot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:8px;vertical-align:1px}
 .dot.on{background:var(--green)} .dot.off{background:var(--muted)}
@@ -109,17 +121,21 @@ footer a{color:var(--paper-2)}
 
 <section class="hero">
   <h1>3つ入れるだけで、<br class="sp"><span class="b">稼げる投稿</span>が完成。</h1>
-  <p>Xで伸びるアフィリエイト投稿を自動作成。スレッド派は「らくスレ」との合わせ技でインプも収益も。</p>
-  <div class="badges"><span>登録不要</span><span>無料</span><span>#PR表記 自動対応</span><span>らくスレ連携</span></div>
+  <p>X と <b class="b">Threads×楽天アフィリエイト</b>、両対応。伸びる投稿文をAIが自動作成します。</p>
+  <div class="badges"><span>登録不要</span><span>無料</span><span>X / Threads×楽天 対応</span><span>#PR表記 自動対応</span></div>
 </section>
 
 <main>
 <div class="grid">
 
   <div class="card">
-    <label style="margin-top:0"><span class="stepnum">1</span>商品・サービス名</label>
+    <div class="platbar">
+      <button id="plat-x" class="active" onclick="App.setPlatform('x')">𝕏 X（旧Twitter）<small>140字・単発/スレッド</small></button>
+      <button id="plat-rakuten" onclick="App.setPlatform('rakuten')">Threads × 楽天<small>500字・三段構成テンプレ</small></button>
+    </div>
+    <label style="margin-top:20px"><span class="stepnum">1</span><span id="lbl-name">商品・サービス名</span></label>
     <input id="in-name" placeholder="例：ワイヤレスイヤホン XYZ-100">
-    <label><span class="stepnum">2</span>アフィリエイトリンク</label>
+    <label><span class="stepnum">2</span><span id="lbl-link">アフィリエイトリンク</span></label>
     <input id="in-link" placeholder="https://...(ASPで発行したリンク)">
     <label><span class="stepnum">3</span>一番の推しポイント <span class="opt">(1つだけ)</span></label>
     <input id="in-point" placeholder="例：1万円以下なのにノイキャン付き">
@@ -138,7 +154,7 @@ footer a{color:var(--paper-2)}
       <button class="btn ghost small" onclick="Settings.open()">AI生成にする</button>
     </div>
 
-    <div class="tips">
+    <div class="tips" id="tipbox">
       <b>インプを伸ばす3つのコツ</b><br>
       ① リンクは<b>リプ欄</b>に(本文の外部リンクは表示が伸びにくい)<br>
       ② 投稿は<b>朝7〜8時・夜21〜23時</b>がねらい目<br>
@@ -240,6 +256,31 @@ function templatesThread(name,point,pain){
   ];
 }
 
+/* ============ templates: Threads × 楽天アフィリエイト (三段構成) ============ */
+/* 型: ①書き出し1行目(数字/損得で止める) → ②体験・ストーリー → ③自然なリンク誘導。
+   Threadsは500字まで。楽天は30日クッキーで別商品購入も成果になる点を活かす。 */
+function templatesRakutenSingle(name,point,pain){
+  const p=pain||"どれを買えばいいか分からない";
+  return [
+    {label:"損得フック型",text:`これ、知らないと損してるかも。\n\n${name}、正直ノーマークだったのに買って正解でした。\n\n${point}。\n毎日のことだからこそ、地味に効いてます。\n\n「${p}」って人こそ一度見てみて。\n楽天のセール中だとポイントも乗ってお得です👇\n#PR`},
+    {label:"体験レビュー型",text:`${name}を使い始めて3週間。\nもっと早く買えばよかった、が本音です。\n\n・${point}\n・使い方がとにかくシンプル\n・「${p}」がほぼ気にならなくなった\n\n派手さはないけど、暮らしの満足度が上がるタイプ。\nリンク置いておきます👇\n#PR`},
+    {label:"あるある共感型",text:`「${p}」\nこれ、地味にストレスじゃないですか?\n\n私もずっと我慢してたけど、${name}にしたら一発で解決しました。\n\n${point}のが本当に効く。\n同じ人の参考になれば👇\n#PR`},
+    {label:"ぶっちゃけ型",text:`ぶっちゃけ、${name}は買ってよかったものTOP3に入ります。\n\n理由は${point}から。\nあれこれ比較して疲れるより、これでいいと思う。\n\n楽天だとレビューも多くて選びやすいですよ👇\n#PR`},
+    {label:"リスト型",text:`${name}を選んだ理由、3つ。\n\n① ${point}\n② レビュー評価が高くて安心\n③ 「${p}」が解決した\n\n買い物マラソンのタイミングならさらにお得。\n気になる人はチェックしてみて👇\n#PR`}
+  ];
+}
+function templatesRakutenThread(name,point,pain){
+  const p=pain||"どれを買えばいいか分からない";
+  return [
+    {label:"1/6 フック",text:`「${p}」を解決した楽天の神アイテム、正直に紹介します。\n\n同じ悩みの人はこのスレ保存推奨🧵\n#PR`},
+    {label:"2/6 共感",text:`まず前提として、「${p}」って地味にずっとストレスなんですよね。\n\n私も何個か買って失敗して、お金も気力もムダにしました。`},
+    {label:"3/6 解決策",text:`色々試した結論が ${name} でした。\n\n決め手はシンプルで、${point}こと。\nここが他と決定的に違いました。`},
+    {label:"4/6 変わったこと",text:`使い始めてから変わったこと:\n\n・「${p}」がほぼ気にならなくなった\n・毎日のプチストレスが1つ消えた\n・人にすすめたくなった`},
+    {label:"5/6 正直な注意点",text:`正直に言うと、万能ではないです。\n合う合わないはあるので、楽天のレビューは一度自分の目で確かめるのがおすすめ。\n\nそのうえで私は買ってよかったです。`},
+    {label:"6/6 まとめ・CTA",text:`まとめ:\n「${p}」なら ${name} は本当に検討する価値あり。\n\nセール中はポイントも乗るので、そのタイミングが狙い目です。\n詳細はこちら👇`}
+  ];
+}
+
 /* ============ AI generation (Claude API, direct from browser) ============ */
 const AI={
   schema:{
@@ -251,18 +292,36 @@ const AI={
     }}},
     required:["posts"],additionalProperties:false
   },
-  system:`あなたは日本のトップアフィリエイターです。X(旧Twitter)で高いインプレッションと成約率を出す投稿文を作ります。
+  system(platform){
+    const raku=platform==="rakuten";
+    return `あなたは日本のトップアフィリエイターです。${raku?"Threads(スレッズ)で楽天アフィリエイトの高い成約を出す投稿文":"X(旧Twitter)で高いインプレッションと成約率を出す投稿文"}を作ります。
 
 ルール:
-- 日本語で書く。各ポストは全角140字以内(記号・ハッシュタグ含む)
+- 日本語で書く。各ポストは全角${raku?"500":"140"}字以内(記号・ハッシュタグ含む)
 - 提供された情報だけを使う。効果・実績・数値の捏造や誇張は絶対にしない
 - URLは本文に入れない(アプリ側で付与するため)
 - 絵文字は控えめに(1ポスト0〜2個)
-- 「〜すぎる」「ヤバい」等の乱用はせず、自然で信頼される文体にする`,
-  async gen(mode,name,point,pain){
+- 「〜すぎる」「ヤバい」等の乱用はせず、自然で信頼される文体にする${raku?`
+- 書き出しの1行目で必ず引き込む(具体的な数字・損得・あるあるの悩みで止める。1行目が弱いと読まれない)
+- 売り込み臭を抑え、口コミ・体験談のトーンにする(Threadsは生活感のある自然な投稿が好まれる)
+- 「三段構成」で書く: ①引き込む書き出し → ②自分ごとの体験・ストーリー → ③自然なリンク誘導。最後は楽天のセール/ポイント/レビューに軽く触れて👇で誘導`:""}`;
+  },
+  async gen(platform,mode,name,point,pain){
     const single=mode==="single";
+    const raku=platform==="rakuten";
     const prompt=single
-      ?`次の商品のX投稿文を5パターン作成してください。パターンは必ずこの5構文で1つずつ: 共感フック型 / 実体験レビュー型 / 断言型 / チェックリスト型(✅の箇条書き) / ストーリー型。
+      ?(raku
+        ?`次の商品を紹介するThreads(スレッズ)×楽天アフィリエイトの投稿文を5パターン作成してください。パターンは必ずこの5構文で1つずつ: 損得フック型 / 体験レビュー型 / あるある共感型 / ぶっちゃけ型 / リスト型。
+
+各ポストの条件:
+- 三段構成(引き込む1行目→体験→自然な誘導)で、500字以内
+- 末尾は楽天のセール/ポイント/レビューに軽く触れてから「👇」で誘導し、改行して「#PR」を入れる
+- labelには構文名を入れる
+
+商品名: ${name}
+一番の推しポイント: ${point}
+ターゲットの悩み: ${pain||"(指定なし。日常のちょっとした悩みを想定)"}`
+        :`次の商品のX投稿文を5パターン作成してください。パターンは必ずこの5構文で1つずつ: 共感フック型 / 実体験レビュー型 / 断言型 / チェックリスト型(✅の箇条書き) / ストーリー型。
 
 各ポストの条件:
 - 末尾に「(リンクはリプ欄に👇)」と改行して「#PR」を入れる
@@ -270,14 +329,22 @@ const AI={
 
 商品名: ${name}
 一番の推しポイント: ${point}
-ターゲットの悩み: ${pain||"(指定なし。一般的な悩みを想定)"}`
-      :`次の商品を紹介するXのスレッド(連続投稿)を6ポストで作成してください。構成: ①フック(保存を促す・#PRを含める) ②悩みへの共感 ③解決策として商品を提示 ④使って変わったこと(箇条書き) ⑤正直な注意点(信頼性のため) ⑥まとめとCTA(「詳細はこちらから👇」で締める。URLは入れない)。
+ターゲットの悩み: ${pain||"(指定なし。一般的な悩みを想定)"}`)
+      :(raku
+        ?`次の商品を紹介するThreads(スレッズ)×楽天アフィリエイトの連続投稿を6ポストで作成してください。構成: ①フック(数字/損得/あるあるで引き込む・保存を促す・#PRを含める) ②悩みへの共感 ③解決策として商品を提示 ④使って変わったこと(箇条書き) ⑤正直な注意点(楽天レビューを自分で確認、で信頼性を担保) ⑥まとめとCTA(楽天のセール/ポイントに触れ「詳細はこちら👇」で締める。URLは入れない)。各ポスト500字以内。
 
 labelには「1/6 フック」のように番号と役割を入れる。
 
 商品名: ${name}
 一番の推しポイント: ${point}
-ターゲットの悩み: ${pain||"(指定なし。一般的な悩みを想定)"}`;
+ターゲットの悩み: ${pain||"(指定なし。日常のちょっとした悩みを想定)"}`
+        :`次の商品を紹介するXのスレッド(連続投稿)を6ポストで作成してください。構成: ①フック(保存を促す・#PRを含める) ②悩みへの共感 ③解決策として商品を提示 ④使って変わったこと(箇条書き) ⑤正直な注意点(信頼性のため) ⑥まとめとCTA(「詳細はこちらから👇」で締める。URLは入れない)。
+
+labelには「1/6 フック」のように番号と役割を入れる。
+
+商品名: ${name}
+一番の推しポイント: ${point}
+ターゲットの悩み: ${pain||"(指定なし。一般的な悩みを想定)"}`);
     const res=await fetch("https://api.anthropic.com/v1/messages",{
       method:"POST",
       headers:{
@@ -289,7 +356,7 @@ labelには「1/6 フック」のように番号と役割を入れる。
       body:JSON.stringify({
         model:Settings.data.model,
         max_tokens:4000,
-        system:AI.system,
+        system:AI.system(platform),
         messages:[{role:"user",content:prompt}],
         output_config:{format:{type:"json_schema",schema:AI.schema}}
       })
@@ -312,9 +379,37 @@ labelには「1/6 フック」のように番号と役割を入れる。
 };
 
 /* ============ app ============ */
+const PLAT={
+  x:{limit:140, linkInReply:true,
+     intent:t=>`https://x.com/intent/post?text=${encodeURIComponent(t)}`,
+     postLabel:"Xで投稿する",
+     nameHint:"例：ワイヤレスイヤホン XYZ-100", nameLbl:"商品・サービス名",
+     linkHint:"https://...(ASPで発行したリンク)", linkLbl:"アフィリエイトリンク",
+     tips:`<b>インプを伸ばす3つのコツ</b><br>① リンクは<b>リプ欄</b>に(本文の外部リンクは表示が伸びにくい)<br>② 投稿は<b>朝7〜8時・夜21〜23時</b>がねらい目<br>③ 単発とスレッドを<b>混ぜて週3〜5回</b>投稿する`},
+  rakuten:{limit:500, linkInReply:false,
+     intent:t=>`https://www.threads.net/intent/post?text=${encodeURIComponent(t)}`,
+     postLabel:"Threadsで投稿する",
+     nameHint:"例：楽天で買ったステンレスタンブラー", nameLbl:"紹介する商品名（楽天）",
+     linkHint:"楽天の短縮リンク https://a.r10.to/...", linkLbl:"楽天アフィリエイトの短縮リンク",
+     tips:`<b>Threads×楽天で伸ばす4つの型</b><br>① <b>書き出し1行目が9割</b>(数字/損得/あるあるで止める)<br>② 有益投稿：リンク投稿＝<b>3〜5：1</b>(毎回リンクは宣伝判定でNG)<br>③ 楽天の<b>短縮URL＋30日クッキー</b>(別商品購入も成果に)<br>④ <b>お買い物マラソン/SALE</b>のタイミングに乗せる`}
+};
 const App={
+  platform:"x",
   mode:"single",
   last:[],reply:"",link:"",
+  cfg(){return PLAT[App.platform]},
+  setPlatform(pf){
+    App.platform=pf;
+    $("plat-x").classList.toggle("active",pf==="x");
+    $("plat-rakuten").classList.toggle("active",pf==="rakuten");
+    document.body.classList.toggle("raku",pf==="rakuten");
+    const c=App.cfg();
+    $("lbl-name").textContent=c.nameLbl; $("in-name").placeholder=c.nameHint;
+    $("lbl-link").textContent=c.linkLbl; $("in-link").placeholder=c.linkHint;
+    $("mode-thread").querySelector("small").textContent=pf==="rakuten"?"連続投稿・6本":"らくスレ用・6連投稿";
+    $("tipbox").innerHTML=c.tips;
+    store.set("platform",pf);
+  },
   setMode(m){App.mode=m;
     $("mode-single").classList.toggle("active",m==="single");
     $("mode-thread").classList.toggle("active",m==="thread");
@@ -325,6 +420,7 @@ const App={
     try{new URL(link)}catch(e){return alert("②のリンクは https:// から始まるURLを入れてください")}
     store.set("inputs",{name,link,point,pain});
     App.link=link;
+    const pf=App.platform;
     const useAI=!!Settings.data.key;
     const btn=$("genbtn");
     let posts;
@@ -332,7 +428,7 @@ const App={
       btn.disabled=true;btn.textContent="AIが作成中…";
       $("out").innerHTML='<div class="loading"><div class="spinner"></div>AIが投稿文を書いています…(10〜30秒)</div>';
       try{
-        posts=await AI.gen(App.mode,name,point,pain);
+        posts=await AI.gen(pf,App.mode,name,point,pain);
       }catch(e){
         $("out").innerHTML=`<div class="errbox">⚠ ${esc(e.message)}<br><br>下の「テンプレで作る」なら今すぐ無料で生成できます。</div><div style="margin-top:14px"><button class="btn ghost" onclick="App.genTemplate()">テンプレで作る</button></div>`;
         btn.disabled=false;btn.textContent="投稿文を作る →";
@@ -340,24 +436,33 @@ const App={
       }
       btn.disabled=false;btn.textContent="投稿文を作る →";
     }else{
-      posts=(App.mode==="single"?templatesSingle:templatesThread)(name,point,pain);
+      posts=App.tpl(pf,App.mode,name,point,pain);
     }
     App.render(posts,useAI);
   },
+  tpl(pf,mode,name,point,pain){
+    if(pf==="rakuten")return (mode==="single"?templatesRakutenSingle:templatesRakutenThread)(name,point,pain);
+    return (mode==="single"?templatesSingle:templatesThread)(name,point,pain);
+  },
   genTemplate(){
     const s=store.get("inputs",{});
-    App.render((App.mode==="single"?templatesSingle:templatesThread)(s.name,s.point,s.pain),false);
+    App.render(App.tpl(App.platform,App.mode,s.name,s.point,s.pain),false);
   },
   render(posts,ai){
     const name=store.get("inputs",{}).name||"";
+    const c=App.cfg(), limit=c.limit;
     const isThread=App.mode==="thread";
-    if(isThread){
+    // Threads allows in-post links; on X we keep links out of the body (reply-only).
+    const inlineLink=!c.linkInReply;
+    if(isThread || inlineLink){
       const last=posts.length-1;
       posts=posts.map((p,i)=>i===last?{...p,text:p.text+"\n"+App.link}:p);
     }
     App.last=posts.map(p=>p.text);
     App.reply=`▼${name}の詳細・最安値はこちら\n${App.link}\n#PR`;
-    const cards=posts.map((p,i)=>`
+    const cards=posts.map((p,i)=>{
+      const over=p.text.length>limit;
+      return `
       <div class="xwrap">
         <div class="xlabel"><b>${esc(p.label)}</b><span>${p.text.length}字</span></div>
         <div class="xcard">
@@ -365,24 +470,27 @@ const App={
           <div class="xtext">${esc(p.text)}</div>
         </div>
         <div class="xmeta">
-          <span class="xcount ${p.text.length>140?"over":""}">${p.text.length>140?"⚠140字を超えています。少し削って投稿してください":"140字以内 ✓"}</span>
+          <span class="xcount ${over?"over":""}">${over?`⚠${limit}字を超えています。少し削って投稿してください`:`${limit}字以内 ✓`}</span>
           <span>
             <button class="btn ghost small" onclick="App.copy(${i})">コピー</button>
-            ${isThread?"":`<a class="btn small" target="_blank" rel="noopener" href="https://x.com/intent/post?text=${encodeURIComponent(p.text)}">Xで投稿する</a>`}
+            ${isThread?"":`<a class="btn small" target="_blank" rel="noopener" href="${c.intent(p.text)}">${c.postLabel}</a>`}
           </span>
         </div>
-      </div>`).join("");
-    const replyBox=isThread?"":`
+      </div>`;}).join("");
+    const replyBox=(isThread||inlineLink)?"":`
       <div class="xwrap" style="border-top:1px solid var(--line);padding-top:20px">
         <div class="xlabel"><b>リプ欄用のリンク文</b><span>投稿したらすぐ自分のポストに返信で貼る</span></div>
         <div class="xcard"><div class="xtext">${esc(App.reply)}</div></div>
         <div class="xmeta"><span></span><span><button class="btn ghost small" onclick="App.copyReply()">コピー</button></span></div>
       </div>`;
-    const threadBar=isThread?`<button class="btn big copyall" onclick="App.copyAll()">🧵 スレッド全文をまとめてコピー(らくスレに貼る用)</button>`:"";
+    const threadBar=isThread?`<button class="btn big copyall" onclick="App.copyAll()">🧵 スレッド全文をまとめてコピー</button>`:"";
+    const rakuNote=App.platform==="rakuten"
+      ?`<br>※楽天アフィリンクは<b>本文にそのまま貼れます</b>(30日クッキーで別商品購入も成果対象)。ただし毎投稿に貼らず、有益投稿と<b>3〜5：1</b>の比率を守るのがコツです。`
+      :`<br>※Xは本文の外部リンクが伸びにくいため、リンクは<b>リプ欄</b>に貼る構成です。`;
     $("out").innerHTML=`
-      <p style="font-size:12px;color:var(--muted);margin-bottom:14px">${ai?"🤖 AI生成(あなたの商品向けに書き下ろし)":"📋 テンプレ生成(⚙ AI設定でAI生成に切替可)"} ｜ ${isThread?"上から順に連続投稿してください。らくスレなら一括投稿できます。":"気に入ったパターンを選んで投稿してください。"}</p>
+      <p style="font-size:12px;color:var(--muted);margin-bottom:14px">${ai?"🤖 AI生成(あなたの商品向けに書き下ろし)":"📋 テンプレ生成(⚙ AI設定でAI生成に切替可)"} ｜ ${App.platform==="rakuten"?"Threads×楽天":"X"} ｜ ${isThread?"上から順に連続投稿してください。":"気に入ったパターンを選んで投稿してください。"}</p>
       ${cards}${replyBox}${threadBar}
-      <p class="note">※「#PR」はステマ規制(景品表示法)対応の広告表記です。外さずに投稿することをおすすめします。<br>※文章は叩き台です。自分の言葉に1〜2割書き換えると、より伸びやすくなります。</p>`;
+      <p class="note">※「#PR」はステマ規制(景品表示法)対応の広告表記です。外さずに投稿することをおすすめします。${rakuNote}<br>※文章は叩き台です。自分の言葉に1〜2割書き換えると、より伸びやすくなります。</p>`;
   },
   copy(i){copyText(App.last[i])},
   copyReply(){copyText(App.reply)},
@@ -391,6 +499,7 @@ const App={
 
 /* init */
 (function(){
+  App.setPlatform(store.get("platform","x"));
   const s=store.get("inputs",null);
   if(s){["name","link","point","pain"].forEach(k=>{if(s[k])$("in-"+k).value=s[k]})}
   Settings.refreshBadge();
