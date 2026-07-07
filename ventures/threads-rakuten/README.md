@@ -12,30 +12,29 @@
 
 Threadsで楽天アフィリエイトに取り組む「稼ぎ手」132名を分析し、そこから**当社が取るべき事業**を設計する内部プロジェクト。目的は「分析結果を商品化」＝この市場で当社が収益を上げること。
 
-## 現在の意思決定（2026-07-07・**v3.1が現行**）
+## 現在の計画（2026-07-07・**v4が現行**）
 
-> **⚡ v3.1 現実整合**：本事業は**すでに走っている**。創業者は Threads **@tsukuru.laboratory**（つくる｜"めんどくさい"を消す人・フォロワー529・直近閲覧6.9万）で、楽天アフィリ×Threadsツール **らくスレ**（**https://rakusure.com/** に実在・稼働中の実プロダクト。リポの旧 `rakuaffi` はそこへ誘導してクローズ）を無料公開し、**LINE**でリスト化するファネルを運用中。
-> → **コア＝らくスレ（プロダクト）＋ @tsukuru.laboratory（チャネル）＋ LINEリスト（BAN耐性の本命資産）**。SEOメディア(C)は「後から足す耐久資産」に降格。実行は `04-execution/threads-growth-playbook.md`・`line-funnel-monetization.md`・`90-day-leanplan.md`。
+実態を出発点に、事業計画をきれいに立て直した（過去のv2=B2B案／v3=SEOメディア案は `_archive/` に退避）。
 
-**時間キャップつき「実験的GO」（企業ゼロ・プロダクト主導）。** 「法人向けは営業したくない／自然に来るのが望ましい」を受け、v2（B2B真贋監査を本命仮説）を撤回。企業商談・法人営業・監査受託は**全期間ゼロ固定**、企業案件は「営業しない・¥0前提で来たら受ける受け身B2B」（付録B）に格下げ。**お金をかけない（リーン・最初の90日は実質¥0）を標準**とする。
+> **⚡ すでに動いているもの**：**らくスレ**（https://rakusure.com/・稼働中の実プロダクト）＋ **@tsukuru.laboratory**（Threads・529フォロワー/直近閲覧6.9万・「めんどくさいを消す人」）＋ **LINE公式**（配布＆リスト化のファネル運用中）。
 
-- **序列**: `C → A → B3ガイド → B1無料ツール →（規約適合・母数確認後）→ B2買い切りPro`。ツール系は**中止しうる実験**（BAN連鎖・無料代替）。
-- **財務（ネット・機会費用込み・3シナリオ）**: 保守 現金約−37万／基本 約−25万／楽観 約−9万。**全ケース12ヶ月は現金赤字**。最大コストは投入時間（機会費用 年約240万）＝「小さく張るオプション」。
-- **★標準方針＝お金をかけない（リーン）**: コストを年約¥57,000（さらに最初の90日は実質¥0）へ圧縮すると**全シナリオ現金黒字**（保守+6.3万／基本+18.3万／楽観+34.3万・最大ドローダウン−1.7万）。**余暇でやるなら機会費用≒¥0でGO／本業時間を削るならNO**。→ 具体手順は `04-execution/90-day-leanplan.md`（ゼロ円スタック＋最初のロングテール記事候補）。
-- **重要判断**: 判定は正直に格下げ（機会費用を入れると事業単体は赤字）。ツールは楽天口座を巻き込むBAN連鎖リスクで規約適合確認が前提。**らくアフィ→らくスレに一本化済み**（英名改称は当面見送り）。
-- 詳細 → `00-overview/executive-summary.md`（1ページ）、`03-business-plan/business-plan.md`（v3全文）。過去版は `_archive/v2/`。
+**結論（v4）**：**すでに動いているものを、余暇で・お金をかけず・無理なく育てる。** 大きく稼ぐ計画ではなく、壊れない小さな資産（ツール・アカウント・LINE）を積む計画。
+
+- **やること3つ**：①らくスレを使ってもらう ②@tsukuru.laboratory を育てる（追うのは**LINE登録**、フォロワー数ではない）③LINEを整える（押し売りしない）。
+- **収益は正直に小さい**：らくスレ無料（集客）→ 自分の楽天アフィ報酬（月0〜数万）→ **LINEリスト（本命資産・BAN耐性）** →（需要が見えたら）少額の有料を10本テスト →（受け身）B2Bは来たら受ける。
+- **数字**：現金コスト≒¥0（年 数千〜数万）。最大コストは**時間** → **余暇でやるならGO／本業（漫画・IP）を削るならNO**。
+- 詳細 → `00-overview/executive-summary.md`（1ページ）、`03-business-plan/business-plan.md`（v4本文）。
 
 ## フォルダ構成
 
 | フォルダ | 主なファイル | 内容 |
 |---|---|---|
-| `00-overview/` | `executive-summary.md` | 意思決定者向け1ページ要約（v3） |
+| `00-overview/` | `executive-summary.md` | 意思決定者向け1ページ要約（**v4**） |
 | `01-market-analysis/` | `report.md` `affiliators_100.csv/.json` `dashboard.html` `verified-accounts.md` | 132名の市場分析・ダッシュボード・一次検証 |
-| `02-strategy/` | `direction-debate.md` | 方向性の内部討議・意思決定・批判レビューの全記録（v3） |
-| `03-business-plan/` | `business-plan.md` `financial-model.csv` `financial-model-lean.csv` | **事業計画v3**（企業ゼロ・B＋A＋C・月次3シナリオ・リーン版） |
-| `04-execution/` | `threads-growth-playbook.md` `line-funnel-monetization.md` `90-day-leanplan.md` `entry-plan.md` | **@tsukuru.laboratory 育て方 ＋ LINEファネル→収益化 ＋ ゼロ円90日** ＋ 自社運用(A)プラン |
-| `05-products/` | `product-catalog.md` | 商品カタログv3（C/A/B3/B1/B2＋受け身B2B） |
-| `_archive/v2/` | — | 過去版v2（B2B監査を本命仮説にした版・参考） |
+| `03-business-plan/` | `business-plan.md` `financial-model-lean.csv` | **事業計画 v4**（らくスレ×つくる・実態ベース）＋ リーン財務 |
+| `04-execution/` | `threads-growth-playbook.md` `line-funnel-monetization.md` `90-day-leanplan.md` `entry-plan.md` | **@tsukuru.laboratory 育て方 ＋ LINEファネル→収益化** ＋ ゼロ円90日(SEO任意) ＋ 自社運用プラン |
+| `05-products/` | `product-catalog.md` | 商品カタログ（らくスレ/ガイド/自社運用＋受け身B2B） |
+| `_archive/` | `v2/` `v3/` | 過去版（v2=B2B監査案／v3=SEOメディア案）・内部討議13エージェント記録。参考 |
 
 関連プロダクト（リポジトリ直下・稼働中の実物）:
 - **らくスレ → https://rakusure.com/**（**別ホスティングの実プロダクト・稼働中**／このリポには含まれない）。**本事業の集客ツール＝コア**。
