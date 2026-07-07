@@ -1,0 +1,4 @@
+# CryptoManga Studios — public site
+# 内部資料(ventures/)は検索エンジンにインデックスさせない。
+User-agent: *
+Disallow: /ventures/

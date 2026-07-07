@@ -1,0 +1,6 @@
+# GitHub Pages (Jekyll) build settings.
+# 内部の事業計画フォルダを「公開サイトのビルド対象から除外」する。
+# ※これは公開ブランチ(通常 main)に載った場合の保険。根本的には
+#   リポジトリ/Pages を非公開にするのが確実（README参照）。
+exclude:
+  - ventures/
