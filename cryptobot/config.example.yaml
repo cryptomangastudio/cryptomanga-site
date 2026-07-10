@@ -1,0 +1,28 @@
+# CryptoBot 設定サンプル。コピーして config.yaml を作成すること(config.yamlはgit管理外)。
+
+exchange: bitflyer        # ccxtの取引所ID(bitflyer / coincheck など。金融庁登録業者のみ)
+symbol: BTC/JPY
+mode: paper               # paper | live。live は環境変数 CRYPTOBOT_LIVE=YES も必要(二重ロック)
+strategy: dca             # dca | ma_cross
+interval_seconds: 3600    # 判断間隔(秒)
+
+budget_jpy: 100000        # 総予算。これを超える買いは絶対に通らない
+fee_rate: 0.0015          # 手数料率(ペーパートレード/バックテストで使用)
+
+risk:
+  max_order_jpy: 10000        # 1回の注文上限
+  max_position_jpy: 50000     # 保有ポジション上限(取得原価ベース)
+  max_daily_loss_jpy: 3000    # 1日の実現損失上限。超えたらその日は停止
+  max_drawdown_pct: 15        # 最大ドローダウン(%)。超えたらbot全停止
+  cooldown_minutes: 60        # 発注後のクールダウン
+
+dca:
+  buy_amount_jpy: 3000        # 1回あたりの積立額
+
+ma_cross:
+  timeframe: 1h
+  fast: 9
+  slow: 26
+
+journal_path: data/trades.csv
+paper_state_path: data/paper_state.json
