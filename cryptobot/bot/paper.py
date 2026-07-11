@@ -4,6 +4,8 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
+from .journal import EPS
+
 
 class PaperBroker:
     def __init__(self, jpy_balance: float, fee_rate: float, state_path: str | Path | None = None):
@@ -26,7 +28,7 @@ class PaperBroker:
 
     def market_sell(self, price: float, amount: float) -> tuple[float, float]:
         """成行売りをシミュレート。(受取JPY, 手数料JPY) を返す。"""
-        if amount > self.base_amount + 1e-12:
+        if amount > self.base_amount + EPS:
             raise ValueError(f"保有不足: 保有{self.base_amount} < 売却{amount}")
         gross = amount * price
         fee = gross * self.fee_rate

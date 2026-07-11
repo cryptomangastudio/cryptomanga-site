@@ -13,6 +13,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from bot.config import BotConfig, ConfigError, RiskConfig, validate
+from bot.exchange import normalize_order_fill
 from bot.journal import Fill, TradeJournal
 from bot.notify import Notifier
 from bot.paper import PaperBroker
@@ -69,6 +70,38 @@ class TestJournal(unittest.TestCase):
         with self.assertRaises(ValueError):
             TradeJournal(self.path)
 
+    def test_restart_survives_fractional_full_sell(self):
+        # 回帰テスト: 端数のある買い→全量売却のCSVを再読込しても
+        # 丸め誤差で「保有量を超える売却」にならないこと(完全精度で書くため)
+        for offset, p in enumerate([9_876_543, 9_876_666]):
+            self.journal.record(_fill("buy", (3000 - 4.5) / p, p, 4.5))
+        self.journal.record(_fill("sell", self.journal.position_amount, 9_877_000, 9.0))
+        reloaded = TradeJournal(self.path)  # ここでValueErrorになってはいけない
+        self.assertEqual(reloaded.position_amount, 0.0)
+        self.assertAlmostEqual(reloaded.total_realized_pnl, self.journal.total_realized_pnl)
+
+
+class TestNormalizeFill(unittest.TestCase):
+    def test_partial_fill_books_filled_amount(self):
+        order = {"filled": 0.003, "average": 10_100_000, "fee": {"cost": 30.3, "currency": "JPY"}}
+        amount, price, fee = normalize_order_fill(order, "BTC", 0.005, 10_000_000)
+        self.assertAlmostEqual(amount, 0.003)  # 要求0.005ではなく約定分
+        self.assertAlmostEqual(price, 10_100_000)
+        self.assertAlmostEqual(fee, 30.3)
+
+    def test_base_currency_fee_reduces_position(self):
+        # bitFlyerのようにBTC建てで手数料を取る取引所: 受渡数量から差し引く
+        order = {"filled": 0.001, "average": 10_000_000, "fee": {"cost": 0.0000015, "currency": "BTC"}}
+        amount, _, fee = normalize_order_fill(order, "BTC", 0.001, 10_000_000)
+        self.assertAlmostEqual(amount, 0.0009985)
+        self.assertAlmostEqual(fee, 15.0)  # 0.0000015 BTC × 価格
+
+    def test_missing_fields_fall_back(self):
+        amount, price, fee = normalize_order_fill({}, "BTC", 0.002, 9_000_000)
+        self.assertAlmostEqual(amount, 0.002)
+        self.assertAlmostEqual(price, 9_000_000)
+        self.assertAlmostEqual(fee, 0.0)
+
 
 class TestRiskManager(unittest.TestCase):
     def setUp(self):
@@ -115,6 +148,14 @@ class TestRiskManager(unittest.TestCase):
         self.assertTrue(self.risk.halted)
         self.assertFalse(self.risk.check_order("buy", 5_000, 0, self.now).approved)
         self.assertFalse(self.risk.check_order("sell", 5_000, 0, self.now).approved)
+
+    def test_on_halt_hook_fires(self):
+        events = []
+        risk = RiskManager(self.cfg, 100_000, on_halt=events.append)
+        risk.update_equity(100_000)
+        risk.update_equity(80_000)
+        self.assertEqual(len(events), 1)
+        self.assertIn("ドローダウン", events[0])
 
     def test_halt_persists_via_file(self):
         with tempfile.TemporaryDirectory() as tmp:

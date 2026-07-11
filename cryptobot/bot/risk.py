@@ -8,6 +8,7 @@
 """
 from __future__ import annotations
 
+from collections.abc import Callable
 from dataclasses import dataclass
 from datetime import datetime, timedelta
 from pathlib import Path
@@ -22,10 +23,17 @@ class RiskDecision:
 
 
 class RiskManager:
-    def __init__(self, cfg: RiskConfig, budget_jpy: int, halt_file: str | Path | None = None):
+    def __init__(
+        self,
+        cfg: RiskConfig,
+        budget_jpy: int,
+        halt_file: str | Path | None = None,
+        on_halt: Callable[[str], None] | None = None,
+    ):
         self.cfg = cfg
         self.budget_jpy = budget_jpy
         self.halt_file = Path(halt_file) if halt_file else None
+        self.on_halt = on_halt  # 停止イベントのフック(通知など)。halt()から必ず呼ばれる
         self.halted = False
         self.halt_reason = ""
         self._last_buy_at: datetime | None = None
@@ -45,6 +53,8 @@ class RiskManager:
         if self.halt_file:
             self.halt_file.parent.mkdir(parents=True, exist_ok=True)
             self.halt_file.write_text(reason + "\n", encoding="utf-8")
+        if self.on_halt:
+            self.on_halt(reason)
 
     def _roll_day(self, now: datetime) -> None:
         day = now.strftime("%Y-%m-%d")

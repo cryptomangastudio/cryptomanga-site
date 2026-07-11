@@ -35,6 +35,24 @@ def fee_to_jpy(fee: dict | None, price: float, base_currency: str) -> float:
     return cost  # JPY建て、または通貨不明ならそのまま扱う
 
 
+def normalize_order_fill(
+    order: dict, base_currency: str, fallback_amount: float, fallback_price: float
+) -> tuple[float, float, float]:
+    """ccxtの注文結果を (実受渡数量, 約定価格, 手数料JPY) に正規化する。
+
+    - 部分約定: filled を使う(要求数量を記帳すると帳簿が実保有と乖離する)
+    - 基軸通貨建て手数料(bitFlyerはBTCで徴収): 受渡数量から差し引く。
+      取得原価は (数量×価格 + 手数料JPY) で支払総額と一致する
+    """
+    filled = float(order.get("filled") or fallback_amount)
+    price = float(order.get("average") or fallback_price)
+    fee = order.get("fee")
+    fee_jpy = fee_to_jpy(fee, price, base_currency)
+    if fee and fee.get("currency") == base_currency and fee.get("cost"):
+        filled -= float(fee["cost"])
+    return filled, price, fee_jpy
+
+
 class SpotOnlyExchange:
     def __init__(self, cfg: BotConfig):
         import ccxt  # liveや価格取得時のみ必要なので遅延import
@@ -108,3 +126,10 @@ class SpotOnlyExchange:
     def market_sell(self, symbol: str, amount: float, params: dict | None = None) -> dict:
         self._assert_spot(symbol, params)
         return self.client.create_order(symbol, "market", "sell", amount)
+
+    def normalize_fill(
+        self, order: dict, symbol: str, fallback_amount: float, fallback_price: float
+    ) -> tuple[float, float, float]:
+        return normalize_order_fill(
+            order, self.base_currency(symbol), fallback_amount, fallback_price
+        )

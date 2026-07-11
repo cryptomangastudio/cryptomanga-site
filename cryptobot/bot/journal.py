@@ -4,7 +4,10 @@
 注意: 利益を出して売却した時点で、日本円に出金していなくても課税対象。
 
 既存のCSVがある場合は起動時に全行をリプレイして建玉・取得単価・累計損益を
-復元する(bot再起動で帳簿が狂わないようにするため)。
+復元する(bot再起動で帳簿が狂わないようにするため)。このため数量・約定価格・
+手数料の3列はreprによる完全精度で書く(丸めるとリプレイ結果が実際の建玉と
+ズレて、全量売却が「保有不足」になったり起動時リプレイが失敗したりする)。
+派生列(約定金額・取得単価・損益)は表示用なので丸めてよい。
 """
 from __future__ import annotations
 
@@ -27,8 +30,10 @@ HEADER = [
     "累計実現損益(JPY)",
     "メモ",
 ]
+# 列番号(report.py等の読み手と共有する)
+COL_TS, COL_SIDE, COL_AMOUNT, COL_PRICE, COL_JPY, COL_FEE, COL_REALIZED = 0, 3, 4, 5, 6, 7, 9
 
-_EPS = 1e-12
+EPS = 1e-12  # 建玉数量の実質ゼロ判定(paper/runnerとも共有)
 
 
 @dataclass
@@ -70,10 +75,10 @@ class TradeJournal:
                     fill.exchange,
                     fill.symbol,
                     "買" if fill.side == "buy" else "売",
-                    f"{fill.amount:.8f}",
-                    f"{fill.price:.2f}",
+                    repr(fill.amount),
+                    repr(fill.price),
                     f"{fill.amount * fill.price:.2f}",
-                    f"{fill.fee_jpy:.2f}",
+                    repr(fill.fee_jpy),
                     f"{self.avg_cost:.2f}",
                     f"{realized:.2f}",
                     f"{self.total_realized_pnl:.2f}",
@@ -91,11 +96,11 @@ class TradeJournal:
             self.avg_cost = new_cost / self.position_amount if self.position_amount else 0.0
             return 0.0
         if side == "sell":
-            if amount > self.position_amount + _EPS:
+            if amount > self.position_amount + EPS:
                 raise ValueError(f"保有量{self.position_amount}を超える売却: {amount}")
             realized = (price - self.avg_cost) * amount - fee_jpy
             self.position_amount -= amount
-            if self.position_amount <= _EPS:
+            if self.position_amount <= EPS:
                 self.position_amount = 0.0
                 self.avg_cost = 0.0
             self.total_realized_pnl += realized
@@ -116,7 +121,9 @@ class TradeJournal:
                 if not row:
                     continue
                 try:
-                    side = {"買": "buy", "売": "sell"}[row[3]]
-                    self._apply(side, float(row[4]), float(row[5]), float(row[7]))
+                    side = {"買": "buy", "売": "sell"}[row[COL_SIDE]]
+                    self._apply(
+                        side, float(row[COL_AMOUNT]), float(row[COL_PRICE]), float(row[COL_FEE])
+                    )
                 except (KeyError, ValueError, IndexError) as e:
                     raise ValueError(f"{self.path}:{line_no}行目が不正です: {e}") from e

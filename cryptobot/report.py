@@ -16,7 +16,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from bot.config import load_config
-from bot.journal import HEADER
+from bot.journal import COL_FEE, COL_JPY, COL_REALIZED, COL_SIDE, COL_TS, HEADER
 
 
 @dataclass
@@ -39,17 +39,17 @@ def aggregate(journal_path: Path) -> dict[str, MonthlySummary]:
         for row in reader:
             if not row:
                 continue
-            month = row[0][:7]  # YYYY-MM
+            month = row[COL_TS][:7]  # YYYY-MM
             m = months[month]
-            jpy = float(row[6])
-            m.fee_jpy += float(row[7])
-            if row[3] == "買":
+            jpy = float(row[COL_JPY])
+            m.fee_jpy += float(row[COL_FEE])
+            if row[COL_SIDE] == "買":
                 m.buys += 1
                 m.buy_jpy += jpy
             else:
                 m.sells += 1
                 m.sell_jpy += jpy
-                m.realized_pnl += float(row[9])
+                m.realized_pnl += float(row[COL_REALIZED])
     return dict(sorted(months.items()))
 
 

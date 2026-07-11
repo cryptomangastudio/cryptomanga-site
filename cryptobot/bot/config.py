@@ -10,9 +10,10 @@ from pathlib import Path
 
 import yaml
 
+from .notify import VALID_FORMATS as VALID_NOTIFY_FORMATS
+
 VALID_MODES = ("paper", "live")
 VALID_STRATEGIES = ("dca", "ma_cross")
-VALID_NOTIFY_FORMATS = ("none", "discord", "slack")
 
 
 @dataclass
