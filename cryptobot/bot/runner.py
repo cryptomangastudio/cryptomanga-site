@@ -101,8 +101,15 @@ class BotRunner:
             return f"BUYスキップ: 発注可能額{buy_jpy:.0f}円 < 最低{MIN_BUY_JPY}円(手数料負け防止)"
 
         # 取引所の最低注文数量チェック(bitFlyerは0.001 BTC等。少額運用の要注意点)
+        # 取得に失敗しても致命傷にしない: ペーパーはそのまま続行してよく、
+        # liveでも最終的には取引所側が最低数量未満の注文を拒否してくれる
         amount_estimate = buy_jpy / price
-        min_amount = self.exchange.min_order_amount(self.cfg.symbol) if self.exchange else None
+        min_amount = None
+        if self.exchange is not None:
+            try:
+                min_amount = self.exchange.min_order_amount(self.cfg.symbol)
+            except Exception as e:
+                log.warning("最低注文数量の取得失敗(チェックを省略): %s", e)
         if min_amount and amount_estimate < min_amount:
             return (
                 f"BUYスキップ: 注文数量{amount_estimate:.8f} < 取引所の最低数量{min_amount}。"
