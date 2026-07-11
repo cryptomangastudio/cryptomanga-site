@@ -3,6 +3,9 @@
 OHLCVのCSV(timestamp,open,high,low,close,volume)に対して戦略を回し、
 手数料込みの成績を表示する。実弾投入前に必ずここで検証すること。
 
+実運転と同じ RiskManager を通すため、注文上限・保有上限・クールダウン・
+日次損失停止・ドローダウン停止がバックテストでもそのまま効く。
+
 使い方:
     python backtest.py --config config.yaml --data data/BTC_JPY_1h.csv
 """
@@ -16,6 +19,7 @@ from pathlib import Path
 from bot.config import load_config
 from bot.journal import Fill, TradeJournal
 from bot.paper import PaperBroker
+from bot.risk import RiskManager
 from bot.strategy import Action, MarketSnapshot, build_strategy
 
 
@@ -55,17 +59,21 @@ def main() -> None:
 
     strategy = build_strategy(cfg)
     broker = PaperBroker(cfg.budget_jpy, cfg.fee_rate)
+    risk = RiskManager(cfg.risk, cfg.budget_jpy)  # 停止ファイルは使わない(毎回まっさら)
     journal_path = Path("data") / "backtest_trades.csv"
     journal_path.unlink(missing_ok=True)
     journal = TradeJournal(journal_path)
 
-    peak = equity = float(cfg.budget_jpy)
     max_dd = 0.0
-    trades = 0
+    peak = float(cfg.budget_jpy)
+    trades = rejected = 0
 
     closes: list[float] = []
     for ts, close in data:
         closes.append(close)
+        risk.update_equity(broker.equity(close))
+        if risk.halted:
+            continue  # 実運転と同じく、DD停止後は何もしない
         market = MarketSnapshot(
             price=close,
             closes=closes,
@@ -73,32 +81,52 @@ def main() -> None:
             position_cost_jpy=journal.position_cost_jpy,
         )
         signal = strategy.decide(market)
-        try:
-            if signal.action == Action.BUY and signal.jpy_amount <= broker.jpy:
-                amount, fee = broker.market_buy(close, signal.jpy_amount)
-                journal.record(Fill(ts, cfg.exchange, cfg.symbol, "buy", amount, close, fee, signal.reason))
-                trades += 1
-            elif signal.action == Action.SELL and journal.position_amount > 0:
-                amount = journal.position_amount
-                _, fee = broker.market_sell(close, amount)
-                journal.record(Fill(ts, cfg.exchange, cfg.symbol, "sell", amount, close, fee, signal.reason))
-                trades += 1
-        except ValueError:
-            pass  # 残高不足はスキップ(記録上は買えなかっただけ)
+        if signal.action == Action.HOLD:
+            continue
+
+        if signal.action == Action.BUY:
+            buy_jpy = min(signal.jpy_amount, broker.jpy)
+            if buy_jpy < 1_000:
+                continue
+            if not risk.check_order("buy", buy_jpy, market.position_cost_jpy, ts).approved:
+                rejected += 1
+                continue
+            amount, fee = broker.market_buy(close, buy_jpy)
+            realized = journal.record(
+                Fill(ts, cfg.exchange, cfg.symbol, "buy", amount, close, fee, signal.reason)
+            )
+            risk.record_fill(ts, "buy", realized)
+            trades += 1
+        else:
+            amount = journal.position_amount
+            if amount <= 0:
+                continue
+            if not risk.check_order("sell", amount * close, market.position_cost_jpy, ts).approved:
+                rejected += 1
+                continue
+            _, fee = broker.market_sell(close, amount)
+            realized = journal.record(
+                Fill(ts, cfg.exchange, cfg.symbol, "sell", amount, close, fee, signal.reason)
+            )
+            risk.record_fill(ts, "sell", realized)
+            trades += 1
+
         equity = broker.equity(close)
         peak = max(peak, equity)
         max_dd = max(max_dd, (1 - equity / peak) * 100)
 
     final_price = data[-1][1]
+    final_equity = broker.equity(final_price)
     print("=== バックテスト結果 ===")
     print(f"期間        : {data[0][0]:%Y-%m-%d} 〜 {data[-1][0]:%Y-%m-%d}({len(data)}本)")
     print(f"戦略        : {cfg.strategy}")
     print(f"初期資金    : {cfg.budget_jpy:,}円")
-    print(f"最終資産    : {broker.equity(final_price):,.0f}円 "
-          f"({(broker.equity(final_price) / cfg.budget_jpy - 1) * 100:+.2f}%)")
+    print(f"最終資産    : {final_equity:,.0f}円({(final_equity / cfg.budget_jpy - 1) * 100:+.2f}%)")
     print(f"実現損益    : {journal.total_realized_pnl:+,.0f}円(課税対象の目安)")
-    print(f"取引回数    : {trades}回")
+    print(f"取引回数    : {trades}回(リスク管理による却下 {rejected}回)")
     print(f"最大DD      : {max_dd:.2f}%")
+    if risk.halted:
+        print(f"⚠️  途中でDD停止が発動: {risk.halt_reason}")
     print(f"取引明細    : {journal_path}")
 
 

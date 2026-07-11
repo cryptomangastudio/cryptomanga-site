@@ -12,6 +12,7 @@ import yaml
 
 VALID_MODES = ("paper", "live")
 VALID_STRATEGIES = ("dca", "ma_cross")
+VALID_NOTIFY_FORMATS = ("none", "discord", "slack")
 
 
 @dataclass
@@ -36,6 +37,12 @@ class MACrossConfig:
 
 
 @dataclass
+class NotifyConfig:
+    # 通知先URLは環境変数 CRYPTOBOT_WEBHOOK_URL で渡す(設定ファイルに書かない)
+    format: str = "none"  # none | discord | slack
+
+
+@dataclass
 class BotConfig:
     exchange: str = "bitflyer"
     symbol: str = "BTC/JPY"
@@ -47,8 +54,10 @@ class BotConfig:
     risk: RiskConfig = field(default_factory=RiskConfig)
     dca: DCAConfig = field(default_factory=DCAConfig)
     ma_cross: MACrossConfig = field(default_factory=MACrossConfig)
+    notify: NotifyConfig = field(default_factory=NotifyConfig)
     journal_path: str = "data/trades.csv"
     paper_state_path: str = "data/paper_state.json"
+    halt_file: str = "data/HALTED"
 
 
 class ConfigError(ValueError):
@@ -68,8 +77,10 @@ def load_config(path: str | Path) -> BotConfig:
         risk=RiskConfig(**raw.get("risk", {})),
         dca=DCAConfig(**raw.get("dca", {})),
         ma_cross=MACrossConfig(**raw.get("ma_cross", {})),
+        notify=NotifyConfig(**raw.get("notify", {})),
         journal_path=raw.get("journal_path", "data/trades.csv"),
         paper_state_path=raw.get("paper_state_path", "data/paper_state.json"),
+        halt_file=raw.get("halt_file", "data/HALTED"),
     )
     validate(cfg)
     return cfg
@@ -96,6 +107,8 @@ def validate(cfg: BotConfig) -> None:
         raise ConfigError("max_drawdown_pct は 0〜100 の範囲")
     if cfg.ma_cross.fast >= cfg.ma_cross.slow:
         raise ConfigError("ma_cross.fast は slow より小さくしてください")
+    if cfg.notify.format not in VALID_NOTIFY_FORMATS:
+        raise ConfigError(f"notify.format は {VALID_NOTIFY_FORMATS} のいずれか")
     if cfg.mode == "live" and os.environ.get("CRYPTOBOT_LIVE") != "YES":
         raise ConfigError(
             "mode: live には環境変数 CRYPTOBOT_LIVE=YES が必要です(誤発注防止の二重ロック)"

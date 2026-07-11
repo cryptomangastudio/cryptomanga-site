@@ -24,5 +24,9 @@ ma_cross:
   fast: 9
   slow: 26
 
+notify:
+  format: none              # none | discord | slack。URLは環境変数 CRYPTOBOT_WEBHOOK_URL で渡す
+
 journal_path: data/trades.csv
 paper_state_path: data/paper_state.json
+halt_file: data/HALTED      # ドローダウン停止の永続化。人間が削除するまで再開しない
