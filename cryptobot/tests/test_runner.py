@@ -28,6 +28,7 @@ def make_config(tmp: str) -> BotConfig:
     cfg.journal_path = str(Path(tmp) / "trades.csv")
     cfg.paper_state_path = str(Path(tmp) / "paper_state.json")
     cfg.halt_file = str(Path(tmp) / "HALTED")
+    cfg.shortfall_path = str(Path(tmp) / "exec.csv")  # 本番のdata/を汚さない
     return cfg
 
 
@@ -68,6 +69,7 @@ class TestRunnerPaper(unittest.TestCase):
     def test_drawdown_halt_stops_and_persists(self):
         # 保有上限(5万円)まで積んでから価格が半減 → 資産全体で約25%のDD → 全停止
         self.cfg.dca.buy_amount_jpy = 10_000
+        self.cfg.price_sanity_pct = 0  # このテストでは急変スキップを無効化してDD停止を検証
         runner = BotRunner(self.cfg)
         for i in range(5):
             result = runner.step(self.now + timedelta(hours=i), 10_000_000, [])

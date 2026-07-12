@@ -1,23 +1,55 @@
 # CryptoBot 設定サンプル。コピーして config.yaml を作成すること(config.yamlはgit管理外)。
 
-exchange: bitflyer        # ccxtの取引所ID(bitflyer / coincheck など。金融庁登録業者のみ)
+exchange: bitbank         # 推奨: メイカーリベート・日足API・最低数量0.0001BTCが揃う
+                          # (bitflyerも可。ただしリベート・日足なし → execution/regimeの注記参照)
 symbols:                  # 複数銘柄OK。予算・リスク上限は銘柄数で等分される
   - BTC/JPY
   - ETH/JPY               # BTCよりボラティリティ高め
-  - XRP/JPY               # 同上(いずれもbitFlyer現物対応)
+  - XRP/JPY               # 同上(いずれもbitbank現物対応)
 mode: paper               # paper | live。live は環境変数 CRYPTOBOT_LIVE=YES も必要(二重ロック)
 strategy: dca             # dca | ma_cross(ma_crossはOHLCV対応取引所が必要。bitFlyer不可、bitbank可)
 interval_seconds: 3600    # 判断間隔(秒)
 
 budget_jpy: 100000        # 総予算。これを超える買いは絶対に通らない
-fee_rate: 0.0015          # 手数料率(ペーパートレード/バックテストで使用)
 
-risk:
+execution:                # リサーチ#1: メイカー執行がコスト構造を反転させる最重要機能
+  style: maker            # maker | taker。ペーパーは「常に約定」仮定の近似(実際は未約定リスクあり)
+  maker_fee_rate: -0.0002 # bitbank現物は-0.02%(受け取り)
+  taker_fee_rate: 0.0012  # bitbank現物は0.12%
+                          # bitFlyerを使う場合: style: taker / maker・takerとも0.0015 が目安
+  requote_seconds: 20     # live: 指値未約定時の再指値までの秒数
+  max_requotes: 5         # live: 再指値上限。超えたら見送り(テイカーに逃げない)
+
+risk:                     # リサーチ#2: 多層サーキットブレーカー
   max_order_jpy: 10000        # 1回の注文上限
   max_position_jpy: 50000     # 保有ポジション上限(取得原価ベース)
-  max_daily_loss_jpy: 3000    # 1日の実現損失上限。超えたらその日は停止
-  max_drawdown_pct: 15        # 最大ドローダウン(%)。超えたらbot全停止
-  cooldown_minutes: 60        # 発注後のクールダウン
+  max_daily_loss_jpy: 3000    # 1日の実現損失上限。超えたらその日の買いは停止
+  max_weekly_loss_jpy: 7000   # 週の実現損失上限
+  max_consecutive_losses: 5   # 連敗数上限。到達で買い停止(勝ちでリセット)
+  max_drawdown_pct: 15        # 最大ドローダウン(%)。超えたらbot全停止(data/HALTED)
+  cooldown_minutes: 60        # 買いの連続発注クールダウン
+
+cost_gate:                # リサーチ#3: 手数料負けする注文を数学的に事前拒否(ma_cross系のみ)
+  enabled: true
+  k: 2.0                  # 期待値動き >= 往復コスト×k を要求
+  spread_pct_estimate: 0.05
+
+governor:
+  max_buys_per_month: 40  # 月間の買い回数上限(バグ暴走の最終防波堤)
+
+sizing:                   # リサーチ#5: ATRサイジング+クォーターケリー(ma_cross系のみ)
+  risk_pct: 1.0           # 1トレードの許容損失 = 資金の1%
+  atr_mult: 2.0
+  kelly_cap: 0.25
+  kelly_min_trades: 10
+
+regime:                   # リサーチ#8: 200日MAレジームフィルター+DCA傾斜
+  enabled: true           # 日足取得に対応した取引所(bitbank等)でのみ働く
+  ma_days: 200
+  dca_tilt: 0.5           # 200日MAより安いほど積立額を増やす(最大±50%)
+
+tax_rate_pct: 20          # レポートの税引後概算に使う税率(総合課税のため人による)
+price_sanity_pct: 10      # 前回価格からこの%超乖離した価格での判断を拒否(異常値防御)
 
 dca:
   buy_amount_jpy: 3000        # 1回あたりの積立額

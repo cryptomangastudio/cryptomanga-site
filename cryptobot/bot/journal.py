@@ -31,7 +31,9 @@ HEADER = [
     "メモ",
 ]
 # 列番号(report.py等の読み手と共有する)
-COL_TS, COL_SIDE, COL_AMOUNT, COL_PRICE, COL_JPY, COL_FEE, COL_REALIZED = 0, 3, 4, 5, 6, 7, 9
+COL_TS, COL_SYMBOL, COL_SIDE, COL_AMOUNT, COL_PRICE, COL_JPY, COL_FEE, COL_REALIZED = (
+    0, 2, 3, 4, 5, 6, 7, 9,
+)
 
 EPS = 1e-12  # 建玉数量の実質ゼロ判定(paper/runnerとも共有)
 
@@ -54,6 +56,11 @@ class TradeJournal:
         self.position_amount = 0.0
         self.avg_cost = 0.0  # 移動平均法による取得単価
         self.total_realized_pnl = 0.0
+        # 売却成績の統計(ケリー基準の推定に使う。リプレイで自動復元される)
+        self.sell_count = 0
+        self.win_count = 0
+        self.total_win_jpy = 0.0
+        self.total_loss_jpy = 0.0
         if self.path.exists():
             self._replay_existing()
         else:
@@ -104,8 +111,35 @@ class TradeJournal:
                 self.position_amount = 0.0
                 self.avg_cost = 0.0
             self.total_realized_pnl += realized
+            self.sell_count += 1
+            if realized > 0:
+                self.win_count += 1
+                self.total_win_jpy += realized
+            else:
+                self.total_loss_jpy += -realized
             return realized
         raise ValueError(f"不正なside: {side}")
+
+    def kelly_fraction(self) -> float | None:
+        """売却実績からケリー比率 f = W - (1-W)/R を推定する。
+
+        サンプル不足・引き分けのみの場合は None。負の値は「統計上、期待値が負」を意味し、
+        呼び出し側は新規エントリーを止める判断材料にする。
+        """
+        if self.sell_count == 0:
+            return None
+        wins, losses = self.win_count, self.sell_count - self.win_count
+        if losses == 0:
+            return 1.0  # 全勝(サンプル不足の可能性大。上限キャップ側で守る)
+        if wins == 0:
+            return -1.0
+        avg_win = self.total_win_jpy / wins
+        avg_loss = self.total_loss_jpy / losses
+        if avg_loss <= 0:
+            return 1.0
+        w = wins / self.sell_count
+        r = avg_win / avg_loss
+        return w - (1 - w) / r
 
     def _replay_existing(self) -> None:
         """既存CSVの全行をリプレイして建玉・取得単価・累計損益を復元する。"""

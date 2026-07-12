@@ -21,6 +21,8 @@ class RiskConfig:
     max_order_jpy: int = 10_000
     max_position_jpy: int = 50_000
     max_daily_loss_jpy: int = 3_000
+    max_weekly_loss_jpy: int = 7_000     # 週次損失上限(多層ブレーカー第2層)
+    max_consecutive_losses: int = 5      # 連敗数上限(第3層)。到達で買い停止
     max_drawdown_pct: float = 15.0
     cooldown_minutes: int = 60
 
@@ -44,22 +46,70 @@ class NotifyConfig:
 
 
 @dataclass
+class ExecutionConfig:
+    """執行方式。リサーチ結論#1: メイカー執行がコスト構造を反転させる最重要機能。"""
+    style: str = "maker"          # maker | taker。ペーパーでは手数料率の違いとして近似
+    maker_fee_rate: float = -0.0002   # bitbankは-0.02%(受け取り)。取引所に合わせて変更
+    taker_fee_rate: float = 0.0012
+    requote_seconds: int = 20     # live: 指値が約定しない場合の再指値までの秒数
+    max_requotes: int = 5         # live: 再指値の上限。超えたら見送り(テイカーに逃げない)
+
+
+@dataclass
+class CostGateConfig:
+    """発注前コストゲート(#3)。期待利幅がコストのk倍未満の売買を機械的に見送る。"""
+    enabled: bool = True
+    k: float = 2.0                    # 期待利幅 >= 往復コスト×k を要求
+    spread_pct_estimate: float = 0.05  # スプレッド+滑りの見積もり(%)
+
+
+@dataclass
+class GovernorConfig:
+    """売買頻度ガバナー(#3)。バグによるシグナル乱発の最終防波堤も兼ねる。"""
+    max_buys_per_month: int = 40  # DCA(1時間毎×上限まで)も通る程度に。ma_crossはコストゲートが主役
+
+
+@dataclass
+class SizingConfig:
+    """ATR連動サイジング+クォーターケリー上限(#5)。ma_cross系のエントリーに適用。"""
+    risk_pct: float = 1.0     # 1回のトレードで許容する損失 = 資金の1%
+    atr_mult: float = 2.0     # 想定損切り幅 = ATR×この倍率
+    kelly_cap: float = 0.25   # 推定ケリー値のこの割合を上限に
+    kelly_min_trades: int = 10  # ケリー推定に必要な最低売却回数(未満なら判定しない)
+
+
+@dataclass
+class RegimeConfig:
+    """200日MAレジームフィルター+DCA傾斜(#8)。日足OHLCV対応の取引所でのみ有効。"""
+    enabled: bool = True
+    ma_days: int = 200
+    dca_tilt: float = 0.5     # 200日MAからの乖離に応じてDCA額を最大±この割合まで傾斜
+
+
+@dataclass
 class BotConfig:
-    exchange: str = "bitflyer"
+    exchange: str = "bitbank"  # メイカーリベート・日足API・最低数量の点でbitbankを既定に
     symbol: str = "BTC/JPY"
     symbols: list[str] = field(default_factory=list)  # 複数銘柄。空ならsymbolのみ
     mode: str = "paper"
     strategy: str = "dca"
     interval_seconds: int = 3600
     budget_jpy: int = 100_000
-    fee_rate: float = 0.0015
     risk: RiskConfig = field(default_factory=RiskConfig)
     dca: DCAConfig = field(default_factory=DCAConfig)
     ma_cross: MACrossConfig = field(default_factory=MACrossConfig)
     notify: NotifyConfig = field(default_factory=NotifyConfig)
+    execution: ExecutionConfig = field(default_factory=ExecutionConfig)
+    cost_gate: CostGateConfig = field(default_factory=CostGateConfig)
+    governor: GovernorConfig = field(default_factory=GovernorConfig)
+    sizing: SizingConfig = field(default_factory=SizingConfig)
+    regime: RegimeConfig = field(default_factory=RegimeConfig)
+    tax_rate_pct: float = 20.0  # 税引後表示の概算税率(実際は総合課税で人による)
+    price_sanity_pct: float = 10.0  # 前回価格からこの%超乖離した価格での判断を拒否
     journal_path: str = "data/trades.csv"
     paper_state_path: str = "data/paper_state.json"
     halt_file: str = "data/HALTED"
+    shortfall_path: str = "data/execution_log.csv"
 
     def __post_init__(self):
         if not self.symbols:
@@ -73,22 +123,34 @@ class ConfigError(ValueError):
 
 def load_config(path: str | Path) -> BotConfig:
     raw = yaml.safe_load(Path(path).read_text(encoding="utf-8")) or {}
+    if "fee_rate" in raw:
+        raise ConfigError(
+            "fee_rate は廃止されました。execution: の maker_fee_rate / taker_fee_rate に"
+            "移行してください(黙って無視すると手数料の前提が変わり危険なためエラーにしています)"
+        )
     cfg = BotConfig(
-        exchange=raw.get("exchange", "bitflyer"),
+        exchange=raw.get("exchange", "bitbank"),
         symbol=raw.get("symbol", "BTC/JPY"),
         symbols=list(raw.get("symbols") or []),
         mode=raw.get("mode", "paper"),
         strategy=raw.get("strategy", "dca"),
         interval_seconds=int(raw.get("interval_seconds", 3600)),
         budget_jpy=int(raw.get("budget_jpy", 100_000)),
-        fee_rate=float(raw.get("fee_rate", 0.0015)),
         risk=RiskConfig(**raw.get("risk", {})),
         dca=DCAConfig(**raw.get("dca", {})),
         ma_cross=MACrossConfig(**raw.get("ma_cross", {})),
         notify=NotifyConfig(**raw.get("notify", {})),
+        execution=ExecutionConfig(**raw.get("execution", {})),
+        cost_gate=CostGateConfig(**raw.get("cost_gate", {})),
+        governor=GovernorConfig(**raw.get("governor", {})),
+        sizing=SizingConfig(**raw.get("sizing", {})),
+        regime=RegimeConfig(**raw.get("regime", {})),
+        tax_rate_pct=float(raw.get("tax_rate_pct", 20.0)),
+        price_sanity_pct=float(raw.get("price_sanity_pct", 10.0)),
         journal_path=raw.get("journal_path", "data/trades.csv"),
         paper_state_path=raw.get("paper_state_path", "data/paper_state.json"),
         halt_file=raw.get("halt_file", "data/HALTED"),
+        shortfall_path=raw.get("shortfall_path", "data/execution_log.csv"),
     )
     validate(cfg)
     return cfg
@@ -124,6 +186,14 @@ def validate(cfg: BotConfig) -> None:
             f"銘柄数{len(cfg.symbols)}に対して予算が少なすぎます"
             "(1銘柄あたり5,000円以上になるよう銘柄を減らすか予算を見直してください)"
         )
+    if cfg.execution.style not in ("maker", "taker"):
+        raise ConfigError("execution.style は maker | taker のいずれか")
+    if cfg.execution.requote_seconds < 2:
+        raise ConfigError("execution.requote_seconds は2秒以上(注文状態のポーリング間隔より短くできない)")
+    if not (0 < cfg.sizing.kelly_cap <= 1):
+        raise ConfigError("sizing.kelly_cap は 0〜1 の範囲")
+    if cfg.cost_gate.k < 1:
+        raise ConfigError("cost_gate.k は 1 以上(期待利幅がコスト未満の売買は確実な損失)")
     if cfg.mode == "live" and os.environ.get("CRYPTOBOT_LIVE") != "YES":
         raise ConfigError(
             "mode: live には環境変数 CRYPTOBOT_LIVE=YES が必要です(誤発注防止の二重ロック)"

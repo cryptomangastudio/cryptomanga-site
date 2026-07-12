@@ -144,6 +144,35 @@ class SpotOnlyExchange:
         self._assert_spot(symbol, params)
         return self.client.create_order(symbol, "market", "sell", amount)
 
+    def limit_post_only(self, symbol: str, side: str, amount: float, price: float) -> dict:
+        """Post-Only指値(メイカー約定を保証。板を食う価格なら取引所が拒否する)。
+
+        ccxtのbitbankは統一パラメータpostOnlyをAPIのpost_onlyに変換せず素通しする
+        (ccxt 4.5.64で確認)ため、両方のキーを渡す。post_onlyがbitbank実キー。
+        """
+        self._assert_spot(symbol, None)
+        return self.client.create_order(
+            symbol, "limit", side, amount, price, {"postOnly": True, "post_only": True}
+        )
+
+    def fetch_daily_closes(self, symbol: str, days: int) -> list[float]:
+        """直近days本の日足終値。
+
+        bitbankの日足APIは「年バケット」単位でしか返さない(sinceを含む1年分のみ)
+        ため、複数のsinceで取得してマージする。対応していない取引所(bitFlyer等)は
+        例外がそのまま伝播する(呼び出し側が警告してレジーム機能を無効化する)。
+        """
+        now_ms = self.client.milliseconds()
+        year_ms = 365 * 24 * 3600 * 1000
+        merged: dict[int, float] = {}
+        for since in (now_ms - 2 * year_ms, now_ms - year_ms, None):
+            candles = self.client.fetch_ohlcv(symbol, "1d", since=since, limit=days + 10)
+            for c in candles:
+                if c and c[0] is not None and c[4] is not None:
+                    merged[int(c[0])] = float(c[4])
+        closes = [v for _, v in sorted(merged.items())]
+        return closes[-days:]
+
     def normalize_fill(
         self, order: dict, symbol: str, fallback_amount: float, fallback_price: float
     ) -> tuple[float, float, float]:

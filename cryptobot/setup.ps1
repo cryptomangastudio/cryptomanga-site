@@ -35,6 +35,11 @@ try {
     Write-Host "[4/5] 部品をインストール中(初回は1〜3分かかります。そのままお待ちください)..."
     & $py.Source -m venv .venv
     & ".venv\Scripts\python.exe" -m pip install --quiet --disable-pip-version-check -r requirements.txt
+    # 旧形式の設定(fee_rate)は新形式(execution:)に置き換わったため退避して作り直す
+    if ((Test-Path "config.yaml") -and (Select-String -Path "config.yaml" -Pattern "fee_rate" -Quiet)) {
+        Move-Item "config.yaml" "config_old.yaml" -Force
+        Write-Host "旧形式の config.yaml を config_old.yaml に退避し、新しい設定で作り直しました" -ForegroundColor Yellow
+    }
     if (-not (Test-Path "config.yaml")) { Copy-Item config.example.yaml config.yaml }
 
     Write-Host ""

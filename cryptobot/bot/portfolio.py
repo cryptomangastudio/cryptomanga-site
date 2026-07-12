@@ -30,9 +30,14 @@ def sub_config(cfg: BotConfig, symbol: str) -> BotConfig:
         max_order_jpy=min(cfg.risk.max_order_jpy, budget),
         max_position_jpy=min(cfg.risk.max_position_jpy, budget),
         max_daily_loss_jpy=max(500, cfg.risk.max_daily_loss_jpy // n),
+        max_weekly_loss_jpy=max(1_000, cfg.risk.max_weekly_loss_jpy // n),
     )
     dca = dataclasses.replace(
         cfg.dca, buy_amount_jpy=min(cfg.dca.buy_amount_jpy, risk.max_order_jpy)
+    )
+    # 暴走防止ガバナーも銘柄数で按分(しないとポートフォリオ全体でn倍緩んでしまう)
+    governor = dataclasses.replace(
+        cfg.governor, max_buys_per_month=max(2, cfg.governor.max_buys_per_month // n)
     )
     if n == 1:
         paths = {}
@@ -48,9 +53,13 @@ def sub_config(cfg: BotConfig, symbol: str) -> BotConfig:
                 str(Path(cfg.halt_file).with_name(f"HALTED_{slug}"))
                 if cfg.halt_file else cfg.halt_file
             ),
+            "shortfall_path": str(
+                Path(cfg.shortfall_path).with_name(f"execution_{slug}.csv")
+            ),
         }
     return dataclasses.replace(
-        cfg, symbol=symbol, symbols=[symbol], budget_jpy=budget, risk=risk, dca=dca, **paths
+        cfg, symbol=symbol, symbols=[symbol], budget_jpy=budget,
+        risk=risk, dca=dca, governor=governor, **paths
     )
 
 
