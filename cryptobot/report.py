@@ -17,6 +17,7 @@ from pathlib import Path
 
 from bot.config import load_config
 from bot.journal import COL_FEE, COL_JPY, COL_REALIZED, COL_SIDE, COL_TS, HEADER
+from bot.portfolio import sub_config
 
 
 @dataclass
@@ -29,27 +30,29 @@ class MonthlySummary:
     realized_pnl: float = 0.0
 
 
-def aggregate(journal_path: Path) -> dict[str, MonthlySummary]:
+def aggregate(journal_paths: list[Path]) -> dict[str, MonthlySummary]:
+    """複数銘柄の記帳CSVを月別に合算する。"""
     months: dict[str, MonthlySummary] = defaultdict(MonthlySummary)
-    with journal_path.open(newline="", encoding="utf-8") as f:
-        reader = csv.reader(f)
-        header = next(reader, None)
-        if header != HEADER:
-            raise SystemExit(f"{journal_path} のヘッダーが想定と異なります")
-        for row in reader:
-            if not row:
-                continue
-            month = row[COL_TS][:7]  # YYYY-MM
-            m = months[month]
-            jpy = float(row[COL_JPY])
-            m.fee_jpy += float(row[COL_FEE])
-            if row[COL_SIDE] == "買":
-                m.buys += 1
-                m.buy_jpy += jpy
-            else:
-                m.sells += 1
-                m.sell_jpy += jpy
-                m.realized_pnl += float(row[COL_REALIZED])
+    for journal_path in journal_paths:
+        with journal_path.open(newline="", encoding="utf-8") as f:
+            reader = csv.reader(f)
+            header = next(reader, None)
+            if header != HEADER:
+                raise SystemExit(f"{journal_path} のヘッダーが想定と異なります")
+            for row in reader:
+                if not row:
+                    continue
+                month = row[COL_TS][:7]  # YYYY-MM
+                m = months[month]
+                jpy = float(row[COL_JPY])
+                m.fee_jpy += float(row[COL_FEE])
+                if row[COL_SIDE] == "買":
+                    m.buys += 1
+                    m.buy_jpy += jpy
+                else:
+                    m.sells += 1
+                    m.sell_jpy += jpy
+                    m.realized_pnl += float(row[COL_REALIZED])
     return dict(sorted(months.items()))
 
 
@@ -94,13 +97,15 @@ def main() -> None:
     args = parser.parse_args()
 
     if args.journal:
-        journal_path = Path(args.journal)
+        journal_paths = [Path(args.journal)]
     else:
-        journal_path = Path(load_config(args.config).journal_path)
-    if not journal_path.exists():
-        raise SystemExit(f"記帳CSVが見つかりません: {journal_path}")
+        cfg = load_config(args.config)
+        journal_paths = [Path(sub_config(cfg, s).journal_path) for s in cfg.symbols]
+    journal_paths = [p for p in journal_paths if p.exists()]
+    if not journal_paths:
+        raise SystemExit("記帳CSVが見つかりません(まだ取引がないかパスが違います)")
 
-    months = aggregate(journal_path)
+    months = aggregate(journal_paths)
     if not months:
         raise SystemExit("取引記録がまだありません")
 

@@ -13,38 +13,36 @@ from datetime import datetime
 
 from bot.config import load_config
 from bot.exchange import SpotOnlyExchange
-from bot.runner import BotRunner
+from bot.portfolio import PortfolioRunner, sub_config
 
 
 def run_check(cfg, exchange: SpotOnlyExchange) -> None:
     """設定と取引所仕様の整合性を確認する(発注はしない)。"""
-    print(f"=== 適合性チェック: {cfg.exchange} {cfg.symbol} ===")
-    price = exchange.fetch_price(cfg.symbol)
-    print(f"現在価格          : {price:,.0f}円")
-    min_amount = exchange.min_order_amount(cfg.symbol)
-    if min_amount is None:
-        print("最低注文数量      : 取引所情報から取得できず(要手動確認)")
-    else:
+    print(f"=== 適合性チェック: {cfg.exchange} / モード: {cfg.mode} / 総予算: {cfg.budget_jpy:,}円 ===")
+    any_problem = False
+    for sym in cfg.symbols:
+        sub = sub_config(cfg, sym)
+        price = exchange.fetch_price(sym)
+        print(f"\n[{sym}] 現在価格 {price:,.0f}円 / この銘柄の予算 {sub.budget_jpy:,}円")
+        min_amount = exchange.min_order_amount(sym)
+        if min_amount is None:
+            print("  最低注文数量: 取引所情報から取得できず(要手動確認)")
+            continue
         min_jpy = min_amount * price
-        print(f"最低注文数量      : {min_amount}(約 {min_jpy:,.0f}円)")
+        print(f"  最低注文数量: {min_amount}(約 {min_jpy:,.0f}円)")
         problems = []
-        if cfg.strategy == "dca" and cfg.dca.buy_amount_jpy < min_jpy:
-            problems.append(
-                f"DCAの積立額 {cfg.dca.buy_amount_jpy:,}円 が最低注文額を下回っています"
-            )
-        if cfg.risk.max_order_jpy < min_jpy:
-            problems.append(
-                f"1回の注文上限 {cfg.risk.max_order_jpy:,}円 が最低注文額を下回っています"
-            )
-        if problems:
-            print("\n⚠️  問題あり:")
-            for p in problems:
-                print(f"  - {p}")
-            print("  → 積立額を増やすか、最低注文数量の小さい取引所(例: bitbank)を検討")
-        else:
-            print("\n✅ 設定は取引所の最低注文数量と整合しています")
-    print(f"モード            : {cfg.mode}")
-    print(f"総予算            : {cfg.budget_jpy:,}円")
+        if cfg.strategy == "dca" and sub.dca.buy_amount_jpy < min_jpy:
+            problems.append(f"DCAの積立額 {sub.dca.buy_amount_jpy:,}円 が最低注文額を下回る")
+        if sub.risk.max_order_jpy < min_jpy:
+            problems.append(f"1回の注文上限 {sub.risk.max_order_jpy:,}円 が最低注文額を下回る")
+        for p in problems:
+            print(f"  ⚠️  {p}")
+        any_problem = any_problem or bool(problems)
+    print()
+    if any_problem:
+        print("⚠️  問題のある銘柄があります。積立額を増やす・銘柄を絞る・最低数量の小さい取引所(例: bitbank)を検討してください")
+    else:
+        print("✅ すべての銘柄が取引所の最低注文数量と整合しています")
 
 
 def main() -> None:
@@ -66,17 +64,11 @@ def main() -> None:
 
     if cfg.mode == "live":
         print("⚠️  LIVEモード: 実際のお金で発注します。停止は Ctrl+C。")
-    runner = BotRunner(cfg, exchange)
+    runner = PortfolioRunner(cfg, exchange)
 
     if args.once:
-        price = exchange.fetch_price(cfg.symbol)
-        closes = [
-            c[4]
-            for c in exchange.fetch_ohlcv(
-                cfg.symbol, cfg.ma_cross.timeframe, limit=cfg.ma_cross.slow + 5
-            )
-        ]
-        print(runner.step(datetime.now(), price, closes))
+        for sym, result in runner.step_all(datetime.now()).items():
+            print(f"{sym} | {result}")
     else:
         runner.run()
 

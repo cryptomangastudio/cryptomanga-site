@@ -119,6 +119,23 @@ class SpotOnlyExchange:
         balance = self.client.fetch_balance()
         return float((balance.get("JPY") or {}).get("free") or 0.0)
 
+    def fetch_public_trades(self, symbol: str, limit: int = 30) -> list[dict]:
+        """市場全体の約定履歴(公開データ)。ダッシュボードのフィード表示用。"""
+        out = []
+        for t in self.client.fetch_trades(symbol, limit=limit):
+            if t.get("price") is None:
+                continue
+            out.append(
+                {
+                    "id": str(t.get("id") or t.get("timestamp")),
+                    "ts": int(t.get("timestamp") or 0),
+                    "side": t.get("side") or "buy",
+                    "price": float(t["price"]),
+                    "amount": float(t.get("amount") or 0.0),
+                }
+            )
+        return out
+
     def market_buy(self, symbol: str, amount: float, params: dict | None = None) -> dict:
         self._assert_spot(symbol, params)
         return self.client.create_order(symbol, "market", "buy", amount)
