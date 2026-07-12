@@ -3,7 +3,7 @@
 exchange: bitflyer        # ccxtの取引所ID(bitflyer / coincheck など。金融庁登録業者のみ)
 symbol: BTC/JPY
 mode: paper               # paper | live。live は環境変数 CRYPTOBOT_LIVE=YES も必要(二重ロック)
-strategy: dca             # dca | ma_cross
+strategy: dca             # dca | ma_cross(ma_crossはOHLCV対応取引所が必要。bitFlyer不可、bitbank可)
 interval_seconds: 3600    # 判断間隔(秒)
 
 budget_jpy: 100000        # 総予算。これを超える買いは絶対に通らない

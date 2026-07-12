@@ -13,7 +13,7 @@ from datetime import datetime
 
 from bot.config import load_config
 from bot.exchange import SpotOnlyExchange
-from bot.runner import BotRunner
+from bot.runner import BotRunner, fetch_closes
 
 
 def run_check(cfg, exchange: SpotOnlyExchange) -> None:
@@ -70,13 +70,7 @@ def main() -> None:
 
     if args.once:
         price = exchange.fetch_price(cfg.symbol)
-        closes = [
-            c[4]
-            for c in exchange.fetch_ohlcv(
-                cfg.symbol, cfg.ma_cross.timeframe, limit=cfg.ma_cross.slow + 5
-            )
-        ]
-        print(runner.step(datetime.now(), price, closes))
+        print(runner.step(datetime.now(), price, fetch_closes(exchange, cfg)))
     else:
         runner.run()
 

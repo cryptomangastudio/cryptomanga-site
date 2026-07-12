@@ -17,6 +17,23 @@ log = logging.getLogger("cryptobot")
 MIN_BUY_JPY = 1_000  # これ未満に切り詰められた買いはスキップ(手数料負け防止)
 
 
+def fetch_closes(exchange, cfg: BotConfig) -> list[float]:
+    """戦略が必要とする終値履歴を取得する。
+
+    DCAは価格履歴を使わないので取得しない(bitFlyer等、OHLCV API非対応の
+    取引所でもDCA運用できるようにするため)。ma_crossはOHLCV対応の取引所
+    (例: bitbank)が必要。
+    """
+    if cfg.strategy != "ma_cross":
+        return []
+    return [
+        c[4]
+        for c in exchange.fetch_ohlcv(
+            cfg.symbol, cfg.ma_cross.timeframe, limit=cfg.ma_cross.slow + 5
+        )
+    ]
+
+
 class BotRunner:
     def __init__(self, cfg: BotConfig, exchange=None):
         self.cfg = cfg
@@ -180,14 +197,7 @@ class BotRunner:
         while True:
             try:
                 price = self.exchange.fetch_price(self.cfg.symbol)
-                closes = [
-                    c[4]
-                    for c in self.exchange.fetch_ohlcv(
-                        self.cfg.symbol,
-                        self.cfg.ma_cross.timeframe,
-                        limit=self.cfg.ma_cross.slow + 5,
-                    )
-                ]
+                closes = fetch_closes(self.exchange, self.cfg)
                 result = self.step(datetime.now(), price, closes)
                 log.info("%s | 価格=%s円 | %s", self.cfg.symbol, f"{price:,.0f}", result)
             except Exception:
