@@ -2,9 +2,12 @@
 
 方針:
 - 買い(リスクを増やす注文)は厳しく制限する
-- 売り(リスクを減らす注文)はクールダウン・日次損失停止の対象外
+- 売り(リスクを減らす注文)はクールダウン・損失停止の対象外
 - 全停止(halt)だけはすべての注文を止める。haltはファイルに永続化され、
   人間がファイルを消すまで再起動しても解除されない
+
+多層ブレーカー(リサーチ#2): 日次損失 / 週次損失 / 連敗数 / 最大ドローダウン。
+売買頻度ガバナー(リサーチ#3): 月間の買い回数上限(バグ暴走の最終防波堤)。
 """
 from __future__ import annotations
 
@@ -29,16 +32,23 @@ class RiskManager:
         budget_jpy: int,
         halt_file: str | Path | None = None,
         on_halt: Callable[[str], None] | None = None,
+        max_buys_per_month: int | None = None,
     ):
         self.cfg = cfg
         self.budget_jpy = budget_jpy
         self.halt_file = Path(halt_file) if halt_file else None
         self.on_halt = on_halt  # 停止イベントのフック(通知など)。halt()から必ず呼ばれる
+        self.max_buys_per_month = max_buys_per_month
         self.halted = False
         self.halt_reason = ""
         self._last_buy_at: datetime | None = None
         self._daily_realized_loss = 0.0
         self._daily_date: str | None = None
+        self._weekly_realized_loss = 0.0
+        self._weekly_key: str | None = None
+        self._consecutive_losses = 0
+        self._monthly_buys = 0
+        self._monthly_key: str | None = None
         self._peak_equity: float | None = None
         if self.halt_file and self.halt_file.exists():
             self.halted = True
@@ -61,6 +71,15 @@ class RiskManager:
         if day != self._daily_date:
             self._daily_date = day
             self._daily_realized_loss = 0.0
+        iso = now.isocalendar()
+        week = f"{iso[0]}-W{iso[1]:02d}"
+        if week != self._weekly_key:
+            self._weekly_key = week
+            self._weekly_realized_loss = 0.0
+        month = now.strftime("%Y-%m")
+        if month != self._monthly_key:
+            self._monthly_key = month
+            self._monthly_buys = 0
 
     def check_order(
         self,
@@ -85,6 +104,21 @@ class RiskManager:
                 False,
                 f"本日の損失上限({self.cfg.max_daily_loss_jpy}円)に到達。本日の買いは停止",
             )
+        if self._weekly_realized_loss >= self.cfg.max_weekly_loss_jpy:
+            return RiskDecision(
+                False,
+                f"今週の損失上限({self.cfg.max_weekly_loss_jpy}円)に到達。今週の買いは停止",
+            )
+        if self._consecutive_losses >= self.cfg.max_consecutive_losses:
+            return RiskDecision(
+                False,
+                f"{self._consecutive_losses}連敗中。買いを停止(勝ちトレードでリセット)",
+            )
+        if self.max_buys_per_month is not None and self._monthly_buys >= self.max_buys_per_month:
+            return RiskDecision(
+                False,
+                f"今月の買い回数上限({self.max_buys_per_month}回)に到達(暴走防止ガバナー)",
+            )
         if self._last_buy_at is not None:
             wait_until = self._last_buy_at + timedelta(minutes=self.cfg.cooldown_minutes)
             if now < wait_until:
@@ -104,12 +138,19 @@ class RiskManager:
         return RiskDecision(True, "OK")
 
     def record_fill(self, now: datetime, side: str, realized_pnl_jpy: float = 0.0) -> None:
-        """約定後に呼ぶ。実現損益(売却時)を日次損失に反映する。"""
+        """約定後に呼ぶ。実現損益(売却時)を損失カウンタ・連敗数に反映する。"""
         self._roll_day(now)
         if side == "buy":
             self._last_buy_at = now
+            self._monthly_buys += 1
+        elif side == "sell":
+            if realized_pnl_jpy < 0:
+                self._consecutive_losses += 1
+            elif realized_pnl_jpy > 0:
+                self._consecutive_losses = 0
         if realized_pnl_jpy < 0:
             self._daily_realized_loss += -realized_pnl_jpy
+            self._weekly_realized_loss += -realized_pnl_jpy
 
     def update_equity(self, equity_jpy: float) -> None:
         """資産評価額の更新。最大ドローダウン超過でbotを恒久停止する。"""

@@ -144,6 +144,19 @@ class SpotOnlyExchange:
         self._assert_spot(symbol, params)
         return self.client.create_order(symbol, "market", "sell", amount)
 
+    def market_buy_limit_post_only(self, symbol: str, amount: float, price: float) -> dict:
+        """Post-Only指値買い(メイカー約定を保証。板を食う価格なら取引所が拒否する)。"""
+        self._assert_spot(symbol, None)
+        return self.client.create_order(
+            symbol, "limit", "buy", amount, price, {"postOnly": True}
+        )
+
+    def market_sell_limit_post_only(self, symbol: str, amount: float, price: float) -> dict:
+        self._assert_spot(symbol, None)
+        return self.client.create_order(
+            symbol, "limit", "sell", amount, price, {"postOnly": True}
+        )
+
     def normalize_fill(
         self, order: dict, symbol: str, fallback_amount: float, fallback_price: float
     ) -> tuple[float, float, float]:
