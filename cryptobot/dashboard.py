@@ -10,9 +10,9 @@
 - 画面は読み取り+「今すぐ1回判断」ボタンのみ。設定変更はconfig.yamlで行う
 
 構成:
-- 背景スレッド①: interval_secondsごとに売買判断(bot本体)
-- 背景スレッド②: 20秒ごとに価格だけ取得してチャート用の履歴を貯める
-- フロントエンドは /api/state を5秒ごとにポーリングしてぬるぬる更新する
+- 背景スレッド①: interval_secondsごとに全銘柄の売買判断(bot本体)
+- 背景スレッド②: 5秒ごとに価格、10秒ごとに市場約定フィードを取得
+- フロントエンドは /api/state を3秒ごとにポーリングしてぬるぬる更新する
 """
 from __future__ import annotations
 
@@ -31,12 +31,15 @@ from pathlib import Path
 from bot.config import load_config
 from bot.exchange import SpotOnlyExchange
 from bot.journal import COL_AMOUNT, COL_PRICE, COL_REALIZED, COL_SIDE, COL_TS, HEADER
-from bot.runner import BotRunner, fetch_closes
+from bot.portfolio import PortfolioRunner
+from bot.runner import fetch_closes
 
 log = logging.getLogger("cryptobot.dashboard")
 
-PRICE_POLL_SECONDS = 20
-PRICE_HISTORY_MAX = 720  # 20秒×720 = 4時間ぶん
+PRICE_POLL_SECONDS = 5
+PRICE_HISTORY_MAX = 2880   # 5秒×2880 = 4時間ぶん
+TRADES_POLL_SECONDS = 10   # 市場の約定フィードの取得間隔(銘柄を順繰りに取得)
+MARKET_TRADES_MAX = 60
 
 
 class Dashboard:
@@ -48,40 +51,67 @@ class Dashboard:
                 "ダッシュボードはペーパートレード専用です。config.yaml を mode: paper にしてください。"
             )
         self.cfg = cfg
-        self.runner = BotRunner(cfg, SpotOnlyExchange(cfg))
+        self.portfolio = PortfolioRunner(cfg, SpotOnlyExchange(cfg))
         self.lock = threading.Lock()
-        self.last_price: float | None = None
-        self.price_history: deque[tuple[int, float]] = deque(maxlen=PRICE_HISTORY_MAX)
-        self.last_result = "まだ実行していません(自動実行を待つか「今すぐ判断」を押してください)"
+        self.last_price: dict[str, float] = {}
+        self.price_history = {s: deque(maxlen=PRICE_HISTORY_MAX) for s in cfg.symbols}
+        self.market_trades = {s: deque(maxlen=MARKET_TRADES_MAX) for s in cfg.symbols}
+        self._seen_ids = {s: deque(maxlen=MARKET_TRADES_MAX * 4) for s in cfg.symbols}
+        self._trade_poll_i = 0
+        self.last_results: dict[str, str] = {}
         self.last_error = ""
         self.last_run_at: datetime | None = None
 
-    def _record_price(self, price: float) -> None:
-        self.last_price = price
-        self.price_history.append((int(time.time() * 1000), price))
+    @property
+    def exchange(self):
+        return self.portfolio.exchange
+
+    def _record_price(self, symbol: str, price: float) -> None:
+        self.last_price[symbol] = price
+        self.price_history[symbol].append((int(time.time() * 1000), price))
 
     def run_cycle(self) -> None:
-        """売買判断1回ぶん。"""
+        """全銘柄の売買判断1周ぶん。"""
         with self.lock:
-            try:
-                price = self.runner.exchange.fetch_price(self.cfg.symbol)
-                self._record_price(price)
-                closes = fetch_closes(self.runner.exchange, self.cfg)
-                self.last_result = self.runner.step(datetime.now(), price, closes)
-                self.last_error = ""
-            except Exception as e:
-                self.last_error = f"{type(e).__name__}: {e}"
-                log.warning("サイクル失敗: %s", self.last_error)
+            errors = []
+            for sym, runner in self.portfolio.runners.items():
+                try:
+                    price = self.exchange.fetch_price(sym)
+                    self._record_price(sym, price)
+                    closes = fetch_closes(self.exchange, runner.cfg)
+                    self.last_results[sym] = runner.step(datetime.now(), price, closes)
+                except Exception as e:
+                    errors.append(f"{sym}: {type(e).__name__}: {e}")
+                    log.warning("%s のサイクル失敗: %s", sym, e)
+            self.last_error = " / ".join(errors)
             self.last_run_at = datetime.now()
 
-    def poll_price(self) -> None:
+    def poll_prices(self) -> None:
         """チャート用の価格サンプリング(売買判断はしない)。"""
         with self.lock:
-            try:
-                self._record_price(self.runner.exchange.fetch_price(self.cfg.symbol))
-                self.last_error = ""
-            except Exception as e:
-                self.last_error = f"{type(e).__name__}: {e}"
+            errors = []
+            for sym in self.cfg.symbols:
+                try:
+                    self._record_price(sym, self.exchange.fetch_price(sym))
+                except Exception as e:
+                    errors.append(f"{sym}: {type(e).__name__}: {e}")
+            self.last_error = " / ".join(errors)
+
+    def poll_market_trades(self) -> None:
+        """市場全体の約定(公開データ)を銘柄を順繰りに取り込む。"""
+        sym = self.cfg.symbols[self._trade_poll_i % len(self.cfg.symbols)]
+        self._trade_poll_i += 1
+        try:
+            trades = self.exchange.fetch_public_trades(sym, limit=30)
+        except Exception as e:
+            log.debug("%s の市場約定取得失敗: %s", sym, e)
+            return
+        with self.lock:
+            for t in sorted(trades, key=lambda x: x["ts"]):
+                if t["id"] in self._seen_ids[sym]:
+                    continue
+                self._seen_ids[sym].append(t["id"])
+                self.market_trades[sym].append(t)
 
     def bot_loop(self) -> None:
         while True:
@@ -90,60 +120,88 @@ class Dashboard:
 
     def price_loop(self) -> None:
         time.sleep(PRICE_POLL_SECONDS)  # 起動直後はbot_loopが取得するので待つ
+        tick = 0
         while True:
-            self.poll_price()
+            self.poll_prices()
+            if tick % max(1, TRADES_POLL_SECONDS // PRICE_POLL_SECONDS) == 0:
+                self.poll_market_trades()
+            tick += 1
             time.sleep(PRICE_POLL_SECONDS)
 
     def recent_trades(self, limit: int = 20) -> list[dict]:
-        path = Path(self.cfg.journal_path)
-        if not path.exists():
-            return []
-        with path.open(newline="", encoding="utf-8") as f:
-            rows = [r for r in csv.reader(f) if r]
-        if rows and rows[0] == HEADER:
-            rows = rows[1:]
+        """全銘柄の取引を新しい順にマージして返す。"""
         out = []
-        for r in rows[-limit:][::-1]:  # 新しい順
-            out.append(
-                {
-                    "ts": r[COL_TS],
-                    "side": r[COL_SIDE],
-                    "amount": float(r[COL_AMOUNT]),
-                    "price": float(r[COL_PRICE]),
-                    "realized": float(r[COL_REALIZED]),
-                }
-            )
-        return out
+        for sym, runner in self.portfolio.runners.items():
+            path = Path(runner.cfg.journal_path)
+            if not path.exists():
+                continue
+            with path.open(newline="", encoding="utf-8") as f:
+                rows = [r for r in csv.reader(f) if r]
+            if rows and rows[0] == HEADER:
+                rows = rows[1:]
+            for r in rows[-limit:]:
+                out.append(
+                    {
+                        "ts": r[COL_TS],
+                        "symbol": sym,
+                        "side": r[COL_SIDE],
+                        "amount": float(r[COL_AMOUNT]),
+                        "price": float(r[COL_PRICE]),
+                        "realized": float(r[COL_REALIZED]),
+                    }
+                )
+        out.sort(key=lambda t: t["ts"], reverse=True)
+        return out[:limit]
 
     def state(self) -> dict:
         with self.lock:
-            r = self.runner
-            price = self.last_price
-            if r.risk.halted:
-                status, status_text = "halted", "全停止中(人間の確認待ち)"
-                detail = r.risk.halt_reason
+            halted = [s for s, r in self.portfolio.runners.items() if r.risk.halted]
+            cash = sum(r.paper.jpy for r in self.portfolio.runners.values())
+            pnl = sum(r.journal.total_realized_pnl for r in self.portfolio.runners.values())
+            equity = 0.0
+            equity_known = True
+            per_symbol = []
+            for sym, r in self.portfolio.runners.items():
+                price = self.last_price.get(sym)
+                if price is None:
+                    equity_known = False
+                else:
+                    equity += r.paper.equity(price)
+                per_symbol.append(
+                    {
+                        "symbol": sym,
+                        "price": price,
+                        "position": r.paper.base_amount,
+                        "pnl": r.journal.total_realized_pnl,
+                        "halted": r.risk.halted,
+                        "lastResult": self.last_results.get(sym, "待機中"),
+                    }
+                )
+            if len(halted) == len(self.portfolio.runners):
+                status, status_text = "halted", "全銘柄停止中(人間の確認待ち)"
+                detail = " / ".join(f"{s}: {self.portfolio.runners[s].risk.halt_reason}" for s in halted)
             elif self.last_error:
                 status, status_text = "error", "接続エラー(自動で再試行します)"
                 detail = self.last_error
             else:
                 status, status_text = "ok", "稼働中 — ペーパートレード(仮想資金)"
-                detail = ""
+                detail = f"停止中: {', '.join(halted)}" if halted else ""
             return {
                 "exchange": self.cfg.exchange,
-                "symbol": self.cfg.symbol,
+                "symbols": self.cfg.symbols,
                 "strategy": self.cfg.strategy,
                 "intervalSec": self.cfg.interval_seconds,
                 "status": status,
                 "statusText": status_text,
                 "statusDetail": detail,
-                "lastResult": self.last_result,
+                "lastResults": self.last_results,
                 "lastRunAt": self.last_run_at.strftime("%H:%M:%S") if self.last_run_at else "—",
-                "price": price,
-                "history": list(self.price_history),
-                "equity": r.paper.equity(price) if price is not None else None,
-                "cash": r.paper.jpy,
-                "position": r.paper.base_amount,
-                "realizedPnl": r.journal.total_realized_pnl,
+                "equity": equity if equity_known else None,
+                "cash": cash,
+                "realizedPnl": pnl,
+                "perSymbol": per_symbol,
+                "history": {s: list(d) for s, d in self.price_history.items()},
+                "marketTrades": {s: list(d)[::-1] for s, d in self.market_trades.items()},
                 "trades": self.recent_trades(),
             }
 
@@ -165,7 +223,7 @@ body {
   font-family:"Segoe UI","Hiragino Sans","Yu Gothic UI",system-ui,sans-serif;
   background:var(--bg); color:var(--ink); min-height:100vh; overflow-x:hidden;
 }
-body::before { /* 奥行きのあるオーロラ背景 */
+body::before {
   content:""; position:fixed; inset:-40%; z-index:-1; pointer-events:none;
   background:
     radial-gradient(38% 30% at 22% 18%, rgba(56,225,255,.09), transparent 70%),
@@ -174,14 +232,14 @@ body::before { /* 奥行きのあるオーロラ背景 */
   animation:drift 26s ease-in-out infinite alternate;
 }
 @keyframes drift { to { transform:translate3d(2.5%, 3.5%, 0) scale(1.06) } }
-body::after { /* 近未来グリッド */
+body::after {
   content:""; position:fixed; inset:0; z-index:-1; pointer-events:none; opacity:.5;
   background:
     linear-gradient(rgba(120,180,255,.05) 1px, transparent 1px) 0 0/100% 44px,
     linear-gradient(90deg, rgba(120,180,255,.05) 1px, transparent 1px) 0 0/44px 100%;
   mask-image:radial-gradient(70% 60% at 50% 30%, #000 30%, transparent 100%);
 }
-main { max-width:980px; margin:0 auto; padding:28px 18px 40px }
+main { max-width:1040px; margin:0 auto; padding:28px 18px 40px }
 
 header { display:flex; flex-wrap:wrap; align-items:baseline; gap:10px 16px; margin-bottom:18px }
 h1 {
@@ -211,7 +269,7 @@ h1 {
 .pill.ok    { color:var(--ok) }   .pill.ok .dot    { background:var(--ok);   color:var(--ok) }
 .pill.error { color:var(--warn) } .pill.error .dot { background:var(--warn); color:var(--warn) }
 .pill.halted{ color:var(--bad) }  .pill.halted .dot{ background:var(--bad);  color:var(--bad) }
-.detail { color:var(--muted); font-size:.78rem; max-width:60ch; overflow-wrap:anywhere }
+.detail { color:var(--muted); font-size:.78rem; max-width:70ch; overflow-wrap:anywhere }
 
 .grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(200px,1fr)); gap:12px; margin:14px 0 }
 .tile .label { color:var(--muted); font-size:.72rem; letter-spacing:.12em }
@@ -220,7 +278,14 @@ h1 {
   font-variant-numeric:tabular-nums; transition:text-shadow .6s;
 }
 .tile .value.glow { text-shadow:0 0 18px rgba(56,225,255,.55) }
-.unit { font-size:.85rem; color:var(--muted); margin-left:2px }
+
+.symrow { display:grid; grid-template-columns:repeat(auto-fit,minmax(220px,1fr)); gap:12px; margin:14px 0 }
+.symcard { cursor:pointer; user-select:none }
+.symcard.active { border-color:rgba(56,225,255,.55); box-shadow:0 0 24px rgba(56,225,255,.12) }
+.symcard .sy { font-weight:700; letter-spacing:.08em }
+.symcard .px { font-size:1.25rem; font-weight:650; font-variant-numeric:tabular-nums; margin-top:6px }
+.symcard .ln { color:var(--muted); font-size:.72rem; margin-top:6px; font-variant-numeric:tabular-nums }
+.symcard .halt { color:var(--bad); font-size:.72rem; font-weight:700 }
 
 .chart-head { display:flex; justify-content:space-between; align-items:baseline; margin-bottom:6px }
 .chart-head h2, section h2 { font-size:.85rem; letter-spacing:.14em; color:var(--muted); font-weight:600 }
@@ -257,6 +322,24 @@ tr.fresh { animation:slidein .6s ease-out }
 .pnl-pos { color:var(--ok) } .pnl-neg { color:var(--bad) }
 .note { color:var(--faint); font-size:.75rem; margin-top:16px; line-height:1.7 }
 section { margin-top:14px }
+
+.cols { display:grid; grid-template-columns:5fr 7fr; gap:12px; margin-top:14px }
+@media (max-width:760px) { .cols { grid-template-columns:1fr } }
+#feed { margin-top:8px; height:320px; overflow:hidden; position:relative;
+  mask-image:linear-gradient(#000 78%, transparent 100%) }
+.frow { display:grid; grid-template-columns:52px 44px 1fr 1fr; gap:8px;
+  padding:5px 6px; font-size:.8rem; font-variant-numeric:tabular-nums;
+  border-bottom:1px solid rgba(120,180,255,.06) }
+.frow.new { animation:feedin .5s ease-out }
+@keyframes feedin { from { opacity:0; transform:translateY(-10px);
+  background:rgba(56,225,255,.12) } to { background:transparent } }
+.frow .t { color:var(--faint) }
+.frow .p, .frow .a { text-align:right }
+.livechip { display:inline-flex; align-items:center; gap:6px; color:var(--bad);
+  font-size:.68rem; letter-spacing:.2em; font-weight:700 }
+.livechip::before { content:""; width:7px; height:7px; border-radius:50%;
+  background:var(--bad); animation:blink 1.2s infinite }
+@keyframes blink { 50% { opacity:.25 } }
 </style></head><body><main>
 <header>
   <h1>CRYPTOBOT CONSOLE</h1>
@@ -268,10 +351,12 @@ section { margin-top:14px }
     <span class="pill ok" id="pill"><span class="dot"></span><span id="statustext">接続中…</span></span>
     <span class="detail" id="statusdetail"></span>
   </div>
-  <div class="detail">最新の判断: <span id="lastresult" style="color:var(--ink)">—</span>
-    <span id="lastrun"></span></div>
-  <div style="margin-top:12px"><button id="stepbtn">⚡ 今すぐ1回判断する</button></div>
+  <div class="detail" id="lastresults">—</div>
+  <div style="margin-top:12px"><button id="stepbtn">⚡ 今すぐ全銘柄を1回判断する</button>
+    <span class="detail" id="lastrun" style="margin-left:10px"></span></div>
 </div>
+
+<div class="symrow" id="symrow"></div>
 
 <section class="card">
   <div class="chart-head"><h2>PRICE — <span id="chartsymbol"></span>(直近4時間)</h2>
@@ -283,31 +368,38 @@ section { margin-top:14px }
 </section>
 
 <div class="grid">
-  <div class="card tile"><div class="label">資産評価額(仮想)</div>
+  <div class="card tile"><div class="label">資産評価額(仮想・全銘柄合計)</div>
     <div class="value" id="equity">—</div></div>
-  <div class="card tile"><div class="label">現金残高(仮想)</div>
+  <div class="card tile"><div class="label">現金残高(仮想・合計)</div>
     <div class="value" id="cash">—</div></div>
-  <div class="card tile"><div class="label">保有数量</div>
-    <div class="value" id="position">—</div></div>
   <div class="card tile"><div class="label">累計実現損益 ※課税対象の目安</div>
     <div class="value" id="pnl">—</div></div>
 </div>
 
-<section class="card">
-  <h2>RECENT TRADES(新しい順)</h2>
-  <div style="overflow-x:auto"><table>
-    <thead><tr><th>日時</th><th>売買</th><th>数量</th><th>価格(円)</th><th>実現損益</th></tr></thead>
-    <tbody id="trades"><tr><td colspan="5" style="color:var(--faint)">まだ取引はありません。条件が揃うと自動で仮想売買されます。</td></tr></tbody>
-  </table></div>
-</section>
+<div class="cols">
+  <section class="card">
+    <div style="display:flex;justify-content:space-between;align-items:center">
+      <h2>MARKET FEED — <span id="feedsymbol"></span> 市場の約定</h2><span class="livechip">LIVE</span></div>
+    <div id="feed"><div class="frow"><span class="t">収集中…</span></div></div>
+  </section>
+  <section class="card">
+    <h2>MY TRADES — botの取引(全銘柄・新しい順)</h2>
+    <div style="overflow-x:auto"><table>
+      <thead><tr><th>日時</th><th>銘柄</th><th>売買</th><th>数量</th><th>価格(円)</th><th>実現損益</th></tr></thead>
+      <tbody id="trades"><tr><td colspan="6" style="color:var(--faint)">まだ取引はありません。条件が揃うと自動で仮想売買されます。</td></tr></tbody>
+    </table></div>
+  </section>
+</div>
 
 <p class="note">これはペーパートレード(仮想売買)です。実際のお金は一切動いていません。
+銘柄カードをクリックするとチャートとフィードが切り替わります。
 止めるには起動した黒い画面(ターミナル)を閉じるだけでOK。再開すると残高・履歴は自動復元されます。</p>
 </main>
 <script>
 const $ = id => document.getElementById(id);
-const yen = v => v == null ? "—" : Math.round(v).toLocaleString("ja-JP") + "円";
-const cur = {};  // 数値アニメーションの現在値
+const cur = {};
+let sel = null;      // 選択中の銘柄
+let lastState = null;
 
 function tween(id, target, fmt) {
   if (target == null) { $(id).textContent = "—"; cur[id] = null; return; }
@@ -325,8 +417,12 @@ function tween(id, target, fmt) {
 function drawChart(hist) {
   const svg = $("chart");
   if (!hist || hist.length < 2) {
-    svg.innerHTML = '<text x="480" y="115" text-anchor="middle">データ収集中…(20秒ごとに増えます)</text>';
+    svg.innerHTML = '<text x="480" y="115" text-anchor="middle">データ収集中…(5秒ごとに増えます)</text>';
     return;
+  }
+  if (hist.length > 400) {
+    const step = Math.ceil(hist.length / 400);
+    hist = hist.filter((_, i) => i % step === 0 || i === hist.length - 1);
   }
   const W = 960, H = 220, PL = 8, PR = 74, PT = 14, PB = 22;
   const ts = hist.map(h => h[0]), ps = hist.map(h => h[1]);
@@ -338,7 +434,7 @@ function drawChart(hist) {
   let d = "";
   hist.forEach((h, i) => { d += (i ? "L" : "M") + X(h[0]).toFixed(1) + "," + Y(h[1]).toFixed(1); });
   const area = d + `L${(W-PR).toFixed(1)},${H-PB}L${PL},${H-PB}Z`;
-  const gl = [0, .5, 1].map(f => { // 目盛り3本
+  const gl = [0, .5, 1].map(f => {
     const p = lo + (hi - lo) * f, y = Y(p).toFixed(1);
     return `<line x1="${PL}" y1="${y}" x2="${W-PR}" y2="${y}" stroke="rgba(120,180,255,.08)"/>` +
            `<text x="${W-PR+6}" y="${(+y+3.5)}">${Math.round(p).toLocaleString()}</text>`;
@@ -359,10 +455,9 @@ function drawChart(hist) {
     let best = 0, bd = 1e18;
     hist.forEach((h, i) => { const dx = Math.abs(X(h[0]) - mx); if (dx < bd) { bd = dx; best = i; } });
     const h = hist[best], x = X(h[0]), y = Y(h[1]);
-    const xh = $("xh"), xc = $("xc"), tip = $("tooltip");
-    xh.setAttribute("x1", x); xh.setAttribute("x2", x); xh.style.visibility = "visible";
-    xc.setAttribute("cx", x); xc.setAttribute("cy", y); xc.style.visibility = "visible";
-    const t = new Date(h[0]);
+    $("xh").setAttribute("x1", x); $("xh").setAttribute("x2", x); $("xh").style.visibility = "visible";
+    $("xc").setAttribute("cx", x); $("xc").setAttribute("cy", y); $("xc").style.visibility = "visible";
+    const t = new Date(h[0]), tip = $("tooltip");
     tip.textContent = `${String(t.getHours()).padStart(2,"0")}:${String(t.getMinutes()).padStart(2,"0")}  ${Math.round(h[1]).toLocaleString()}円`;
     tip.style.left = Math.min(x / W * r.width + 12, r.width - 130) + "px";
     tip.style.top = (y / H * r.height - 34) + "px";
@@ -372,29 +467,70 @@ function drawChart(hist) {
     $("xh").style.visibility = "hidden"; $("xc").style.visibility = "hidden"; };
 }
 
+const seenFeed = new Set();
+function renderFeed(mts) {
+  if (!mts || !mts.length) {
+    $("feed").innerHTML = '<div class="frow"><span class="t">収集中…</span></div>';
+    return;
+  }
+  const firstLoad = seenFeed.size === 0;
+  $("feed").innerHTML = mts.map(t => {
+    const d = new Date(t.ts);
+    const hh = String(d.getHours()).padStart(2, "0"), mm = String(d.getMinutes()).padStart(2, "0"),
+          ss = String(d.getSeconds()).padStart(2, "0");
+    const fresh = !firstLoad && !seenFeed.has(t.id);
+    return `<div class="frow ${fresh ? "new" : ""}">` +
+      `<span class="t">${hh}:${mm}:${ss}</span>` +
+      `<span class="${t.side === "buy" ? "side-buy" : "side-sell"}">${t.side === "buy" ? "▲ 買" : "▼ 売"}</span>` +
+      `<span class="p">${Math.round(t.price).toLocaleString()}円</span>` +
+      `<span class="a">${t.amount.toFixed(4)}</span></div>`;
+  }).join("");
+  mts.forEach(t => seenFeed.add(t.id));
+}
+
+function renderSymbols(s) {
+  $("symrow").innerHTML = s.perSymbol.map(p =>
+    `<div class="card symcard ${p.symbol === sel ? "active" : ""}" onclick="pick('${p.symbol}')">` +
+    `<div class="sy">${p.symbol}${p.halted ? ' <span class="halt">⛔停止</span>' : ""}</div>` +
+    `<div class="px">${p.price == null ? "—" : Math.round(p.price).toLocaleString() + "円"}</div>` +
+    `<div class="ln">保有 ${p.position.toFixed(6)} ・ 損益 ` +
+    `<span class="${p.pnl > 0 ? "pnl-pos" : p.pnl < 0 ? "pnl-neg" : ""}">` +
+    `${(p.pnl >= 0 ? "+" : "") + Math.round(p.pnl).toLocaleString()}円</span></div></div>`
+  ).join("");
+}
+
+function pick(sym) { sel = sym; seenFeed.clear(); if (lastState) render(lastState); }
+window.pick = pick;
+
 let lastTradeKey = "";
 function render(s) {
+  lastState = s;
+  if (!sel || !s.symbols.includes(sel)) sel = s.symbols[0];
   $("meta").textContent =
-    `${s.exchange} / ${s.symbol} / 戦略: ${s.strategy} / 判断間隔: ${Math.round(s.intervalSec/60)}分 / 表示は5秒ごと更新`;
-  $("chartsymbol").textContent = s.symbol;
-  const pill = $("pill");
-  pill.className = "pill " + s.status;
+    `${s.exchange} / ${s.symbols.join(" ・ ")} / 戦略: ${s.strategy} / 判断間隔: ${Math.round(s.intervalSec/60)}分`;
+  $("chartsymbol").textContent = sel;
+  $("feedsymbol").textContent = sel;
+  $("pill").className = "pill " + s.status;
   $("statustext").textContent = s.statusText;
   $("statusdetail").textContent = s.statusDetail || "";
-  $("lastresult").textContent = s.lastResult;
-  $("lastrun").textContent = s.lastRunAt !== "—" ? `(${s.lastRunAt})` : "";
-  tween("bigprice", s.price, v => Math.round(v).toLocaleString("ja-JP") + "円");
+  $("lastresults").innerHTML = s.symbols.map(sym =>
+    `<div>最新の判断 <b>${sym}</b>: ${s.lastResults[sym] || "待機中"}</div>`).join("");
+  $("lastrun").textContent = s.lastRunAt !== "—" ? `最終実行 ${s.lastRunAt}` : "";
+  renderSymbols(s);
+  const selInfo = s.perSymbol.find(p => p.symbol === sel);
+  tween("bigprice", selInfo ? selInfo.price : null, v => Math.round(v).toLocaleString("ja-JP") + "円");
   tween("equity", s.equity, v => Math.round(v).toLocaleString("ja-JP") + "円");
   tween("cash", s.cash, v => Math.round(v).toLocaleString("ja-JP") + "円");
   tween("pnl", s.realizedPnl, v => (v >= 0 ? "+" : "") + Math.round(v).toLocaleString("ja-JP") + "円");
-  $("position").textContent = s.position.toFixed(8);
   $("pnl").style.color = s.realizedPnl > 0 ? "var(--ok)" : s.realizedPnl < 0 ? "var(--bad)" : "";
-  drawChart(s.history);
-  const key = s.trades.length ? s.trades[0].ts + s.trades.length : "";
+  drawChart(s.history[sel]);
+  renderFeed(s.marketTrades[sel]);
+  const key = s.trades.length ? s.trades[0].ts + s.trades[0].symbol + s.trades.length : "";
   if (s.trades.length) {
     $("trades").innerHTML = s.trades.map((t, i) =>
       `<tr class="${i === 0 && key !== lastTradeKey ? "fresh" : ""}">` +
-      `<td>${t.ts}</td><td class="${t.side === "買" ? "side-buy" : "side-sell"}">${t.side}</td>` +
+      `<td>${t.ts}</td><td>${t.symbol}</td>` +
+      `<td class="${t.side === "買" ? "side-buy" : "side-sell"}">${t.side}</td>` +
       `<td class="num">${t.amount.toFixed(8)}</td><td class="num">${Math.round(t.price).toLocaleString()}</td>` +
       `<td class="num ${t.realized > 0 ? "pnl-pos" : t.realized < 0 ? "pnl-neg" : ""}">` +
       `${t.side === "売" ? (t.realized >= 0 ? "+" : "") + Math.round(t.realized).toLocaleString() + "円" : "—"}</td></tr>`
@@ -407,15 +543,18 @@ async function refresh() {
   try {
     const s = await (await fetch("/api/state")).json();
     render(s);
-  } catch (e) { $("statustext").textContent = "画面とbotの接続が切れました(黒い画面が閉じていませんか?)"; $("pill").className = "pill error"; }
+  } catch (e) {
+    $("statustext").textContent = "画面とbotの接続が切れました(黒い画面が閉じていませんか?)";
+    $("pill").className = "pill error";
+  }
 }
 $("stepbtn").onclick = async () => {
   const b = $("stepbtn"); b.disabled = true; b.textContent = "⏳ 判断中…";
   try { await fetch("/step", { method: "POST" }); await refresh(); }
-  finally { b.disabled = false; b.textContent = "⚡ 今すぐ1回判断する"; }
+  finally { b.disabled = false; b.textContent = "⚡ 今すぐ全銘柄を1回判断する"; }
 };
 if (window.MOCK_STATE) { render(window.MOCK_STATE); }
-else { refresh(); setInterval(refresh, 5000); }
+else { refresh(); setInterval(refresh, 3000); }
 </script></body></html>"""
 
 

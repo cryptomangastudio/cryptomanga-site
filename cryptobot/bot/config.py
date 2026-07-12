@@ -47,6 +47,7 @@ class NotifyConfig:
 class BotConfig:
     exchange: str = "bitflyer"
     symbol: str = "BTC/JPY"
+    symbols: list[str] = field(default_factory=list)  # 複数銘柄。空ならsymbolのみ
     mode: str = "paper"
     strategy: str = "dca"
     interval_seconds: int = 3600
@@ -60,6 +61,11 @@ class BotConfig:
     paper_state_path: str = "data/paper_state.json"
     halt_file: str = "data/HALTED"
 
+    def __post_init__(self):
+        if not self.symbols:
+            self.symbols = [self.symbol]
+        self.symbol = self.symbols[0]
+
 
 class ConfigError(ValueError):
     pass
@@ -70,6 +76,7 @@ def load_config(path: str | Path) -> BotConfig:
     cfg = BotConfig(
         exchange=raw.get("exchange", "bitflyer"),
         symbol=raw.get("symbol", "BTC/JPY"),
+        symbols=list(raw.get("symbols") or []),
         mode=raw.get("mode", "paper"),
         strategy=raw.get("strategy", "dca"),
         interval_seconds=int(raw.get("interval_seconds", 3600)),
@@ -110,6 +117,13 @@ def validate(cfg: BotConfig) -> None:
         raise ConfigError("ma_cross.fast は slow より小さくしてください")
     if cfg.notify.format not in VALID_NOTIFY_FORMATS:
         raise ConfigError(f"notify.format は {VALID_NOTIFY_FORMATS} のいずれか")
+    if len(cfg.symbols) != len(set(cfg.symbols)):
+        raise ConfigError("symbols に重複があります")
+    if cfg.budget_jpy // len(cfg.symbols) < 5_000:
+        raise ConfigError(
+            f"銘柄数{len(cfg.symbols)}に対して予算が少なすぎます"
+            "(1銘柄あたり5,000円以上になるよう銘柄を減らすか予算を見直してください)"
+        )
     if cfg.mode == "live" and os.environ.get("CRYPTOBOT_LIVE") != "YES":
         raise ConfigError(
             "mode: live には環境変数 CRYPTOBOT_LIVE=YES が必要です(誤発注防止の二重ロック)"
