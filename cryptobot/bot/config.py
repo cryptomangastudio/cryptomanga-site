@@ -88,14 +88,13 @@ class RegimeConfig:
 
 @dataclass
 class BotConfig:
-    exchange: str = "bitflyer"
+    exchange: str = "bitbank"  # メイカーリベート・日足API・最低数量の点でbitbankを既定に
     symbol: str = "BTC/JPY"
     symbols: list[str] = field(default_factory=list)  # 複数銘柄。空ならsymbolのみ
     mode: str = "paper"
     strategy: str = "dca"
     interval_seconds: int = 3600
     budget_jpy: int = 100_000
-    fee_rate: float = 0.0015
     risk: RiskConfig = field(default_factory=RiskConfig)
     dca: DCAConfig = field(default_factory=DCAConfig)
     ma_cross: MACrossConfig = field(default_factory=MACrossConfig)
@@ -124,15 +123,19 @@ class ConfigError(ValueError):
 
 def load_config(path: str | Path) -> BotConfig:
     raw = yaml.safe_load(Path(path).read_text(encoding="utf-8")) or {}
+    if "fee_rate" in raw:
+        raise ConfigError(
+            "fee_rate は廃止されました。execution: の maker_fee_rate / taker_fee_rate に"
+            "移行してください(黙って無視すると手数料の前提が変わり危険なためエラーにしています)"
+        )
     cfg = BotConfig(
-        exchange=raw.get("exchange", "bitflyer"),
+        exchange=raw.get("exchange", "bitbank"),
         symbol=raw.get("symbol", "BTC/JPY"),
         symbols=list(raw.get("symbols") or []),
         mode=raw.get("mode", "paper"),
         strategy=raw.get("strategy", "dca"),
         interval_seconds=int(raw.get("interval_seconds", 3600)),
         budget_jpy=int(raw.get("budget_jpy", 100_000)),
-        fee_rate=float(raw.get("fee_rate", 0.0015)),
         risk=RiskConfig(**raw.get("risk", {})),
         dca=DCAConfig(**raw.get("dca", {})),
         ma_cross=MACrossConfig(**raw.get("ma_cross", {})),
@@ -185,8 +188,8 @@ def validate(cfg: BotConfig) -> None:
         )
     if cfg.execution.style not in ("maker", "taker"):
         raise ConfigError("execution.style は maker | taker のいずれか")
-    if cfg.execution.maker_fee_rate > cfg.execution.taker_fee_rate:
-        raise ConfigError("maker_fee_rate が taker_fee_rate を上回っています(設定ミスの可能性)")
+    if cfg.execution.requote_seconds < 2:
+        raise ConfigError("execution.requote_seconds は2秒以上(注文状態のポーリング間隔より短くできない)")
     if not (0 < cfg.sizing.kelly_cap <= 1):
         raise ConfigError("sizing.kelly_cap は 0〜1 の範囲")
     if cfg.cost_gate.k < 1:

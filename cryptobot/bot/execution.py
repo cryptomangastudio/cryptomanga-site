@@ -1,6 +1,7 @@
 """執行エンジン(リサーチ#1: Post-Onlyメイカー執行)。
 
-- paper: メイカー/テイカーの手数料率の違いとして近似する(paper_fee_rate)
+- paper: メイカー/テイカーの手数料率の違いとして近似する(paper_fee_rate)。
+  注意: ペーパーは「常に約定する」楽観的な近似(実際のメイカーは未約定リスクあり)。
 - live: Post-Only指値を最良気配に置き、未約定なら再指値。上限回数で見送る。
   テイカーへの自動フォールバックはしない(討論の裁定: 取れなかった利益は仮説、
   払った手数料は確定損)。
@@ -12,7 +13,7 @@ import time
 from dataclasses import dataclass
 
 from .config import BotConfig
-from .exchange import SpotOnlyExchange, fee_to_jpy
+from .exchange import SpotOnlyExchange, normalize_order_fill
 
 log = logging.getLogger("cryptobot.execution")
 
@@ -24,6 +25,15 @@ def paper_fee_rate(cfg: BotConfig) -> float:
     if cfg.execution.style == "maker":
         return cfg.execution.maker_fee_rate
     return cfg.execution.taker_fee_rate
+
+
+def conservative_fee_rate(cfg: BotConfig) -> float:
+    """残高の手数料バッファ等、安全側に見積もるべき場面の手数料率。
+
+    設定ミス(リベートのない取引所でmaker指定等)でも不足しないよう、
+    メイカー/テイカーの高い方(かつ0以上)を使う。
+    """
+    return max(cfg.execution.maker_fee_rate, cfg.execution.taker_fee_rate, 0.0)
 
 
 def round_trip_cost_pct(cfg: BotConfig) -> float:
@@ -46,7 +56,11 @@ class ExecutionResult:
 
 
 class MakerExecutor:
-    """live用のPost-Only指値執行。bitbank等、post_onlyに対応した取引所で使う。"""
+    """live用のPost-Only指値執行。bitbank等、post_onlyに対応した取引所で使う。
+
+    途中で通信エラーが起きても、それまでの約定分は必ず結果として返す
+    (返さないと実際に買えた現物が帳簿から漏れて建玉が狂うため)。
+    """
 
     def __init__(self, exchange: SpotOnlyExchange, cfg: BotConfig):
         self.exchange = exchange
@@ -70,51 +84,58 @@ class MakerExecutor:
         requotes = 0
         base = self.exchange.base_currency(symbol)
 
+        def result() -> ExecutionResult:
+            avg = cost_total / filled_total if filled_total > 0 else 0.0
+            return ExecutionResult(
+                amount=filled_total, price=avg, fee_jpy=fee_total,
+                wait_seconds=time.time() - started, requotes=requotes,
+            )
+
         while remaining > 0 and requotes <= self.cfg.execution.max_requotes:
-            price = self._best_quote(symbol, side)
             try:
-                if side == "buy":
-                    order = self.exchange.market_buy_limit_post_only(symbol, remaining, price)
-                else:
-                    order = self.exchange.market_sell_limit_post_only(symbol, remaining, price)
+                price = self._best_quote(symbol, side)
+                order = self.exchange.limit_post_only(symbol, side, remaining, price)
             except Exception as e:
-                # post-only拒否(板を食う価格だった)等は次の気配で再試行
-                log.info("post-only発注が拒否されました(再試行): %s", e)
+                # post-only拒否(板を食う価格)や気配取得失敗は即座に次の気配で再試行
+                log.info("post-only発注できず(再試行): %s", e)
                 requotes += 1
-                time.sleep(POLL_SECONDS)
                 continue
 
             order_id = order["id"]
             deadline = time.time() + self.cfg.execution.requote_seconds
             status = order
-            while time.time() < deadline:
-                time.sleep(POLL_SECONDS)
-                status = client.fetch_order(order_id, symbol)
-                if status.get("status") == "closed":
-                    break
-            if status.get("status") != "closed":
-                try:
-                    client.cancel_order(order_id, symbol)
-                except Exception as e:
-                    log.info("キャンセル失敗(直後に約定した可能性): %s", e)
-                status = client.fetch_order(order_id, symbol)
+            try:
+                while True:
+                    status = client.fetch_order(order_id, symbol)
+                    if status.get("status") == "closed" or time.time() >= deadline:
+                        break
+                    time.sleep(POLL_SECONDS)
+                if status.get("status") != "closed":
+                    try:
+                        client.cancel_order(order_id, symbol)
+                    except Exception as e:
+                        log.info("キャンセル失敗(直後に約定した可能性): %s", e)
+                    status = client.fetch_order(order_id, symbol)
+            except Exception as e:
+                # 状態不明のまま続けると二重発注の危険。ここまでの約定分を返して終了
+                log.warning("注文状態の確認に失敗(ここまでの約定分のみ記帳): %s", e)
+                fill, fill_price, fee = normalize_order_fill(status, base, 0.0, price)
+                if fill > 0:
+                    filled_total += fill
+                    cost_total += fill * fill_price
+                    fee_total += fee
+                return result()
 
-            filled = float(status.get("filled") or 0.0)
-            if filled > 0:
-                fill_price = float(status.get("average") or price)
-                filled_total += filled
-                cost_total += filled * fill_price
-                fee_total += fee_to_jpy(status.get("fee"), fill_price, base)
-                remaining -= filled
+            # 部分約定も含めて、実受渡数量(基軸通貨建て手数料は控除)を取り込む
+            gross_fill = float(status.get("filled") or 0.0)
+            fill, fill_price, fee = normalize_order_fill(status, base, 0.0, price)
+            if fill > 0:
+                filled_total += fill
+                cost_total += fill * fill_price
+                fee_total += fee
+            remaining -= gross_fill  # 残量は取引所視点の約定量で減らす(手数料控除前)
             if status.get("status") == "closed":
                 break
             requotes += 1
 
-        avg_price = cost_total / filled_total if filled_total > 0 else 0.0
-        return ExecutionResult(
-            amount=filled_total,
-            price=avg_price,
-            fee_jpy=fee_total,
-            wait_seconds=time.time() - started,
-            requotes=requotes,
-        )
+        return result()

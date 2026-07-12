@@ -11,13 +11,19 @@ import time
 from datetime import datetime
 
 from .config import BotConfig
-from .execution import MakerExecutor, paper_fee_rate, round_trip_cost_pct
+from .execution import (
+    ExecutionResult,
+    MakerExecutor,
+    conservative_fee_rate,
+    paper_fee_rate,
+    round_trip_cost_pct,
+)
 from .journal import EPS, Fill, TradeJournal
 from .notify import Notifier
 from .paper import PaperBroker
 from .risk import RiskManager
 from .shortfall import ShortfallLedger
-from .strategy import Action, MarketSnapshot, build_strategy
+from .strategy import Action, MarketSnapshot, Signal, build_strategy, sma
 
 log = logging.getLogger("cryptobot")
 
@@ -36,9 +42,14 @@ def fetch_closes(exchange, cfg: BotConfig) -> list[float]:
     return [
         c[4]
         for c in exchange.fetch_ohlcv(
-            cfg.symbol, cfg.ma_cross.timeframe, limit=cfg.ma_cross.slow + 5
+            cfg.symbol, cfg.ma_cross.timeframe, limit=closes_needed(cfg)
         )
     ]
+
+
+def closes_needed(cfg: BotConfig) -> int:
+    """戦略+ATR(15本)が必要とする終値の本数。バックテストと実運転で共有する。"""
+    return max(cfg.ma_cross.slow + 5, 16)
 
 
 def atr_estimate(closes: list[float], period: int = 14) -> float | None:
@@ -76,6 +87,8 @@ class BotRunner:
             else None
         )
         self._last_sane_price: float | None = None
+        self._pending_price: float | None = None  # 未確認の急変価格(次周期で確認)
+        self._pending_exit = False  # 売りシグナルが未約定のまま残っている(次周期で再試行)
         self._ma_cache: tuple[str, float | None] | None = None
         self._regime_warned = False
         self._check_state_consistency()
@@ -124,14 +137,15 @@ class BotRunner:
             return self._ma_cache[1]
         ma = None
         try:
-            closes = [
-                c[4]
-                for c in self.exchange.fetch_ohlcv(
-                    self.cfg.symbol, "1d", limit=self.cfg.regime.ma_days + 5
-                )
-            ]
+            closes = self.exchange.fetch_daily_closes(self.cfg.symbol, self.cfg.regime.ma_days)
             if len(closes) >= self.cfg.regime.ma_days:
-                ma = sum(closes[-self.cfg.regime.ma_days :]) / self.cfg.regime.ma_days
+                ma = sma(closes, self.cfg.regime.ma_days)
+            elif not self._regime_warned:
+                log.warning(
+                    "%s: 日足が%d本しか取れずレジームフィルターは無効(%d本必要)",
+                    self.cfg.symbol, len(closes), self.cfg.regime.ma_days,
+                )
+                self._regime_warned = True
         except Exception as e:
             if not self._regime_warned:
                 log.warning(
@@ -144,16 +158,24 @@ class BotRunner:
 
     def step(self, now: datetime, price: float, closes: list[float]) -> str:
         """1サイクル。何をしたかの説明文字列を返す。"""
-        # 価格サニティチェック(#2): 異常値・誤参照への防御
+        # 価格サニティチェック(#2): 単発の異常値は無視し、2周期連続で同水準なら
+        # 実際の急変と判断して処理を続行する(単純スキップだと暴落が続く間
+        # DD停止も売りも一切発火しない穴になる)
         if self._last_sane_price is not None and self.cfg.price_sanity_pct > 0:
             jump_pct = abs(price / self._last_sane_price - 1) * 100
             if jump_pct > self.cfg.price_sanity_pct:
-                prev = self._last_sane_price
-                self._last_sane_price = price  # 実相場の急変なら次周期から再開できる
-                return (
-                    f"スキップ: 価格が前回比{jump_pct:.1f}%乖離(異常値防御。"
-                    f"前回{prev:,.0f}円→今回{price:,.0f}円)"
+                pending = self._pending_price
+                confirmed = (
+                    pending is not None
+                    and abs(price / pending - 1) * 100 <= 2 * self.cfg.price_sanity_pct
                 )
+                if not confirmed:
+                    self._pending_price = price
+                    return (
+                        f"スキップ: 価格が前回比{jump_pct:.1f}%乖離(異常値の可能性。"
+                        f"次の周期も同水準なら実際の急変として処理します)"
+                    )
+        self._pending_price = None
         self._last_sane_price = price
 
         market = MarketSnapshot(
@@ -167,9 +189,19 @@ class BotRunner:
             return f"停止中: {self.risk.halt_reason}"
 
         signal = self.strategy.decide(market)
+
+        # 前周期の売りが未約定のまま残っていれば、シグナルに関わらず再試行する
+        # (MAクロスはクロス発生バーでしかSELLを出さないため、放置すると出口を失う)
+        if self._pending_exit:
+            if market.position_amount <= 0:
+                self._pending_exit = False
+            elif signal.action != Action.SELL:
+                return self._try_sell(
+                    now, price, market, Signal(Action.SELL, 0.0, "前回の売り残りを再試行")
+                )
+
         if signal.action == Action.HOLD:
             return f"HOLD: {signal.reason}"
-
         if signal.action == Action.BUY:
             return self._try_buy(now, price, market, signal)
         return self._try_sell(now, price, market, signal)
@@ -211,11 +243,12 @@ class BotRunner:
                     buy_jpy = cap
                     notes.append(f"ケリー上限→{buy_jpy:,.0f}円")
         elif self.cfg.strategy == "dca" and ma is not None and self.cfg.regime.dca_tilt > 0:
-            # DCA傾斜(#8): 200日MAより安いほど多く、高いほど少なく買う
+            # DCA傾斜(#8): 200日MAより安いほど多く、高いほど少なく買う。
+            # 増額後もリスク上限は超えない(超過して全却下されたら傾斜の意味が真逆になる)
             deviation = (price - ma) / ma
             tilt = self.cfg.regime.dca_tilt
             factor = max(1 - tilt, min(1 + tilt, 1 - deviation))
-            buy_jpy *= factor
+            buy_jpy = min(buy_jpy * factor, self.cfg.risk.max_order_jpy)
             notes.append(f"MA乖離{deviation:+.1%}→積立×{factor:.2f}")
 
         return buy_jpy, ("(" + " / ".join(notes) + ")" if notes else "")
@@ -228,8 +261,9 @@ class BotRunner:
 
         buy_jpy = min(buy_jpy, self._available_jpy())
         if not self.paper:
-            # live: 注文額 + 手数料 が残高に収まるよう手数料ぶんの余裕を取る
-            buy_jpy /= 1 + max(paper_fee_rate(self.cfg), 0)
+            # live: 注文額 + 手数料 が残高に収まるよう、高い方の手数料率ぶんの余裕を取る
+            # (設定ミスでリベートのない取引所にmaker指定をしても不足しないように)
+            buy_jpy /= 1 + conservative_fee_rate(self.cfg)
         if buy_jpy < MIN_BUY_JPY:
             return f"BUYスキップ: 発注可能額{buy_jpy:.0f}円 < 最低{MIN_BUY_JPY}円(手数料負け防止)"
 
@@ -252,26 +286,15 @@ class BotRunner:
         if not decision.approved:
             return f"BUY却下: {decision.reason}"
 
-        wait_s = 0.0
-        if self.paper:
-            amount, fee_jpy = self.paper.market_buy(price, buy_jpy)
-            fill_price = price
-        elif self.maker:
-            result = self.maker.execute(self.cfg.symbol, "buy", amount_estimate)
-            if result.amount <= 0:
-                return (
-                    f"BUY見送り: メイカー指値が{result.requotes}回の再指値でも約定せず"
-                    "(テイカーには逃げない方針)"
-                )
-            amount, fill_price, fee_jpy = result.amount, result.price, result.fee_jpy
-            wait_s = result.wait_seconds
-        else:
-            order = self.exchange.market_buy(self.cfg.symbol, amount_estimate)
-            amount, fill_price, fee_jpy = self.exchange.normalize_fill(
-                order, self.cfg.symbol, amount_estimate, price
+        result = self._execute_order("buy", amount_estimate, price)
+        if result.amount <= 0:
+            return (
+                f"BUY見送り: メイカー指値が{result.requotes}回の再指値でも約定せず"
+                "(テイカーには逃げない方針)"
             )
-        return self._book(now, "buy", amount, fill_price, fee_jpy, signal.reason + note,
-                          signal_price=price, wait_seconds=wait_s)
+        return self._book(now, "buy", result.amount, result.price, result.fee_jpy,
+                          signal.reason + note,
+                          signal_price=price, wait_seconds=result.wait_seconds)
 
     def _try_sell(self, now, price, market, signal) -> str:
         amount = market.position_amount  # 現状は全量売却のみ(現物なので保有分だけ)
@@ -281,27 +304,40 @@ class BotRunner:
         if not decision.approved:
             return f"SELL却下: {decision.reason}"
 
-        wait_s = 0.0
+        result = self._execute_order("sell", amount, price)
+        if result.amount <= 0:
+            self._pending_exit = True  # クロスは再発しないので、こちらで再試行を保証する
+            return (
+                f"SELL見送り: メイカー指値が{result.requotes}回の再指値でも約定せず"
+                "(次の周期に自動で再試行します)"
+            )
+        # 部分約定なら残りを次周期に再試行する
+        self._pending_exit = result.amount < amount - EPS
+        return self._book(now, "sell", result.amount, result.price, result.fee_jpy,
+                          signal.reason, signal_price=price, wait_seconds=result.wait_seconds)
+
+    def _execute_order(self, side: str, amount: float, price: float):
+        """paper / live-maker / live-taker の執行を1か所に集約する。
+
+        戻り値は ExecutionResult(数量・平均価格・手数料JPY・待ち秒・再指値回数)。
+        """
         if self.paper:
-            _, fee_jpy = self.paper.market_sell(price, amount)
-            fill_price = price
-        elif self.maker:
-            result = self.maker.execute(self.cfg.symbol, "sell", amount)
-            if result.amount <= 0:
-                return (
-                    f"SELL見送り: メイカー指値が{result.requotes}回の再指値でも約定せず"
-                    "(次の周期のシグナルで再試行)"
-                )
-            amount, fill_price, fee_jpy = result.amount, result.price, result.fee_jpy
-            wait_s = result.wait_seconds
+            if side == "buy":
+                filled, fee_jpy = self.paper.market_buy(price, amount * price)
+            else:
+                _, fee_jpy = self.paper.market_sell(price, amount)
+                filled = amount
+            return ExecutionResult(filled, price, fee_jpy, 0.0, 0)
+        if self.maker:
+            return self.maker.execute(self.cfg.symbol, side, amount)
+        if side == "buy":
+            order = self.exchange.market_buy(self.cfg.symbol, amount)
         else:
             order = self.exchange.market_sell(self.cfg.symbol, amount)
-            # 部分約定なら約定分だけ記帳する(残りは次周期のシグナルで再売却)
-            amount, fill_price, fee_jpy = self.exchange.normalize_fill(
-                order, self.cfg.symbol, amount, price
-            )
-        return self._book(now, "sell", amount, fill_price, fee_jpy, signal.reason,
-                          signal_price=price, wait_seconds=wait_s)
+        filled, fill_price, fee_jpy = self.exchange.normalize_fill(
+            order, self.cfg.symbol, amount, price
+        )
+        return ExecutionResult(filled, fill_price, fee_jpy, 0.0, 0)
 
     def _book(self, now, side, amount, price, fee_jpy, reason,
               signal_price: float | None = None, wait_seconds: float = 0.0) -> str:

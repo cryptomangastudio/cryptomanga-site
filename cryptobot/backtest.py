@@ -23,8 +23,37 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 from bot.config import load_config
-from bot.runner import BotRunner
+from bot.runner import BotRunner, closes_needed
 from bot.validate import deflated_sharpe, sharpe_ratio, walk_forward_segments
+
+
+class BacktestDataFeed:
+    """バックテスト用の擬似取引所。
+
+    レジームフィルター(200日MA)が実運転と同じ経路で働くよう、入力OHLCVを
+    日足にリサンプルして fetch_daily_closes を提供する。now_ts より未来の
+    日足は返さない(ルックアヘッド防止)。
+    """
+
+    def __init__(self, data: list[tuple[datetime, float]]):
+        self.daily: list[tuple[str, float]] = []  # (日付, その日の最終終値)
+        for ts, close in data:
+            day = ts.strftime("%Y-%m-%d")
+            if self.daily and self.daily[-1][0] == day:
+                self.daily[-1] = (day, close)
+            else:
+                self.daily.append((day, close))
+        self.now_day = ""
+
+    def set_now(self, ts: datetime) -> None:
+        self.now_day = ts.strftime("%Y-%m-%d")
+
+    def fetch_daily_closes(self, symbol: str, days: int) -> list[float]:
+        closes = [c for day, c in self.daily if day < self.now_day]  # 当日は未確定なので除外
+        return closes[-days:]
+
+    def min_order_amount(self, symbol: str):
+        return None
 
 
 def load_ohlcv(path: str) -> list[tuple[datetime, float]]:
@@ -70,9 +99,10 @@ def run_sim(cfg, data: list[tuple[datetime, float]], journal_name: str) -> dict:
     scfg = sim_config(cfg, journal_name)
     for p in (scfg.journal_path, scfg.shortfall_path):
         Path(p).unlink(missing_ok=True)
-    runner = BotRunner(scfg)
+    feed = BacktestDataFeed(data)  # レジームフィルターを実運転と同じ経路で効かせる
+    runner = BotRunner(scfg, exchange=feed)
 
-    window = scfg.ma_cross.slow + 2  # 戦略が必要とする本数だけ渡す(全履歴はO(n²))
+    window = closes_needed(scfg)  # 実運転(fetch_closes)と同じ本数を渡す
     peak = float(scfg.budget_jpy)
     max_dd = 0.0
     trades = skipped = 0
@@ -81,6 +111,7 @@ def run_sim(cfg, data: list[tuple[datetime, float]], journal_name: str) -> dict:
     closes: list[float] = []
     for ts, close in data:
         closes.append(close)
+        feed.set_now(ts)
         result = runner.step(ts, close, closes[-window:])
         if result.startswith(("BUY ", "SELL ")):
             trades += 1
@@ -148,6 +179,9 @@ def main() -> None:
     print(f"最大DD      : {result['max_dd']:.2f}%")
     print(f"シャープ(年率): {sr:.2f}")
     print(f"DSR         : {dsr:.3f}(試行{args.trials}回を考慮した「本物である確率」)")
+    if cfg.execution.style == "maker":
+        print("※ メイカー執行は「常に約定する」仮定のシミュレーション(実運用より楽観的)。"
+              "実弾では実効コスト台帳との乖離を必ず確認すること")
     if result["halted"]:
         print(f"⚠️  途中でDD停止が発動: {result['halt_reason']}")
     print(f"取引明細    : {result['journal_path']}")

@@ -35,6 +35,10 @@ def sub_config(cfg: BotConfig, symbol: str) -> BotConfig:
     dca = dataclasses.replace(
         cfg.dca, buy_amount_jpy=min(cfg.dca.buy_amount_jpy, risk.max_order_jpy)
     )
+    # 暴走防止ガバナーも銘柄数で按分(しないとポートフォリオ全体でn倍緩んでしまう)
+    governor = dataclasses.replace(
+        cfg.governor, max_buys_per_month=max(2, cfg.governor.max_buys_per_month // n)
+    )
     if n == 1:
         paths = {}
     else:
@@ -54,7 +58,8 @@ def sub_config(cfg: BotConfig, symbol: str) -> BotConfig:
             ),
         }
     return dataclasses.replace(
-        cfg, symbol=symbol, symbols=[symbol], budget_jpy=budget, risk=risk, dca=dca, **paths
+        cfg, symbol=symbol, symbols=[symbol], budget_jpy=budget,
+        risk=risk, dca=dca, governor=governor, **paths
     )
 
 

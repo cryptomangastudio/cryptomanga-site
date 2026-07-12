@@ -31,7 +31,9 @@ HEADER = [
     "メモ",
 ]
 # 列番号(report.py等の読み手と共有する)
-COL_TS, COL_SIDE, COL_AMOUNT, COL_PRICE, COL_JPY, COL_FEE, COL_REALIZED = 0, 3, 4, 5, 6, 7, 9
+COL_TS, COL_SYMBOL, COL_SIDE, COL_AMOUNT, COL_PRICE, COL_JPY, COL_FEE, COL_REALIZED = (
+    0, 2, 3, 4, 5, 6, 7, 9,
+)
 
 EPS = 1e-12  # 建玉数量の実質ゼロ判定(paper/runnerとも共有)
 

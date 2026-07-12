@@ -25,7 +25,7 @@ def _fill(side: str, amount: float, price: float, fee: float = 0.0, ts: datetime
 
 
 class FakeExchange:
-    """min_order_amount と日足OHLCVだけ返す偽の取引所。"""
+    """min_order_amount と日足終値だけ返す偽の取引所。"""
 
     def __init__(self, daily_close: float = 10_000_000, days: int = 205):
         self.daily_close = daily_close
@@ -34,10 +34,8 @@ class FakeExchange:
     def min_order_amount(self, symbol):
         return None
 
-    def fetch_ohlcv(self, symbol, timeframe, limit=100):
-        assert timeframe == "1d"
-        n = min(limit, self.days)
-        return [[i, 0, 0, 0, self.daily_close, 0] for i in range(n)]
+    def fetch_daily_closes(self, symbol, days):
+        return [self.daily_close] * min(days, self.days)
 
 
 def make_config(tmp: str, **overrides) -> BotConfig:
@@ -139,10 +137,10 @@ class TestRunnerGates(unittest.TestCase):
         runner = BotRunner(cfg)
         runner.step(NOW, 10_000_000, [])
         result = runner.step(NOW + timedelta(hours=2), 12_000_000, [])  # +20% > 10%
-        self.assertIn("異常値防御", result)
-        # 次の周期は新価格基準で再開できる
+        self.assertIn("異常値の可能性", result)
+        # 同水準が続けば実際の急変として処理が再開される
         result = runner.step(NOW + timedelta(hours=4), 12_100_000, [])
-        self.assertNotIn("異常値防御", result)
+        self.assertNotIn("異常値の可能性", result)
 
     def test_dca_tilt_buys_more_below_ma(self):
         cfg = make_config(self.tmp.name)
@@ -226,6 +224,74 @@ class TestValidate(unittest.TestCase):
         self.assertEqual(len(segs), 5)
         self.assertEqual(segs[0], (0, 20))
         self.assertEqual(segs[-1][1], 100)
+
+
+class TestReviewRegressions(unittest.TestCase):
+    """コードレビューで検出したバグの回帰テスト。"""
+
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory()
+
+    def tearDown(self):
+        self.tmp.cleanup()
+
+    def test_dca_tilt_clamped_to_max_order(self):
+        # 積立額=注文上限のとき、下落時の増額が上限超過で全却下されてはいけない
+        cfg = make_config(self.tmp.name)
+        cfg.dca.buy_amount_jpy = 10_000
+        cfg.risk.max_order_jpy = 10_000
+        runner = BotRunner(cfg, exchange=FakeExchange(daily_close=10_000_000))
+        result = runner.step(NOW, 9_000_000, [])  # MAより10%安 → 傾斜1.1倍
+        self.assertIn("BUY", result)
+        self.assertNotIn("却下", result)
+        self.assertLessEqual(runner.journal.position_cost_jpy, 10_000 + 1)
+
+    def test_pending_exit_retries_next_cycle(self):
+        # 売りが未約定で残った場合、クロスが再発しなくても次周期で再試行する
+        cfg = make_config(self.tmp.name)
+        runner = BotRunner(cfg)
+        runner.step(NOW, 10_000_000, [])  # DCAで建玉を作る
+        runner._pending_exit = True  # 前周期の売りが未約定だったと仮定
+        result = runner.step(NOW + timedelta(hours=2), 10_000_000, [])
+        self.assertIn("前回の売り残り", result)
+        self.assertEqual(runner.journal.position_amount, 0.0)
+        self.assertFalse(runner._pending_exit)
+
+    def test_sanity_confirms_real_crash(self):
+        # 2周期連続で同水準の急変は「実際の暴落」として処理される(DD停止が効く)
+        cfg = make_config(self.tmp.name)
+        cfg.dca.buy_amount_jpy = 10_000
+        runner = BotRunner(cfg)
+        for i in range(5):  # 上限まで積む
+            runner.step(NOW + timedelta(hours=i), 10_000_000, [])
+        r1 = runner.step(NOW + timedelta(hours=6), 5_000_000, [])
+        self.assertIn("異常値の可能性", r1)  # 1回目は未確認でスキップ
+        r2 = runner.step(NOW + timedelta(hours=7), 5_050_000, [])
+        self.assertIn("停止中", r2)  # 2回目で確認 → equity更新 → DD全停止
+        self.assertTrue(runner.risk.halted)
+
+    def test_soheikin_is_per_symbol(self):
+        from report import soheikin_by_year
+
+        def row(ts, symbol, side, amount, price):
+            return [ts, "x", symbol, side, repr(float(amount)), repr(float(price)),
+                    "0", "0.0", "0", "0", "0", ""]
+
+        rows = [
+            row("2026-01-01 00:00:00", "BTC/JPY", "買", 1, 100),
+            row("2026-02-01 00:00:00", "BTC/JPY", "売", 1, 150),   # +50
+            row("2026-01-01 00:00:00", "XRP/JPY", "買", 10, 10),
+            row("2026-03-01 00:00:00", "XRP/JPY", "売", 10, 12),   # +20
+        ]
+        result = soheikin_by_year(rows)
+        self.assertAlmostEqual(result["2026"], 70)  # 銘柄をまたいで平均されないこと
+
+    def test_legacy_fee_rate_rejected(self):
+        from bot.config import ConfigError, load_config
+        p = Path(self.tmp.name) / "old.yaml"
+        p.write_text("fee_rate: 0.0015\n", encoding="utf-8")
+        with self.assertRaises(ConfigError):
+            load_config(p)
 
 
 class TestAtr(unittest.TestCase):

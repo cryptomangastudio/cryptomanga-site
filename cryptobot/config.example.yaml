@@ -1,10 +1,11 @@
 # CryptoBot 設定サンプル。コピーして config.yaml を作成すること(config.yamlはgit管理外)。
 
-exchange: bitflyer        # ccxtの取引所ID(bitflyer / coincheck など。金融庁登録業者のみ)
+exchange: bitbank         # 推奨: メイカーリベート・日足API・最低数量0.0001BTCが揃う
+                          # (bitflyerも可。ただしリベート・日足なし → execution/regimeの注記参照)
 symbols:                  # 複数銘柄OK。予算・リスク上限は銘柄数で等分される
   - BTC/JPY
   - ETH/JPY               # BTCよりボラティリティ高め
-  - XRP/JPY               # 同上(いずれもbitFlyer現物対応)
+  - XRP/JPY               # 同上(いずれもbitbank現物対応)
 mode: paper               # paper | live。live は環境変数 CRYPTOBOT_LIVE=YES も必要(二重ロック)
 strategy: dca             # dca | ma_cross(ma_crossはOHLCV対応取引所が必要。bitFlyer不可、bitbank可)
 interval_seconds: 3600    # 判断間隔(秒)
@@ -12,9 +13,10 @@ interval_seconds: 3600    # 判断間隔(秒)
 budget_jpy: 100000        # 総予算。これを超える買いは絶対に通らない
 
 execution:                # リサーチ#1: メイカー執行がコスト構造を反転させる最重要機能
-  style: maker            # maker | taker。ペーパーでは手数料率の違いとして近似
-  maker_fee_rate: -0.0002 # bitbankは-0.02%(受け取り)。bitFlyerはリベートなし→0.0015等に
-  taker_fee_rate: 0.0012
+  style: maker            # maker | taker。ペーパーは「常に約定」仮定の近似(実際は未約定リスクあり)
+  maker_fee_rate: -0.0002 # bitbank現物は-0.02%(受け取り)
+  taker_fee_rate: 0.0012  # bitbank現物は0.12%
+                          # bitFlyerを使う場合: style: taker / maker・takerとも0.0015 が目安
   requote_seconds: 20     # live: 指値未約定時の再指値までの秒数
   max_requotes: 5         # live: 再指値上限。超えたら見送り(テイカーに逃げない)
 

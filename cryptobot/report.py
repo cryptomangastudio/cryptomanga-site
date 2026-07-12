@@ -47,63 +47,59 @@ def load_rows(journal_paths: list[Path]) -> list[list[str]]:
 def soheikin_by_year(rows: list[list[str]]) -> dict[str, float]:
     """総平均法(個人の法定デフォルト)による年別実現損益の概算。
 
-    年内の全買付(前年からの繰越を含む)の平均単価で売却損益を計算する。
-    移動平均法(帳簿の記載)とは金額が変わりうるため、両方を表示して比較する。
+    総平均法は通貨(銘柄)ごとに平均単価を計算する必要があるため、
+    銘柄別に計算してから年ごとに合算する。
     """
-    from bot.journal import COL_AMOUNT, COL_PRICE
+    from bot.journal import COL_AMOUNT, COL_PRICE, COL_SYMBOL
 
-    by_year: dict[str, list[list[str]]] = defaultdict(list)
+    by_symbol: dict[str, list[list[str]]] = defaultdict(list)
     for r in rows:
-        by_year[r[COL_TS][:4]].append(r)
+        by_symbol[r[COL_SYMBOL]].append(r)
 
-    result: dict[str, float] = {}
-    carry_amount = 0.0
-    carry_cost = 0.0
-    for year in sorted(by_year):
-        buys_cost = carry_cost
-        total_amount = carry_amount
-        for r in by_year[year]:
-            if r[COL_SIDE] == "買":
-                amount, price, fee = float(r[COL_AMOUNT]), float(r[COL_PRICE]), float(r[COL_FEE])
-                buys_cost += amount * price + fee
-                total_amount += amount
-        avg = buys_cost / total_amount if total_amount > 0 else 0.0
-        realized = 0.0
-        sold = 0.0
-        for r in by_year[year]:
-            if r[COL_SIDE] == "売":
-                amount, price, fee = float(r[COL_AMOUNT]), float(r[COL_PRICE]), float(r[COL_FEE])
-                realized += (price - avg) * amount - fee
-                sold += amount
-        result[year] = realized
-        carry_amount = total_amount - sold
-        carry_cost = carry_amount * avg
-    return result
+    result: dict[str, float] = defaultdict(float)
+    for symbol_rows in by_symbol.values():
+        by_year: dict[str, list[list[str]]] = defaultdict(list)
+        for r in symbol_rows:
+            by_year[r[COL_TS][:4]].append(r)
+        carry_amount = 0.0
+        carry_cost = 0.0
+        for year in sorted(by_year):
+            buys_cost = carry_cost
+            total_amount = carry_amount
+            for r in by_year[year]:
+                if r[COL_SIDE] == "買":
+                    amount, price, fee = float(r[COL_AMOUNT]), float(r[COL_PRICE]), float(r[COL_FEE])
+                    buys_cost += amount * price + fee
+                    total_amount += amount
+            avg = buys_cost / total_amount if total_amount > 0 else 0.0
+            realized = 0.0
+            sold = 0.0
+            for r in by_year[year]:
+                if r[COL_SIDE] == "売":
+                    amount, price, fee = float(r[COL_AMOUNT]), float(r[COL_PRICE]), float(r[COL_FEE])
+                    realized += (price - avg) * amount - fee
+                    sold += amount
+            result[year] += realized
+            carry_amount = total_amount - sold
+            carry_cost = carry_amount * avg
+    return dict(result)
 
 
-def aggregate(journal_paths: list[Path]) -> dict[str, MonthlySummary]:
-    """複数銘柄の記帳CSVを月別に合算する。"""
+def aggregate(rows: list[list[str]]) -> dict[str, MonthlySummary]:
+    """明細行を月別に合算する(load_rowsの結果を受け取る。ファイルは一度しか読まない)。"""
     months: dict[str, MonthlySummary] = defaultdict(MonthlySummary)
-    for journal_path in journal_paths:
-        with journal_path.open(newline="", encoding="utf-8") as f:
-            reader = csv.reader(f)
-            header = next(reader, None)
-            if header != HEADER:
-                raise SystemExit(f"{journal_path} のヘッダーが想定と異なります")
-            for row in reader:
-                if not row:
-                    continue
-                month = row[COL_TS][:7]  # YYYY-MM
-                m = months[month]
-                jpy = float(row[COL_JPY])
-                m.fee_jpy += float(row[COL_FEE])
-                if row[COL_SIDE] == "買":
-                    m.buys += 1
-                    m.buy_jpy += jpy
-                else:
-                    m.sells += 1
-                    m.sell_jpy += jpy
-                    m.realized_pnl += float(row[COL_REALIZED])
+    for row in rows:
+        month = row[COL_TS][:7]  # YYYY-MM
+        m = months[month]
+        jpy = float(row[COL_JPY])
+        m.fee_jpy += float(row[COL_FEE])
+        if row[COL_SIDE] == "買":
+            m.buys += 1
+            m.buy_jpy += jpy
+        else:
+            m.sells += 1
+            m.sell_jpy += jpy
+            m.realized_pnl += float(row[COL_REALIZED])
     return dict(sorted(months.items()))
 
 
@@ -172,11 +168,12 @@ def main() -> None:
     if not journal_paths:
         raise SystemExit("記帳CSVが見つかりません(まだ取引がないかパスが違います)")
 
-    months = aggregate(journal_paths)
+    rows = load_rows(journal_paths)
+    months = aggregate(rows)
     if not months:
         raise SystemExit("取引記録がまだありません")
 
-    markdown = render_markdown(months, soheikin_by_year(load_rows(journal_paths)), tax_rate)
+    markdown = render_markdown(months, soheikin_by_year(rows), tax_rate)
     out_dir = Path(args.out)
     out_dir.mkdir(parents=True, exist_ok=True)
     latest_year = max(months)[:4]
