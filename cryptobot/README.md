@@ -23,6 +23,18 @@
 「今すぐ1回判断する」ボタンで手動実行もできます。
 デフォルトはペーパートレード(仮想のお金)なので、**1円も動きません**。
 
+### さらにかんたん: 1行貼るだけの全自動セットアップ(Windows)
+
+ZIPのダウンロードや展開も自動でやりたい場合は、PowerShell
+(Windowsキー →「powershell」と入力 → Enter)に次の1行を貼ってEnterするだけです。
+
+```powershell
+irm https://raw.githubusercontent.com/cryptomangastudio/cryptomanga-site/claude/crypto-bot-foundation-ioefuq/cryptobot/setup.ps1 | iex
+```
+
+ダウンロード → 展開 → 環境構築 → 管理画面の起動まで全部やります(`setup.ps1`)。
+2回目以降も同じ1行で起動でき、取引記録は消えません。
+
 ## 設計原則(このbotが絶対に守ること)
 
 1. **現物のみ**: レバレッジ・信用・先物・スワップに関わる注文はコードレベルで拒否します(`bot/exchange.py`)。
