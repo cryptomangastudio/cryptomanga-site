@@ -20,9 +20,11 @@ import argparse
 import csv
 import json
 import logging
+import secrets
 import threading
 import time
 import webbrowser
+from urllib.parse import parse_qs, urlparse
 from collections import deque
 from datetime import datetime
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
@@ -71,6 +73,7 @@ class Dashboard:
         self.cfg = cfg
         self.portfolio = PortfolioRunner(cfg, SpotOnlyExchange(cfg))
         self.notifier = Notifier(cfg.notify.format)  # 定期レポート用(約定通知は各runnerが送る)
+        self.key = self._load_or_create_key()  # トンネル共有時ののぞき見防止キー
         self.lock = threading.Lock()
         self.last_price: dict[str, float] = {}
         self.price_history = {s: deque(maxlen=PRICE_HISTORY_MAX) for s in cfg.symbols}
@@ -80,6 +83,18 @@ class Dashboard:
         self.last_results: dict[str, str] = {}
         self.last_error = ""
         self.last_run_at: datetime | None = None
+
+    def _load_or_create_key(self) -> str:
+        """アクセスキー。share.ps1でスマホ共有しても第三者に見られないようにする。"""
+        key_file = Path(self.cfg.journal_path).parent / "dashboard_key.txt"
+        if key_file.exists():
+            key = key_file.read_text(encoding="utf-8").strip()
+            if key:
+                return key
+        key = secrets.token_urlsafe(9)
+        key_file.parent.mkdir(parents=True, exist_ok=True)
+        key_file.write_text(key + "\n", encoding="utf-8")
+        return key
 
     @property
     def exchange(self):
@@ -561,9 +576,10 @@ function render(s) {
   lastTradeKey = key;
 }
 
+const KEY = new URLSearchParams(location.search).get("key") || "";
 async function refresh() {
   try {
-    const s = await (await fetch("/api/state")).json();
+    const s = await (await fetch("/api/state?key=" + encodeURIComponent(KEY))).json();
     render(s);
   } catch (e) {
     $("statustext").textContent = "画面とbotの接続が切れました(黒い画面が閉じていませんか?)";
@@ -572,7 +588,7 @@ async function refresh() {
 }
 $("stepbtn").onclick = async () => {
   const b = $("stepbtn"); b.disabled = true; b.textContent = "⏳ 判断中…";
-  try { await fetch("/step", { method: "POST" }); await refresh(); }
+  try { await fetch("/step?key=" + encodeURIComponent(KEY), { method: "POST" }); await refresh(); }
   finally { b.disabled = false; b.textContent = "⚡ 今すぐ全銘柄を1回判断する"; }
 };
 if (window.MOCK_STATE) { render(window.MOCK_STATE); }
@@ -589,10 +605,24 @@ def make_handler(dash: Dashboard):
             self.end_headers()
             self.wfile.write(body)
 
+        def _route(self) -> tuple[str, bool]:
+            """(パス, 認証OKか)。キー必須: トンネル共有時に第三者から守るため。"""
+            parsed = urlparse(self.path)
+            key = (parse_qs(parsed.query).get("key") or [""])[0]
+            return parsed.path, key == dash.key
+
         def do_GET(self):
-            if self.path == "/":
+            path, ok = self._route()
+            if not ok:
+                self._send(
+                    "アクセスキーが必要です。PCの黒い画面に表示されたURL"
+                    "(?key=... 付き)から開いてください。".encode("utf-8"),
+                    "text/plain; charset=utf-8", 401,
+                )
+                return
+            if path == "/":
                 self._send(PAGE.encode("utf-8"), "text/html; charset=utf-8")
-            elif self.path == "/api/state":
+            elif path == "/api/state":
                 self._send(
                     json.dumps(dash.state(), ensure_ascii=False).encode("utf-8"),
                     "application/json; charset=utf-8",
@@ -601,7 +631,11 @@ def make_handler(dash: Dashboard):
                 self.send_error(404)
 
         def do_POST(self):
-            if self.path != "/step":
+            path, ok = self._route()
+            if not ok:
+                self._send(b'{"error": "unauthorized"}', "application/json", 401)
+                return
+            if path != "/step":
                 self.send_error(404)
                 return
             dash.run_cycle()
@@ -624,9 +658,10 @@ def main() -> None:
     threading.Thread(target=dash.bot_loop, daemon=True).start()
     threading.Thread(target=dash.price_loop, daemon=True).start()
 
-    url = f"http://127.0.0.1:{args.port}"
+    url = f"http://127.0.0.1:{args.port}/?key={dash.key}"
     server = ThreadingHTTPServer(("127.0.0.1", args.port), make_handler(dash))
-    print(f"ダッシュボード起動: {url} (この画面を閉じるとbotも止まります)")
+    print(f"ダッシュボード起動: {url}")
+    print("(この画面を閉じるとbotも止まります。スマホで見るには share.ps1 を実行)")
     threading.Timer(1.0, webbrowser.open, args=(url,)).start()
     try:
         server.serve_forever()

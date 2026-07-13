@@ -98,6 +98,21 @@ python report.py --config config.yaml
 ccxtに実装のある金融庁登録業者: `bitflyer` / `coincheck` / `bitbank` / `zaif`。
 GMOコインはccxt未対応のため、使う場合は専用アダプタの追加実装が必要です。
 
+### 📱 スマホで「実際の画面」を見る(share.ps1・無料)
+
+botを起動した状態で、**もう1つ**PowerShellを開いて次の1行を貼るだけです。
+
+```powershell
+irm https://raw.githubusercontent.com/cryptomangastudio/cryptomanga-site/claude/crypto-bot-foundation-ioefuq/cryptobot/share.ps1 | iex
+```
+
+Cloudflare Tunnel(無料・アカウント不要)でスマホ用URLが表示されるので、
+LINE等で自分に送ってタップすれば、**動いているダッシュボードそのもの**が見られます。
+
+- URLには自動生成のアクセスキーが付いており、URLを知らない第三者は開けません
+- botのウィンドウ+共有ウィンドウを開けている間だけ有効。URLは毎回変わります
+- PCがスリープすると見えなくなります(電源設定に注意)
+
 ### 📱 スマホで確認する(Discord通知・無料・5分で設定)
 
 外出中でもスマホで状況が分かるように、約定・全停止・**1時間ごとの資産レポート**を
