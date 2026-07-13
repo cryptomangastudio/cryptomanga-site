@@ -29,6 +29,7 @@ def make_config(tmp: str) -> BotConfig:
     cfg.paper_state_path = str(Path(tmp) / "paper_state.json")
     cfg.halt_file = str(Path(tmp) / "HALTED")
     cfg.shortfall_path = str(Path(tmp) / "exec.csv")  # 本番のdata/を汚さない
+    cfg.risk_state_path = str(Path(tmp) / "risk_state.json")
     return cfg
 
 

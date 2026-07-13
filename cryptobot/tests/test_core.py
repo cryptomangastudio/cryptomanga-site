@@ -142,12 +142,13 @@ class TestRiskManager(unittest.TestCase):
         tomorrow = self.now + timedelta(days=1, minutes=61)
         self.assertTrue(self.risk.check_order("buy", 5_000, 0, tomorrow).approved)
 
-    def test_drawdown_halts_bot(self):
+    def test_drawdown_halts_buys_but_not_sells(self):
         self.risk.update_equity(100_000)
         self.risk.update_equity(84_000)  # -16% > 上限15%
         self.assertTrue(self.risk.halted)
         self.assertFalse(self.risk.check_order("buy", 5_000, 0, self.now).approved)
-        self.assertFalse(self.risk.check_order("sell", 5_000, 0, self.now).approved)
+        # halt中でも売り(リスク削減)は常に許可される — DD超過は最も売るべき局面
+        self.assertTrue(self.risk.check_order("sell", 5_000, 0, self.now).approved)
 
     def test_on_halt_hook_fires(self):
         events = []

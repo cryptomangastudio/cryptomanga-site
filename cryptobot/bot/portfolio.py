@@ -56,6 +56,10 @@ def sub_config(cfg: BotConfig, symbol: str) -> BotConfig:
             "shortfall_path": str(
                 Path(cfg.shortfall_path).with_name(f"execution_{slug}.csv")
             ),
+            "risk_state_path": (
+                str(Path(cfg.risk_state_path).with_name(f"risk_state_{slug}.json"))
+                if cfg.risk_state_path else cfg.risk_state_path
+            ),
         }
     return dataclasses.replace(
         cfg, symbol=symbol, symbols=[symbol], budget_jpy=budget,
@@ -96,4 +100,4 @@ class PortfolioRunner:
         while True:
             for sym, result in self.step_all(datetime.now()).items():
                 log.info("%s | %s", sym, result)
-            time.sleep(self.cfg.interval_seconds)
+            time.sleep(min(r.next_sleep_seconds() for r in self.runners.values()))

@@ -44,6 +44,7 @@ def make_config(tmp: str, **overrides) -> BotConfig:
     cfg.paper_state_path = str(Path(tmp) / "paper.json")
     cfg.halt_file = str(Path(tmp) / "HALTED")
     cfg.shortfall_path = str(Path(tmp) / "exec.csv")
+    cfg.risk_state_path = str(Path(tmp) / "risk_state.json")
     for k, v in overrides.items():
         setattr(cfg, k, v)
     return cfg
@@ -144,6 +145,7 @@ class TestRunnerGates(unittest.TestCase):
 
     def test_dca_tilt_buys_more_below_ma(self):
         cfg = make_config(self.tmp.name)
+        cfg.regime.dca_tilt = 0.5  # 傾斜は既定OFFなのでテストでは明示的に有効化
         runner = BotRunner(cfg, exchange=FakeExchange(daily_close=10_000_000))
         result = runner.step(NOW, 9_000_000, [])  # 200日MAより10%安い
         self.assertIn("BUY", result)
@@ -164,8 +166,8 @@ class TestRunnerGates(unittest.TestCase):
         cfg.ma_cross.fast, cfg.ma_cross.slow = 2, 3
         cfg.regime.enabled = False
         runner = BotRunner(cfg)
-        closes = [10_000.0] * 14 + [9_990, 9_980, 9_970, 9_960, 10_000]
-        result = runner.step(NOW, 10_000, closes)
+        closes = [10_000.0] * 14 + [9_990, 9_980, 9_970, 9_960, 10_100]
+        result = runner.step(NOW, 10_100, closes)
         self.assertIn("コストゲート", result)
 
     def test_kelly_negative_blocks_new_entries(self):
@@ -238,6 +240,7 @@ class TestReviewRegressions(unittest.TestCase):
     def test_dca_tilt_clamped_to_max_order(self):
         # 積立額=注文上限のとき、下落時の増額が上限超過で全却下されてはいけない
         cfg = make_config(self.tmp.name)
+        cfg.regime.dca_tilt = 0.5
         cfg.dca.buy_amount_jpy = 10_000
         cfg.risk.max_order_jpy = 10_000
         runner = BotRunner(cfg, exchange=FakeExchange(daily_close=10_000_000))
@@ -251,11 +254,11 @@ class TestReviewRegressions(unittest.TestCase):
         cfg = make_config(self.tmp.name)
         runner = BotRunner(cfg)
         runner.step(NOW, 10_000_000, [])  # DCAで建玉を作る
-        runner._pending_exit = True  # 前周期の売りが未約定だったと仮定
+        runner._pending_exit_price = 10_000_000  # 前周期の売りが未約定だったと仮定
         result = runner.step(NOW + timedelta(hours=2), 10_000_000, [])
         self.assertIn("前回の売り残り", result)
         self.assertEqual(runner.journal.position_amount, 0.0)
-        self.assertFalse(runner._pending_exit)
+        self.assertIsNone(runner._pending_exit_price)
 
     def test_sanity_confirms_real_crash(self):
         # 2周期連続で同水準の急変は「実際の暴落」として処理される(DD停止が効く)
@@ -292,6 +295,109 @@ class TestReviewRegressions(unittest.TestCase):
         p.write_text("fee_rate: 0.0015\n", encoding="utf-8")
         with self.assertRaises(ConfigError):
             load_config(p)
+
+
+class TestDefenseV2(unittest.TestCase):
+    """レッドチーム討論(2026-07)で決まった防御強化の回帰テスト。"""
+
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory()
+
+    def tearDown(self):
+        self.tmp.cleanup()
+
+    def test_halt_does_not_block_exit(self):
+        # DD停止(halt)中でも売り=リスク削減は実行される
+        cfg = make_config(self.tmp.name, strategy="ma_cross")
+        cfg.ma_cross.fast, cfg.ma_cross.slow = 2, 3
+        cfg.regime.enabled = False
+        cfg.cost_gate.enabled = False
+        cfg.risk.hard_stop_pct = 0  # このテストではhaltとレベル売りだけを見る
+        cfg.price_sanity_pct = 0
+        runner = BotRunner(cfg)
+        closes_up = [100.0, 90, 80, 70, 60, 100]
+        runner.step(NOW, 100, closes_up)  # ゴールデンクロスで買い
+        self.assertGreater(runner.journal.position_amount, 0)
+        runner.risk.halt("テスト用の停止")
+        closes_down = [100.0, 100, 100, 90, 80, 70]  # fast<slow
+        result = runner.step(NOW + timedelta(hours=2), 70, closes_down)
+        self.assertIn("SELL", result)
+        self.assertEqual(runner.journal.position_amount, 0.0)
+
+    def test_hard_stop_forces_exit(self):
+        # デッドクロスを待たず、取得単価比-10%で強制売却される
+        cfg = make_config(self.tmp.name, strategy="ma_cross")
+        cfg.ma_cross.fast, cfg.ma_cross.slow = 2, 3
+        cfg.regime.enabled = False
+        cfg.cost_gate.enabled = False
+        cfg.price_sanity_pct = 0
+        runner = BotRunner(cfg)
+        runner.step(NOW, 100, [100.0, 90, 80, 70, 60, 100])  # 買い(取得単価≈100)
+        # fastはまだslowの上(クロスによる売りは出ない)だが、価格は-11%
+        closes = [100.0, 60, 70, 80, 90, 89]
+        result = runner.step(NOW + timedelta(hours=2), 89, closes)
+        self.assertIn("ハードストップ", result)
+        self.assertEqual(runner.journal.position_amount, 0.0)
+
+    def test_level_based_sell_recovers_after_restart(self):
+        # クロスの「瞬間」を取り逃しても、fast<slowの間はSELLが出続ける
+        from bot.strategy import MACrossStrategy, MarketSnapshot, Action
+        strategy = MACrossStrategy(fast=2, slow=3, buy_amount_jpy=5_000)
+        closes = [100.0, 95, 90, 85, 80, 75]  # とっくにデッドクロス済み
+        market = MarketSnapshot(price=75, closes=closes, position_amount=1.0, position_cost_jpy=100)
+        self.assertEqual(strategy.decide(market).action, Action.SELL)
+
+    def test_dca_hard_floor_stops_buys(self):
+        cfg = make_config(self.tmp.name)  # dca
+        runner = BotRunner(cfg, exchange=FakeExchange(daily_close=10_000_000))
+        result = runner.step(NOW, 7_400_000, [])  # MA比-26% < フロア-25%
+        self.assertIn("ハードフロア", result)
+        self.assertEqual(runner.journal.position_amount, 0.0)
+
+    def test_risk_state_survives_restart(self):
+        # 損失カウンタ・ピーク資産が再起動で消えない(ブレーカー武装解除の防止)
+        from bot.config import RiskConfig
+        from bot.risk import RiskManager
+        state = Path(self.tmp.name) / "risk_state.json"
+        risk = RiskManager(RiskConfig(), 100_000, state_file=state)
+        risk.update_equity(100_000)
+        risk.record_fill(NOW, "sell", realized_pnl_jpy=-2_900)
+        risk.record_fill(NOW + timedelta(minutes=1), "buy")
+        reborn = RiskManager(RiskConfig(), 100_000, state_file=state)
+        self.assertEqual(reborn._consecutive_losses, 1)
+        self.assertAlmostEqual(reborn._daily_realized_loss, 2_900)
+        self.assertEqual(reborn._monthly_buys, 1)
+        self.assertAlmostEqual(reborn._peak_equity, 100_000)
+        # 再起動後の暴落でもピークは引き継がれているのでDD停止が正しく効く
+        reborn.update_equity(84_000)
+        self.assertTrue(reborn.halted)
+
+    def test_peak_defaults_to_budget(self):
+        # 状態ファイルなしの初回でも「今の資産が新ピーク」ラチェットにならない
+        from bot.config import RiskConfig
+        from bot.risk import RiskManager
+        risk = RiskManager(RiskConfig(), 100_000)
+        risk.update_equity(84_000)  # 予算比-16%
+        self.assertTrue(risk.halted)
+
+    def test_kelly_all_wins_is_none(self):
+        journal = TradeJournal(Path(self.tmp.name) / "t.csv")
+        for _ in range(12):
+            journal.record(_fill("buy", 1, 100))
+            journal.record(_fill("sell", 1, 110))
+        self.assertIsNone(journal.kelly_fraction())  # 全勝は「無制限」ではなく判定保留
+
+    def test_live_paths_are_separated(self):
+        cfg = BotConfig(mode="paper")
+        self.assertEqual(cfg.journal_path, "data/trades.csv")
+        import os
+        os.environ["CRYPTOBOT_LIVE"] = "YES"
+        try:
+            live = BotConfig(mode="live")
+        finally:
+            del os.environ["CRYPTOBOT_LIVE"]
+        self.assertEqual(live.journal_path, "data/trades_live.csv")
+        self.assertEqual(live.halt_file, "data/HALTED_live")
 
 
 class TestAtr(unittest.TestCase):

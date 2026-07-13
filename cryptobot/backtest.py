@@ -88,6 +88,7 @@ def sim_config(cfg, journal_name: str):
         notify=dataclasses.replace(cfg.notify, format="none"),
         halt_file="",
         paper_state_path="",
+        risk_state_path="",  # リスク状態も永続化しない(シミュレーション間の汚染防止)
         journal_path=f"data/{journal_name}.csv",
         shortfall_path=f"data/{journal_name}_exec.csv",
         price_sanity_pct=0.0,  # 歴史データのギャップで止まらないように
@@ -190,16 +191,28 @@ def main() -> None:
     if args.walk_forward >= 2:
         print(f"\n=== ウォークフォワード({args.walk_forward}区間) ===")
         segments = walk_forward_segments(len(data), args.walk_forward)
-        positives = 0
+        if len(segments) < 2:
+            print("❌ データ不足でウォークフォワード不能 — より長い期間のデータで検証すること")
+            gate_ok = False
+        positives = traded = 0
         for i, (s, e) in enumerate(segments, 1):
             seg = run_sim(cfg, data[s:e], f"backtest_wf{i}")
-            mark = "+" if seg["return_pct"] >= 0 else "-"
-            positives += seg["return_pct"] >= 0
+            # 無取引区間は「戦略が機能した証拠」ではないので合格票に数えない
+            if seg["trades"] > 0:
+                traded += 1
+                positives += seg["return_pct"] > 0
+                mark = "+" if seg["return_pct"] > 0 else "-"
+            else:
+                mark = "無取引"
             print(f"区間{i}: {data[s][0]:%Y-%m-%d}〜{data[e-1][0]:%Y-%m-%d} "
                   f"{seg['return_pct']:+.2f}% 取引{seg['trades']}回 [{mark}]")
-        ratio = positives / len(segments)
-        print(f"プラス区間: {positives}/{len(segments)}({ratio:.0%})")
-        gate_ok = gate_ok and ratio >= 0.6
+        if traded == 0 or traded < len(segments) / 2:
+            print(f"取引のあった区間が{traded}/{len(segments)}のみ — 検証として不十分")
+            gate_ok = False
+        else:
+            ratio = positives / traded
+            print(f"プラス区間: {positives}/{traded}(取引のあった区間の{ratio:.0%})")
+            gate_ok = gate_ok and ratio >= 0.6
 
     print("\n=== 昇格ゲート判定 ===")
     if gate_ok and args.walk_forward >= 2:

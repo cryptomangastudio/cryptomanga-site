@@ -13,6 +13,7 @@ from datetime import datetime
 
 from bot.config import load_config
 from bot.exchange import SpotOnlyExchange
+from bot.lock import acquire_singleton_lock
 from bot.portfolio import PortfolioRunner, sub_config
 
 
@@ -64,6 +65,7 @@ def main() -> None:
 
     if cfg.mode == "live":
         print("⚠️  LIVEモード: 実際のお金で発注します。停止は Ctrl+C。")
+    _lock = acquire_singleton_lock()  # 二重起動防止。プロセス終了まで保持
     runner = PortfolioRunner(cfg, exchange)
 
     if args.once:

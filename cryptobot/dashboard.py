@@ -33,6 +33,7 @@ from pathlib import Path
 from bot.config import load_config
 from bot.exchange import SpotOnlyExchange
 from bot.journal import COL_AMOUNT, COL_PRICE, COL_REALIZED, COL_SIDE, COL_TS, HEADER
+from bot.lock import acquire_singleton_lock
 from bot.notify import Notifier
 from bot.portfolio import PortfolioRunner
 from bot.runner import fetch_closes
@@ -153,7 +154,8 @@ class Dashboard:
             self.run_cycle()
             # スマホ用の定期レポート(interval_secondsごと=既定1時間ごと)
             self.notifier.send(status_summary(self.state()))
-            time.sleep(self.cfg.interval_seconds)
+            # 売り残りのある銘柄がある間は短周期で再試行する
+            time.sleep(min(r.next_sleep_seconds() for r in self.portfolio.runners.values()))
 
     def price_loop(self) -> None:
         time.sleep(PRICE_POLL_SECONDS)  # 起動直後はbot_loopが取得するので待つ
@@ -654,6 +656,7 @@ def main() -> None:
     args = parser.parse_args()
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
 
+    _lock = acquire_singleton_lock()  # 二重起動防止(帳簿の交錯を防ぐ)。プロセス終了まで保持
     dash = Dashboard(load_config(args.config))
     threading.Thread(target=dash.bot_loop, daemon=True).start()
     threading.Thread(target=dash.price_loop, daemon=True).start()

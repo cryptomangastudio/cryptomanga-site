@@ -119,6 +119,11 @@ class SpotOnlyExchange:
         balance = self.client.fetch_balance()
         return float((balance.get("JPY") or {}).get("free") or 0.0)
 
+    def fetch_base_balance(self, symbol: str) -> float:
+        """基軸通貨(BTC等)の実残高(liveモード用)。帳簿との突合に使う。"""
+        balance = self.client.fetch_balance()
+        return float((balance.get(self.base_currency(symbol)) or {}).get("free") or 0.0)
+
     def fetch_public_trades(self, symbol: str, limit: int = 30) -> list[dict]:
         """市場全体の約定履歴(公開データ)。ダッシュボードのフィード表示用。"""
         out = []

@@ -96,9 +96,11 @@ class MakerExecutor:
                 price = self._best_quote(symbol, side)
                 order = self.exchange.limit_post_only(symbol, side, remaining, price)
             except Exception as e:
-                # post-only拒否(板を食う価格)や気配取得失敗は即座に次の気配で再試行
+                # post-only拒否(板を食う価格)や気配取得失敗は次の気配で再試行。
+                # レート制限中にAPIを連打しないよう線形バックオフを入れる
                 log.info("post-only発注できず(再試行): %s", e)
                 requotes += 1
+                time.sleep(POLL_SECONDS * (1 + requotes))
                 continue
 
             order_id = order["id"]
@@ -115,7 +117,25 @@ class MakerExecutor:
                         client.cancel_order(order_id, symbol)
                     except Exception as e:
                         log.info("キャンセル失敗(直後に約定した可能性): %s", e)
-                    status = client.fetch_order(order_id, symbol)
+                    # 二重発注ガード: 前の注文が板から消えたことを確認するまで
+                    # 絶対に次の指値を置かない(レート制限等でキャンセルが
+                    # 通っていないと、同一意図の注文が複数枚並んでしまう)
+                    for _ in range(5):
+                        status = client.fetch_order(order_id, symbol)
+                        if status.get("status") not in ("open", "partially_filled"):
+                            break
+                        time.sleep(POLL_SECONDS)
+                    if status.get("status") in ("open", "partially_filled"):
+                        log.warning(
+                            "注文%sが板に残っている可能性があるため、二重発注を避けて"
+                            "この周期は見送ります", order_id,
+                        )
+                        fill, fill_price, fee = normalize_order_fill(status, base, 0.0, price)
+                        if fill > 0:
+                            filled_total += fill
+                            cost_total += fill * fill_price
+                            fee_total += fee
+                        return result()
             except Exception as e:
                 # 状態不明のまま続けると二重発注の危険。ここまでの約定分を返して終了
                 log.warning("注文状態の確認に失敗(ここまでの約定分のみ記帳): %s", e)
