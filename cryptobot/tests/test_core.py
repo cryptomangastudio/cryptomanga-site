@@ -249,8 +249,8 @@ class TestStatusSummary(unittest.TestCase):
             ],
         }
         text = dash_mod.status_summary(state)
-        self.assertIn("101,235円", text)
-        self.assertIn("+1,235円", text)
+        self.assertIn("資産評価額: 101,234円", text)
+        self.assertIn("累計実現損益: +1,234円", text)
         self.assertIn("BTC/JPY: 10,000,000円", text)
         self.assertIn("⛔停止中", text)
 
