@@ -98,14 +98,23 @@ python report.py --config config.yaml
 ccxtに実装のある金融庁登録業者: `bitflyer` / `coincheck` / `bitbank` / `zaif`。
 GMOコインはccxt未対応のため、使う場合は専用アダプタの追加実装が必要です。
 
-### 通知(任意)
+### 📱 スマホで確認する(Discord通知・無料・5分で設定)
 
-約定・全停止イベントをDiscord/Slack互換Webhookに通知できます。
+外出中でもスマホで状況が分かるように、約定・全停止・**1時間ごとの資産レポート**を
+Discordに送れます。ダッシュボード(localhost)はセキュリティのため自分のPCから
+しか見られない設計なので、外から見る手段はこの通知が正解です。
 
-```bash
-export CRYPTOBOT_WEBHOOK_URL="https://discord.com/api/webhooks/..."
-# config.yaml で notify.format を discord または slack に
-```
+1. スマホに **Discord** アプリを入れて無料アカウントを作る
+2. 「サーバーを追加 → オリジナルの作成」で自分だけのサーバーを作る
+3. チャンネルの ⚙(設定)→「連携サービス」→「ウェブフック」→「新しいウェブフック」
+   →「ウェブフックURLをコピー」
+4. PCの `cryptobot` フォルダにメモ帳で **`notify_url.txt`** というファイルを作り、
+   コピーしたURLを貼り付けて保存(このファイルはgitに入りません)
+5. `config.yaml` の `notify.format:` を `discord` に変更
+6. botを再起動(黒い画面を閉じて、いつもの1行を貼り直す)
+
+以後、スマホのDiscordに「🚀起動」「🟢買付」「📊定期レポート(資産・損益・保有)」
+「🛑全停止」が届きます。環境変数 `CRYPTOBOT_WEBHOOK_URL` でも設定できます。
 
 ### 社内ネットワーク等のプロキシ環境
 

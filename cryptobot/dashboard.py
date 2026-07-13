@@ -31,8 +31,26 @@ from pathlib import Path
 from bot.config import load_config
 from bot.exchange import SpotOnlyExchange
 from bot.journal import COL_AMOUNT, COL_PRICE, COL_REALIZED, COL_SIDE, COL_TS, HEADER
+from bot.notify import Notifier
 from bot.portfolio import PortfolioRunner
 from bot.runner import fetch_closes
+
+
+def status_summary(state: dict) -> str:
+    """スマホ通知用の定期レポート本文(Discord/Slackにそのまま送れるテキスト)。"""
+    lines = [
+        f"📊 CryptoBot定期レポート({state['lastRunAt']})",
+        f"資産評価額: {state['equity']:,.0f}円" if state["equity"] is not None
+        else "資産評価額: 計測中",
+        f"現金: {state['cash']:,.0f}円 / 累計実現損益: {state['realizedPnl']:+,.0f}円",
+    ]
+    for p in state["perSymbol"]:
+        price = f"{p['price']:,.0f}円" if p["price"] is not None else "—"
+        halted = " ⛔停止中" if p["halted"] else ""
+        lines.append(f"{p['symbol']}: {price} / 保有{p['position']:.6f}{halted}")
+    if state["status"] != "ok":
+        lines.append(f"⚠️ {state['statusText']}")
+    return "\n".join(lines)
 
 log = logging.getLogger("cryptobot.dashboard")
 
@@ -52,6 +70,7 @@ class Dashboard:
             )
         self.cfg = cfg
         self.portfolio = PortfolioRunner(cfg, SpotOnlyExchange(cfg))
+        self.notifier = Notifier(cfg.notify.format)  # 定期レポート用(約定通知は各runnerが送る)
         self.lock = threading.Lock()
         self.last_price: dict[str, float] = {}
         self.price_history = {s: deque(maxlen=PRICE_HISTORY_MAX) for s in cfg.symbols}
@@ -114,8 +133,11 @@ class Dashboard:
                 self.market_trades[sym].append(t)
 
     def bot_loop(self) -> None:
+        self.notifier.send("🚀 CryptoBot起動(ペーパートレード)。このあと判断のたびに定期レポートを送ります")
         while True:
             self.run_cycle()
+            # スマホ用の定期レポート(interval_secondsごと=既定1時間ごと)
+            self.notifier.send(status_summary(self.state()))
             time.sleep(self.cfg.interval_seconds)
 
     def price_loop(self) -> None:

@@ -225,6 +225,35 @@ class TestNotifier(unittest.TestCase):
         with self.assertRaises(ValueError):
             Notifier("line")
 
+    def test_url_from_file_fallback(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            f = Path(tmp) / "notify_url.txt"
+            f.write_text("https://discord.com/api/webhooks/xxx\n", encoding="utf-8")
+            n = Notifier("discord", url_file=f)
+            self.assertEqual(n.url, "https://discord.com/api/webhooks/xxx")
+
+
+class TestStatusSummary(unittest.TestCase):
+    def test_summary_contains_key_numbers(self):
+        import dashboard as dash_mod
+        state = {
+            "lastRunAt": "09:00:00",
+            "equity": 101_234.5,
+            "cash": 90_999.0,
+            "realizedPnl": 1_234.5,
+            "status": "ok",
+            "statusText": "稼働中",
+            "perSymbol": [
+                {"symbol": "BTC/JPY", "price": 10_000_000, "position": 0.000299, "halted": False},
+                {"symbol": "XRP/JPY", "price": None, "position": 0.0, "halted": True},
+            ],
+        }
+        text = dash_mod.status_summary(state)
+        self.assertIn("101,235円", text)
+        self.assertIn("+1,235円", text)
+        self.assertIn("BTC/JPY: 10,000,000円", text)
+        self.assertIn("⛔停止中", text)
+
 
 class TestConfigGuards(unittest.TestCase):
     def test_budget_cap_100k(self):
