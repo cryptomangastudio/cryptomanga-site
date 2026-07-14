@@ -69,7 +69,8 @@ def scenarios() -> dict[str, list[float]]:
 
 
 def make_data(prices: list[float]):
-    return [(START + timedelta(hours=i), p) for i, p in enumerate(prices)]
+    # 合成データは高値=安値=終値(ヒゲなし)の保守近似
+    return [(START + timedelta(hours=i), p, p, p) for i, p in enumerate(prices)]
 
 
 def strategy_configs() -> dict[str, BotConfig]:

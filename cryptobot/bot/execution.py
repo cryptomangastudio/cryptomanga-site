@@ -19,6 +19,13 @@ log = logging.getLogger("cryptobot.execution")
 
 POLL_SECONDS = 2.0
 
+# bitbankはpost-only指値が板を食う価格だとエラーではなく自動キャンセルする
+# (CANCELED_UNFILLED / CANCELED_PARTIALLY_FILLED)。これらは正常系であり、
+# 既にキャンセル済みの注文へcancel_orderを呼ぶと無意味な失敗ログが出るため、
+# 「まだ生きている可能性がある」状態のときだけキャンセルを試みる
+_LIVE_STATUSES = ("open", "partially_filled")
+_TERMINAL_STATUSES = ("closed", "canceled", "expired", "rejected")
+
 
 def paper_fee_rate(cfg: BotConfig) -> float:
     """ペーパー/バックテストで使う手数料率。メイカーなら負(リベート)になりうる。"""
@@ -113,19 +120,23 @@ class MakerExecutor:
                         break
                     time.sleep(POLL_SECONDS)
                 if status.get("status") != "closed":
-                    try:
-                        client.cancel_order(order_id, symbol)
-                    except Exception as e:
-                        log.info("キャンセル失敗(直後に約定した可能性): %s", e)
+                    if status.get("status") in _LIVE_STATUSES:
+                        # まだ板に残っている可能性がある注文だけキャンセルを試みる。
+                        # bitbankは板を食う価格のpost-onlyを自動キャンセルするため、
+                        # ここに来た時点で既にcanceled等の終端状態のことが多い
+                        try:
+                            client.cancel_order(order_id, symbol)
+                        except Exception as e:
+                            log.info("キャンセル失敗(直後に約定した可能性): %s", e)
                     # 二重発注ガード: 前の注文が板から消えたことを確認するまで
                     # 絶対に次の指値を置かない(レート制限等でキャンセルが
                     # 通っていないと、同一意図の注文が複数枚並んでしまう)
                     for _ in range(5):
                         status = client.fetch_order(order_id, symbol)
-                        if status.get("status") not in ("open", "partially_filled"):
+                        if status.get("status") not in _LIVE_STATUSES:
                             break
                         time.sleep(POLL_SECONDS)
-                    if status.get("status") in ("open", "partially_filled"):
+                    if status.get("status") in _LIVE_STATUSES:
                         log.warning(
                             "注文%sが板に残っている可能性があるため、二重発注を避けて"
                             "この周期は見送ります", order_id,

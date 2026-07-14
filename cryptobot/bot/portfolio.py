@@ -12,7 +12,7 @@ from datetime import datetime
 from pathlib import Path
 
 from .config import BotConfig
-from .runner import BotRunner, fetch_closes
+from .runner import BotRunner, fetch_window
 
 log = logging.getLogger("cryptobot.portfolio")
 
@@ -84,8 +84,8 @@ class PortfolioRunner:
         for sym, runner in self.runners.items():
             try:
                 price = self.exchange.fetch_price(sym)
-                closes = fetch_closes(self.exchange, runner.cfg)
-                results[sym] = runner.step(now, price, closes)
+                closes, highs, lows = fetch_window(self.exchange, runner.cfg)
+                results[sym] = runner.step(now, price, closes, highs, lows)
             except Exception as e:
                 results[sym] = f"エラー: {type(e).__name__}: {e}"
                 log.warning("%s のサイクル失敗: %s", sym, e)

@@ -30,21 +30,21 @@ log = logging.getLogger("cryptobot")
 MIN_BUY_JPY = 1_000  # これ未満に切り詰められた買いはスキップ(手数料負け防止)
 
 
-def fetch_closes(exchange, cfg: BotConfig) -> list[float]:
-    """戦略が必要とする終値履歴を取得する。
+def fetch_window(exchange, cfg: BotConfig) -> tuple[list[float], list[float], list[float]]:
+    """戦略が必要とする (終値, 高値, 安値) 履歴を取得する。
 
     DCAは価格履歴を使わないので取得しない(bitFlyer等、OHLCV API非対応の
     取引所でもDCA運用できるようにするため)。ma_crossはOHLCV対応の取引所
     (例: bitbank)が必要。
     """
     if cfg.strategy != "ma_cross":
-        return []
-    return [
-        c[4]
-        for c in exchange.fetch_ohlcv(
-            cfg.symbol, cfg.ma_cross.timeframe, limit=closes_needed(cfg)
-        )
-    ]
+        return [], [], []
+    rows = exchange.fetch_ohlcv(cfg.symbol, cfg.ma_cross.timeframe, limit=closes_needed(cfg))
+    return [r[4] for r in rows], [r[2] for r in rows], [r[3] for r in rows]
+
+
+def fetch_closes(exchange, cfg: BotConfig) -> list[float]:
+    return fetch_window(exchange, cfg)[0]
 
 
 def closes_needed(cfg: BotConfig) -> int:
@@ -52,12 +52,32 @@ def closes_needed(cfg: BotConfig) -> int:
     return max(cfg.ma_cross.slow + 5, 16)
 
 
-def atr_estimate(closes: list[float], period: int = 14) -> float | None:
-    """終値ベースの簡易ATR(1バーあたりの平均値動き)。データ不足ならNone。"""
+def atr_estimate(
+    closes: list[float],
+    highs: list[float] | None = None,
+    lows: list[float] | None = None,
+    period: int = 14,
+) -> float | None:
+    """ATR(1バーあたりの平均値動き)。データ不足ならNone。
+
+    高値・安値があればWilderのTrue Range(ヒゲ込みの実勢レンジ)を使う。
+    終値差だけの近似はヒゲを捨てて実勢の半分程度に過小評価しがちで、
+    サイジング(許容損失÷値動き)が過大になるため、H/Lが取れる限りTRを使う。
+    """
     if len(closes) < period + 1:
         return None
-    diffs = [abs(closes[i] - closes[i - 1]) for i in range(1, len(closes))]
-    window = diffs[-period:]
+    if highs and lows and len(highs) == len(closes) and len(lows) == len(closes):
+        trs = [
+            max(
+                highs[i] - lows[i],
+                abs(highs[i] - closes[i - 1]),
+                abs(lows[i] - closes[i - 1]),
+            )
+            for i in range(1, len(closes))
+        ]
+    else:
+        trs = [abs(closes[i] - closes[i - 1]) for i in range(1, len(closes))]
+    window = trs[-period:]
     return sum(window) / len(window)
 
 
@@ -160,7 +180,14 @@ class BotRunner:
         self._ma_cache = (key, ma)
         return ma
 
-    def step(self, now: datetime, price: float, closes: list[float]) -> str:
+    def step(
+        self,
+        now: datetime,
+        price: float,
+        closes: list[float],
+        highs: list[float] | None = None,
+        lows: list[float] | None = None,
+    ) -> str:
         """1サイクル。何をしたかの説明文字列を返す。"""
         # 価格サニティチェック(#2): 単発の異常値は無視し、2周期連続で同水準なら
         # 実際の急変と判断して処理を続行する(単純スキップだと暴落が続く間
@@ -187,6 +214,8 @@ class BotRunner:
             closes=closes,
             position_amount=self.journal.position_amount,
             position_cost_jpy=self.journal.position_cost_jpy,
+            highs=highs,
+            lows=lows,
         )
         self.risk.update_equity(self._equity_jpy(price))
 
@@ -239,7 +268,7 @@ class BotRunner:
         if self.cfg.strategy == "ma_cross":
             if ma is not None and price < ma:
                 return f"BUYスキップ: レジームフィルター(価格が{self.cfg.regime.ma_days}日MA {ma:,.0f}円 未満)"
-            atr = atr_estimate(market.closes)
+            atr = atr_estimate(market.closes, market.highs, market.lows)
             if self.cfg.cost_gate.enabled and atr is not None:
                 edge_pct = atr / price * 100
                 cost_pct = round_trip_cost_pct(self.cfg)

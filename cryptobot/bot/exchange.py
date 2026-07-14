@@ -108,6 +108,16 @@ class SpotOnlyExchange:
         limits = self._market(symbol).get("limits") or {}
         return (limits.get("amount") or {}).get("min")
 
+    def fee_rates(self, symbol: str) -> tuple[float | None, float | None]:
+        """取引所が公開する銘柄ごとの(メイカー, テイカー)手数料率。
+
+        bitbankはGET /spot/pairsで銘柄ごとに手数料率を返す(altcoinはBTCと
+        異なることがある)ため、config.yamlの固定値と乖離していないか
+        `--check` で突き合わせる。取得できなければ (None, None)。
+        """
+        m = self._market(symbol)
+        return m.get("maker"), m.get("taker")
+
     def fetch_price(self, symbol: str) -> float:
         return float(self.client.fetch_ticker(symbol)["last"])
 

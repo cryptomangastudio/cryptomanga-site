@@ -31,6 +31,21 @@ def run_check(cfg, exchange: SpotOnlyExchange) -> None:
             continue
         min_jpy = min_amount * price
         print(f"  最低注文数量: {min_amount}(約 {min_jpy:,.0f}円)")
+
+        # 手数料率は銘柄ごとに異なりうる(altcoinはBTCと違うことがある)ため、
+        # config.yamlの固定値と取引所の実値を突き合わせる
+        maker, taker = exchange.fee_rates(sym)
+        if maker is not None and abs(maker - cfg.execution.maker_fee_rate) > 1e-6:
+            print(
+                f"  ⚠️  メイカー手数料が設定と不一致: 設定{cfg.execution.maker_fee_rate:.4%} "
+                f"/ 取引所{maker:.4%}(config.yamlのexecution.maker_fee_rateを修正してください)"
+            )
+        if taker is not None and abs(taker - cfg.execution.taker_fee_rate) > 1e-6:
+            print(
+                f"  ⚠️  テイカー手数料が設定と不一致: 設定{cfg.execution.taker_fee_rate:.4%} "
+                f"/ 取引所{taker:.4%}(config.yamlのexecution.taker_fee_rateを修正してください)"
+            )
+
         problems = []
         if cfg.strategy == "dca" and sub.dca.buy_amount_jpy < min_jpy:
             problems.append(f"DCAの積立額 {sub.dca.buy_amount_jpy:,}円 が最低注文額を下回る")

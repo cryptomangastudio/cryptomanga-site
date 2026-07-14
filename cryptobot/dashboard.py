@@ -36,7 +36,7 @@ from bot.journal import COL_AMOUNT, COL_PRICE, COL_REALIZED, COL_SIDE, COL_TS, H
 from bot.lock import acquire_singleton_lock
 from bot.notify import Notifier
 from bot.portfolio import PortfolioRunner
-from bot.runner import fetch_closes
+from bot.runner import fetch_window
 
 
 def status_summary(state: dict) -> str:
@@ -113,8 +113,8 @@ class Dashboard:
                 try:
                     price = self.exchange.fetch_price(sym)
                     self._record_price(sym, price)
-                    closes = fetch_closes(self.exchange, runner.cfg)
-                    self.last_results[sym] = runner.step(datetime.now(), price, closes)
+                    closes, highs, lows = fetch_window(self.exchange, runner.cfg)
+                    self.last_results[sym] = runner.step(datetime.now(), price, closes, highs, lows)
                 except Exception as e:
                     errors.append(f"{sym}: {type(e).__name__}: {e}")
                     log.warning("%s のサイクル失敗: %s", sym, e)

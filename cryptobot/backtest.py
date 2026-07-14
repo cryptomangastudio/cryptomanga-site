@@ -35,9 +35,9 @@ class BacktestDataFeed:
     日足は返さない(ルックアヘッド防止)。
     """
 
-    def __init__(self, data: list[tuple[datetime, float]]):
+    def __init__(self, data: list[tuple[datetime, float, float, float]]):
         self.daily: list[tuple[str, float]] = []  # (日付, その日の最終終値)
-        for ts, close in data:
+        for ts, _high, _low, close in data:
             day = ts.strftime("%Y-%m-%d")
             if self.daily and self.daily[-1][0] == day:
                 self.daily[-1] = (day, close)
@@ -56,8 +56,8 @@ class BacktestDataFeed:
         return None
 
 
-def load_ohlcv(path: str) -> list[tuple[datetime, float]]:
-    """(日時, 終値) のリストを返す。timestampは秒/ミリ秒のUNIX時刻またはISO形式。"""
+def load_ohlcv(path: str) -> list[tuple[datetime, float, float, float]]:
+    """(日時, 高値, 安値, 終値) のリストを返す。timestampは秒/ミリ秒のUNIX時刻またはISO形式。"""
     rows = []
     with open(path, newline="", encoding="utf-8") as f:
         reader = csv.reader(f)
@@ -75,7 +75,7 @@ def load_ohlcv(path: str) -> list[tuple[datetime, float]]:
                     ts = datetime.fromisoformat(ts_raw)
                 except ValueError:
                     continue  # ヘッダー行など
-            rows.append((ts, float(row[4])))
+            rows.append((ts, float(row[2]), float(row[3]), float(row[4])))
     return rows
 
 
@@ -95,7 +95,7 @@ def sim_config(cfg, journal_name: str):
     )
 
 
-def run_sim(cfg, data: list[tuple[datetime, float]], journal_name: str) -> dict:
+def run_sim(cfg, data: list[tuple[datetime, float, float, float]], journal_name: str) -> dict:
     """1系列ぶんのシミュレーション。実運転と同じBotRunner.stepを駆動する。"""
     scfg = sim_config(cfg, journal_name)
     for p in (scfg.journal_path, scfg.shortfall_path):
@@ -110,10 +110,16 @@ def run_sim(cfg, data: list[tuple[datetime, float]], journal_name: str) -> dict:
     equity_curve = [float(scfg.budget_jpy)]
 
     closes: list[float] = []
-    for ts, close in data:
+    highs: list[float] = []
+    lows: list[float] = []
+    for ts, high, low, close in data:
         closes.append(close)
+        highs.append(high)
+        lows.append(low)
         feed.set_now(ts)
-        result = runner.step(ts, close, closes[-window:])
+        result = runner.step(
+            ts, close, closes[-window:], highs[-window:], lows[-window:]
+        )
         if result.startswith(("BUY ", "SELL ")):
             trades += 1
         elif "却下" in result or "スキップ" in result or "見送り" in result:

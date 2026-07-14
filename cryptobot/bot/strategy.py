@@ -28,6 +28,8 @@ class MarketSnapshot:
     closes: list[float]  # 直近の終値(古い→新しい)。DCAでは空でよい
     position_amount: float  # 保有数量(BTCなど)
     position_cost_jpy: float  # 保有分の取得原価合計
+    highs: list[float] | None = None  # 高値(ATRのTrue Range計算用。無ければ終値差で近似)
+    lows: list[float] | None = None
 
 
 class Strategy:

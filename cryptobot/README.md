@@ -209,12 +209,49 @@ cryptobot/
 1銘柄あたりの予算が小さくなるほど取引所の最低注文数量に引っかかりやすくなるので、
 実弾前は必ず `--check` で全銘柄の整合を確認してください。
 
+## 過去データの取得(バックテスト用)
+
+`backtest.py` に食わせるOHLCVをbitbankから無料でダウンロードします。
+
+```bash
+python fetch_history.py --symbol BTC/JPY --timeframe 1h --years 2
+python backtest.py --data data/BTC_JPY_1h.csv --walk-forward 5 --trials <試行総数>
+```
+
+bitbankのcandlestick APIは1時間足以下だと「1リクエスト=1日分」の仕様のため、
+数年分だと数百回のリクエストになります(公式レート制限に従い自動でゆっくり進みます。
+数分かかるのは正常です)。
+
+## 実弾昇格チェック
+
+「好成績だから」で実弾に進まないための、機械的なチェックリストです。
+
+```bash
+python promote.py --config config.yaml
+```
+
+ペーパー運用日数・売却回数の最低ラインをプロップファーム(FTMO等)の評価基準や
+アルゴトレード実務の統計的目安から設定しています。バックテストの過学習ゲート
+(`backtest.py --walk-forward`)のPASSは自動確認できないため、必ず目視で確認して
+ください。合格しても段階投入(まず総予算の20%から)を推奨します。
+
+## ストレステスト
+
+暴落・急騰急落など合成相場シナリオで「どんな相場でも壊滅しないか」を確認します。
+
+```bash
+python stress_test.py --out docs/stress
+```
+
 ## ロードマップ(土台の次)
 
-- [x] 適合性チェックコマンド(`--check`)
+- [x] 適合性チェックコマンド(`--check`、手数料率の自動突合つき)
 - [x] 通知(約定・停止イベントをDiscord/Slack Webhookへ)
 - [x] 月次レポート生成(`report.py` → Driveへ月次アップ)
 - [x] 停止状態・帳簿の再起動復元
+- [x] 過去データ取得ツール(`fetch_history.py`)
+- [x] 実弾昇格チェッカー(`promote.py`)
+- [x] ストレステスト基盤(`stress_test.py`)
 - [ ] ユーザー環境での取引所本番接続テスト(この開発環境からは取引所APIへの接続が許可されていないため)
 - [ ] GMOコイン用アダプタ(ccxt未対応のため必要なら)
 - [ ] 戦略の追加(RSI逆張り、グリッドなど)と比較検証
