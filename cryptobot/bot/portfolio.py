@@ -75,8 +75,16 @@ class PortfolioRunner:
             sym: BotRunner(sub_config(cfg, sym), exchange) for sym in cfg.symbols
         }
 
-    def step_symbol(self, symbol: str, now: datetime, price: float, closes: list[float]) -> str:
-        return self.runners[symbol].step(now, price, closes)
+    def step_symbol(
+        self,
+        symbol: str,
+        now: datetime,
+        price: float,
+        closes: list[float],
+        highs: list[float] | None = None,
+        lows: list[float] | None = None,
+    ) -> str:
+        return self.runners[symbol].step(now, price, closes, highs, lows)
 
     def step_all(self, now: datetime) -> dict[str, str]:
         """全銘柄について価格取得→判断を1周する(exchange必須)。"""

@@ -54,8 +54,8 @@ class TestPortfolioRunner(unittest.TestCase):
         cfg = make_config(tmp, ["BTC/JPY", "ETH/JPY"])
         pr = PortfolioRunner(cfg)
         now = datetime(2026, 7, 12, 9, 0)
-        r1 = pr.step_symbol("BTC/JPY", now, 10_000_000, [])
-        r2 = pr.step_symbol("ETH/JPY", now, 500_000, [])
+        r1 = pr.step_symbol("BTC/JPY", now, 10_000_000, [], [], [])
+        r2 = pr.step_symbol("ETH/JPY", now, 500_000, [], [], [])
         self.assertIn("BUY", r1)
         self.assertIn("BUY", r2)
         btc, eth = pr.runners["BTC/JPY"], pr.runners["ETH/JPY"]

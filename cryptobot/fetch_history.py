@@ -15,36 +15,50 @@ from __future__ import annotations
 
 import argparse
 import csv
-import time
 from pathlib import Path
 
 import ccxt
 
 
+_DAILY_BUCKET_TIMEFRAMES = {"1m", "5m", "15m", "30m", "1h"}
+
+
+def bucket_gap_ms(timeframe: str) -> int:
+    """空バケットに遭遇したときに前進する幅。bitbankの実際のバケット単位に合わせる。
+
+    1分〜1時間足は1リクエスト=1日分、4時間足以上は1リクエスト=1年分
+    (rest-api_JP.md / public-api_JP.md で確認)。ここを大きく超える幅で
+    飛ばすと、飛ばした区間の本物のデータを取りこぼす。
+    """
+    if timeframe in _DAILY_BUCKET_TIMEFRAMES:
+        return 24 * 3600 * 1000
+    return 365 * 24 * 3600 * 1000
+
+
 def fetch_all(exchange, symbol: str, timeframe: str, since_ms: int, until_ms: int) -> list[list]:
-    """sinceを進めながら重複排除して全期間のOHLCVを集める。"""
+    """sinceを進めながら重複排除して全期間のOHLCVを集める。
+
+    データが無い区間(未上場期間・メンテナンス等)は「1バケットぶんだけ」前進して
+    次を試す。ジャンプ幅を実際のバケット単位に固定しているため、必ず
+    (until_ms - since_ms) / バケット幅 回程度で終了が保証され、かつ本物のデータを
+    またぎ越して取りこぼすことがない(全体を諦めて打ち切ることもしない)。
+    """
     out: dict[int, list] = {}
     cursor = since_ms
     duration_ms = exchange.parse_timeframe(timeframe) * 1000
-    stall_guard = 0
+    gap_ms = bucket_gap_ms(timeframe)
     while cursor < until_ms:
         batch = exchange.fetch_ohlcv(symbol, timeframe, since=cursor, limit=1000)
         if not batch:
-            cursor += duration_ms * 300  # データ空白期間を飛ばす(bitbankの日次バケット対策)
-            stall_guard += 1
-            if stall_guard > 20:
-                break
+            cursor += gap_ms
             continue
-        stall_guard = 0
         new_max = cursor
         for c in batch:
             if c[0] is None:
                 continue
             out[int(c[0])] = c
             new_max = max(new_max, int(c[0]))
-        if new_max <= cursor:  # 前進しない場合は無限ループ防止で打ち切り
-            break
-        cursor = new_max + duration_ms
+        cursor = new_max + duration_ms if new_max > cursor else cursor + gap_ms
         # ccxtのenableRateLimit=Trueが公式レート制限(読み取り10回/秒)に
         # 合わせて自動でスロットリングするため、ここでの追加sleepは不要
     return [out[k] for k in sorted(out) if k <= until_ms]

@@ -21,12 +21,14 @@ from __future__ import annotations
 import argparse
 import csv
 import json
-from datetime import datetime, timedelta
+from datetime import datetime
 from pathlib import Path
 
 from bot.config import load_config
 from bot.journal import COL_REALIZED, COL_SIDE, COL_TS, HEADER
 from bot.portfolio import sub_config
+
+PROMOTION_STATUS_PATH = "data/promotion_status.json"
 
 DEFAULT_MIN_DAYS = 90     # 3ヶ月。FX EA運用実務での「実弾検討可能」最短ライン
 IDEAL_MIN_DAYS = 180      # 6ヶ月。理想はこちらで、さらに2周期繰り返すのが望ましい
@@ -122,6 +124,19 @@ def main() -> None:
     else:
         print("❌ まだ実弾に進める段階ではありません。上記の❌項目を満たすまで")
         print("   ペーパートレードを継続してください。")
+
+    # 判定結果をファイルに残す。main.pyがlive起動時にこれを読み、
+    # 実行を止めはしないが「チェックを通っていない/古い」ことを必ず警告する
+    # (このスクリプト自体は印字するだけなので、何もしないと誰にも強制されない)
+    status_path = Path(PROMOTION_STATUS_PATH)
+    status_path.parent.mkdir(parents=True, exist_ok=True)
+    status_path.write_text(
+        json.dumps(
+            {"ok": all_ok, "checked_at": datetime.now().isoformat(), "symbols": cfg.symbols},
+            ensure_ascii=False,
+        ),
+        encoding="utf-8",
+    )
 
 
 if __name__ == "__main__":

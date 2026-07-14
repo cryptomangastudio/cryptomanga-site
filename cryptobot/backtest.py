@@ -109,17 +109,23 @@ def run_sim(cfg, data: list[tuple[datetime, float, float, float]], journal_name:
     trades = skipped = 0
     equity_curve = [float(scfg.budget_jpy)]
 
+    # DCAはclosesもhighs/lowsも使わない(strategy.pyのDCAStrategy参照)ので、
+    # ma_crossのときだけH/Lを蓄積する(大量データでの無駄なコピーを避ける)
+    need_hl = scfg.strategy == "ma_cross"
     closes: list[float] = []
     highs: list[float] = []
     lows: list[float] = []
     for ts, high, low, close in data:
         closes.append(close)
-        highs.append(high)
-        lows.append(low)
         feed.set_now(ts)
-        result = runner.step(
-            ts, close, closes[-window:], highs[-window:], lows[-window:]
-        )
+        if need_hl:
+            highs.append(high)
+            lows.append(low)
+            result = runner.step(
+                ts, close, closes[-window:], highs[-window:], lows[-window:]
+            )
+        else:
+            result = runner.step(ts, close, [])
         if result.startswith(("BUY ", "SELL ")):
             trades += 1
         elif "却下" in result or "スキップ" in result or "見送り" in result:

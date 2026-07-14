@@ -479,8 +479,8 @@ class BotRunner:
         while True:
             try:
                 price = self.exchange.fetch_price(self.cfg.symbol)
-                closes = fetch_closes(self.exchange, self.cfg)
-                result = self.step(datetime.now(), price, closes)
+                closes, highs, lows = fetch_window(self.exchange, self.cfg)
+                result = self.step(datetime.now(), price, closes, highs, lows)
                 log.info("%s | 価格=%s円 | %s", self.cfg.symbol, f"{price:,.0f}", result)
             except Exception:
                 log.exception("サイクルでエラー(次の周期で再試行)")
