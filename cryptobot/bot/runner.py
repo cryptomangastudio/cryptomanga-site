@@ -30,21 +30,21 @@ log = logging.getLogger("cryptobot")
 MIN_BUY_JPY = 1_000  # これ未満に切り詰められた買いはスキップ(手数料負け防止)
 
 
-def fetch_closes(exchange, cfg: BotConfig) -> list[float]:
-    """戦略が必要とする終値履歴を取得する。
+def fetch_window(exchange, cfg: BotConfig) -> tuple[list[float], list[float], list[float]]:
+    """戦略が必要とする (終値, 高値, 安値) 履歴を取得する。
 
     DCAは価格履歴を使わないので取得しない(bitFlyer等、OHLCV API非対応の
     取引所でもDCA運用できるようにするため)。ma_crossはOHLCV対応の取引所
     (例: bitbank)が必要。
     """
     if cfg.strategy != "ma_cross":
-        return []
-    return [
-        c[4]
-        for c in exchange.fetch_ohlcv(
-            cfg.symbol, cfg.ma_cross.timeframe, limit=closes_needed(cfg)
-        )
-    ]
+        return [], [], []
+    rows = exchange.fetch_ohlcv(cfg.symbol, cfg.ma_cross.timeframe, limit=closes_needed(cfg))
+    return [r[4] for r in rows], [r[2] for r in rows], [r[3] for r in rows]
+
+
+def fetch_closes(exchange, cfg: BotConfig) -> list[float]:
+    return fetch_window(exchange, cfg)[0]
 
 
 def closes_needed(cfg: BotConfig) -> int:
@@ -52,12 +52,32 @@ def closes_needed(cfg: BotConfig) -> int:
     return max(cfg.ma_cross.slow + 5, 16)
 
 
-def atr_estimate(closes: list[float], period: int = 14) -> float | None:
-    """終値ベースの簡易ATR(1バーあたりの平均値動き)。データ不足ならNone。"""
+def atr_estimate(
+    closes: list[float],
+    highs: list[float] | None = None,
+    lows: list[float] | None = None,
+    period: int = 14,
+) -> float | None:
+    """ATR(1バーあたりの平均値動き)。データ不足ならNone。
+
+    高値・安値があればWilderのTrue Range(ヒゲ込みの実勢レンジ)を使う。
+    終値差だけの近似はヒゲを捨てて実勢の半分程度に過小評価しがちで、
+    サイジング(許容損失÷値動き)が過大になるため、H/Lが取れる限りTRを使う。
+    """
     if len(closes) < period + 1:
         return None
-    diffs = [abs(closes[i] - closes[i - 1]) for i in range(1, len(closes))]
-    window = diffs[-period:]
+    if highs and lows and len(highs) == len(closes) and len(lows) == len(closes):
+        trs = [
+            max(
+                highs[i] - lows[i],
+                abs(highs[i] - closes[i - 1]),
+                abs(lows[i] - closes[i - 1]),
+            )
+            for i in range(1, len(closes))
+        ]
+    else:
+        trs = [abs(closes[i] - closes[i - 1]) for i in range(1, len(closes))]
+    window = trs[-period:]
     return sum(window) / len(window)
 
 
@@ -72,6 +92,7 @@ class BotRunner:
             cfg.halt_file,
             on_halt=lambda reason: self.notifier.send(f"🛑 CryptoBot停止: {reason}"),
             max_buys_per_month=cfg.governor.max_buys_per_month,
+            state_file=cfg.risk_state_path or None,
         )
         self.journal = TradeJournal(cfg.journal_path)
         self.shortfall = ShortfallLedger(cfg.shortfall_path)
@@ -88,7 +109,10 @@ class BotRunner:
         )
         self._last_sane_price: float | None = None
         self._pending_price: float | None = None  # 未確認の急変価格(次周期で確認)
-        self._pending_exit = False  # 売りシグナルが未約定のまま残っている(次周期で再試行)
+        # 売りが未約定のまま残っている場合の元シグナル価格(None=残りなし)。
+        # ここからexit_taker_fallback_pct%下がったらテイカー成行で確定させる
+        self._pending_exit_price: float | None = None
+        self._kelly_block_notified = False
         self._ma_cache: tuple[str, float | None] | None = None
         self._regime_warned = False
         self._check_state_consistency()
@@ -156,7 +180,14 @@ class BotRunner:
         self._ma_cache = (key, ma)
         return ma
 
-    def step(self, now: datetime, price: float, closes: list[float]) -> str:
+    def step(
+        self,
+        now: datetime,
+        price: float,
+        closes: list[float],
+        highs: list[float] | None = None,
+        lows: list[float] | None = None,
+    ) -> str:
         """1サイクル。何をしたかの説明文字列を返す。"""
         # 価格サニティチェック(#2): 単発の異常値は無視し、2周期連続で同水準なら
         # 実際の急変と判断して処理を続行する(単純スキップだと暴落が続く間
@@ -183,28 +214,40 @@ class BotRunner:
             closes=closes,
             position_amount=self.journal.position_amount,
             position_cost_jpy=self.journal.position_cost_jpy,
+            highs=highs,
+            lows=lows,
         )
         self.risk.update_equity(self._equity_jpy(price))
-        if self.risk.halted:
-            return f"停止中: {self.risk.halt_reason}"
 
         signal = self.strategy.decide(market)
 
-        # 前周期の売りが未約定のまま残っていれば、シグナルに関わらず再試行する
-        # (MAクロスはクロス発生バーでしかSELLを出さないため、放置すると出口を失う)
-        if self._pending_exit:
-            if market.position_amount <= 0:
-                self._pending_exit = False
-            elif signal.action != Action.SELL:
-                return self._try_sell(
-                    now, price, market, Signal(Action.SELL, 0.0, "前回の売り残りを再試行")
-                )
+        # ハードストップ: 取得単価比-X%で戦略に関わらず強制全量売却
+        # (MAクロスの出口はSMAの遅行で数%遅れる。1トレードの実損を有界にする最後の出口)
+        hs = self.cfg.risk.hard_stop_pct
+        if (
+            self.cfg.strategy == "ma_cross"
+            and hs > 0
+            and market.position_amount > 0
+            and self.journal.avg_cost > 0
+            and price <= self.journal.avg_cost * (1 - hs / 100)
+        ):
+            signal = Signal(Action.SELL, 0.0, f"ハードストップ(取得単価比-{hs:.0f}%)")
 
+        # 前周期の売りが未約定のまま残っていれば、シグナルに関わらず再試行する
+        if self._pending_exit_price is not None:
+            if market.position_amount <= 0:
+                self._pending_exit_price = None
+            elif signal.action != Action.SELL:
+                signal = Signal(Action.SELL, 0.0, "前回の売り残りを再試行")
+
+        # 売り(リスク削減)はhalt中でも実行する。買いだけがhaltの対象
+        if signal.action == Action.SELL:
+            return self._try_sell(now, price, market, signal)
+        if self.risk.halted:
+            return f"停止中(買い禁止・売りは可能): {self.risk.halt_reason}"
         if signal.action == Action.HOLD:
             return f"HOLD: {signal.reason}"
-        if signal.action == Action.BUY:
-            return self._try_buy(now, price, market, signal)
-        return self._try_sell(now, price, market, signal)
+        return self._try_buy(now, price, market, signal)
 
     def _apply_buy_gates(self, now, price, market, signal) -> tuple[float, str] | str:
         """レジーム(#8)・コストゲート(#3)・サイジング(#5)。(買付額, 補足) か却下文字列を返す。"""
@@ -212,10 +255,20 @@ class BotRunner:
         notes = []
         ma = self._regime_ma(now)
 
+        if self.cfg.strategy == "dca" and ma is not None and self.cfg.regime.dca_hard_floor_pct > 0:
+            # DCAハードフロア: レジーム崩壊級の下落(MA比-25%等)では「安いから多く買う」
+            # をやめて積立自体を停止する(浅い押し目のナンピンと構造的ベアを区別する)
+            floor = ma * (1 - self.cfg.regime.dca_hard_floor_pct / 100)
+            if price < floor:
+                return (
+                    f"BUYスキップ: DCAハードフロア(価格が{self.cfg.regime.ma_days}日MA比"
+                    f"-{self.cfg.regime.dca_hard_floor_pct:.0f}%の{floor:,.0f}円を下回った)"
+                )
+
         if self.cfg.strategy == "ma_cross":
             if ma is not None and price < ma:
                 return f"BUYスキップ: レジームフィルター(価格が{self.cfg.regime.ma_days}日MA {ma:,.0f}円 未満)"
-            atr = atr_estimate(market.closes)
+            atr = atr_estimate(market.closes, market.highs, market.lows)
             if self.cfg.cost_gate.enabled and atr is not None:
                 edge_pct = atr / price * 100
                 cost_pct = round_trip_cost_pct(self.cfg)
@@ -232,12 +285,21 @@ class BotRunner:
                     buy_jpy = size_jpy
                     notes.append(f"ATRサイジング→{buy_jpy:,.0f}円")
             kelly = self.journal.kelly_fraction()
-            if kelly is not None and self.journal.sell_count >= self.cfg.sizing.kelly_min_trades:
+            samples = len(self.journal.recent_returns)
+            if kelly is not None and samples >= self.cfg.sizing.kelly_min_trades:
                 if kelly <= 0:
+                    if not self._kelly_block_notified:
+                        # サイレント永久停止にしない: 人間に判断材料を届ける
+                        self.notifier.send(
+                            f"⚠️ {self.cfg.symbol}: 直近{samples}回の売却実績でケリー推定が負"
+                            f"({kelly:.2f})のため新規買いを停止中。戦略・設定の見直しを検討してください"
+                        )
+                        self._kelly_block_notified = True
                     return (
-                        f"BUYスキップ: ケリー推定が負({kelly:.2f}、直近{self.journal.sell_count}回の"
+                        f"BUYスキップ: ケリー推定が負({kelly:.2f}、直近{samples}回の"
                         "売却実績で期待値マイナス)。戦略を見直すまで新規買い停止"
                     )
+                self._kelly_block_notified = False
                 cap = kelly * self.cfg.sizing.kelly_cap * equity
                 if cap < buy_jpy:
                     buy_jpy = cap
@@ -300,26 +362,60 @@ class BotRunner:
         amount = market.position_amount  # 現状は全量売却のみ(現物なので保有分だけ)
         if amount <= 0:
             return "SELLスキップ: 保有なし"
+
+        # live: 帳簿と実残高の突合(オーナーの手動売買・記帳漏れで乖離した場合、
+        # 幻の建玉を永久に売り続けようとするデッドロックを防ぐ)
+        if not self.paper and self.exchange is not None:
+            try:
+                actual = self.exchange.fetch_base_balance(self.cfg.symbol)
+            except Exception as e:
+                log.warning("実残高の取得失敗(帳簿の建玉で続行): %s", e)
+            else:
+                if actual < amount - EPS:
+                    self.notifier.send(
+                        f"⚠️ {self.cfg.symbol}: 帳簿の建玉({amount:.8f})より実残高({actual:.8f})が"
+                        "少ないため、実残高分のみ売却します。取引所で手動売買しませんでしたか?"
+                        "(手動介入する場合は必ずbotを止めてから)"
+                    )
+                    amount = actual
+                if amount <= EPS:
+                    self._pending_exit_price = None
+                    return "SELLスキップ: 実残高なし(外部で売却済みの可能性。帳簿の確認を)"
         decision = self.risk.check_order("sell", amount * price, market.position_cost_jpy, now)
         if not decision.approved:
             return f"SELL却下: {decision.reason}"
 
-        result = self._execute_order("sell", amount, price)
+        # 出口エスカレーション: 未約定のままシグナル価格から一定%滑ったら
+        # テイカー成行で確定する(出口の見送りは実損の拡大なので入口と非対称に扱う)
+        esc_pct = self.cfg.execution.exit_taker_fallback_pct
+        force_taker = (
+            esc_pct > 0
+            and self._pending_exit_price is not None
+            and price <= self._pending_exit_price * (1 - esc_pct / 100)
+        )
+        result = self._execute_order("sell", amount, price, force_taker=force_taker)
         if result.amount <= 0:
-            self._pending_exit = True  # クロスは再発しないので、こちらで再試行を保証する
+            if self._pending_exit_price is None:
+                self._pending_exit_price = price  # 元シグナル価格として記憶
             return (
                 f"SELL見送り: メイカー指値が{result.requotes}回の再指値でも約定せず"
-                "(次の周期に自動で再試行します)"
+                f"(次周期に再試行。シグナル比-{esc_pct:.0f}%までにはテイカーで確定します)"
             )
-        # 部分約定なら残りを次周期に再試行する
-        self._pending_exit = result.amount < amount - EPS
+        if result.amount < amount - EPS:
+            if self._pending_exit_price is None:
+                self._pending_exit_price = price  # 部分約定: 残りを次周期に再試行
+        else:
+            self._pending_exit_price = None
+        note = "(テイカーで確定)" if force_taker else ""
         return self._book(now, "sell", result.amount, result.price, result.fee_jpy,
-                          signal.reason, signal_price=price, wait_seconds=result.wait_seconds)
+                          signal.reason + note, signal_price=price,
+                          wait_seconds=result.wait_seconds)
 
-    def _execute_order(self, side: str, amount: float, price: float):
+    def _execute_order(self, side: str, amount: float, price: float, force_taker: bool = False):
         """paper / live-maker / live-taker の執行を1か所に集約する。
 
         戻り値は ExecutionResult(数量・平均価格・手数料JPY・待ち秒・再指値回数)。
+        force_taker は出口エスカレーション用(メイカーを飛ばして成行で確定)。
         """
         if self.paper:
             if side == "buy":
@@ -328,7 +424,7 @@ class BotRunner:
                 _, fee_jpy = self.paper.market_sell(price, amount)
                 filled = amount
             return ExecutionResult(filled, price, fee_jpy, 0.0, 0)
-        if self.maker:
+        if self.maker and not force_taker:
             return self.maker.execute(self.cfg.symbol, side, amount)
         if side == "buy":
             order = self.exchange.market_buy(self.cfg.symbol, amount)
@@ -367,6 +463,12 @@ class BotRunner:
         self.notifier.send(f"{'🟢' if side == 'buy' else '🔴'} [{self.cfg.mode}] {line}")
         return line
 
+    def next_sleep_seconds(self) -> int:
+        """売り残りがある間は1時間待たず短周期で再試行する(出口の滑り拡大防止)。"""
+        if self._pending_exit_price is not None:
+            return min(self.cfg.interval_seconds, 60)
+        return self.cfg.interval_seconds
+
     def run(self) -> None:
         assert self.exchange is not None, "run()には価格取得用のexchangeが必要"
         log.info(
@@ -377,9 +479,9 @@ class BotRunner:
         while True:
             try:
                 price = self.exchange.fetch_price(self.cfg.symbol)
-                closes = fetch_closes(self.exchange, self.cfg)
-                result = self.step(datetime.now(), price, closes)
+                closes, highs, lows = fetch_window(self.exchange, self.cfg)
+                result = self.step(datetime.now(), price, closes, highs, lows)
                 log.info("%s | 価格=%s円 | %s", self.cfg.symbol, f"{price:,.0f}", result)
             except Exception:
                 log.exception("サイクルでエラー(次の周期で再試行)")
-            time.sleep(self.cfg.interval_seconds)
+            time.sleep(self.next_sleep_seconds())

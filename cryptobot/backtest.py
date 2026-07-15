@@ -35,9 +35,9 @@ class BacktestDataFeed:
     日足は返さない(ルックアヘッド防止)。
     """
 
-    def __init__(self, data: list[tuple[datetime, float]]):
+    def __init__(self, data: list[tuple[datetime, float, float, float]]):
         self.daily: list[tuple[str, float]] = []  # (日付, その日の最終終値)
-        for ts, close in data:
+        for ts, _high, _low, close in data:
             day = ts.strftime("%Y-%m-%d")
             if self.daily and self.daily[-1][0] == day:
                 self.daily[-1] = (day, close)
@@ -56,8 +56,8 @@ class BacktestDataFeed:
         return None
 
 
-def load_ohlcv(path: str) -> list[tuple[datetime, float]]:
-    """(日時, 終値) のリストを返す。timestampは秒/ミリ秒のUNIX時刻またはISO形式。"""
+def load_ohlcv(path: str) -> list[tuple[datetime, float, float, float]]:
+    """(日時, 高値, 安値, 終値) のリストを返す。timestampは秒/ミリ秒のUNIX時刻またはISO形式。"""
     rows = []
     with open(path, newline="", encoding="utf-8") as f:
         reader = csv.reader(f)
@@ -75,7 +75,7 @@ def load_ohlcv(path: str) -> list[tuple[datetime, float]]:
                     ts = datetime.fromisoformat(ts_raw)
                 except ValueError:
                     continue  # ヘッダー行など
-            rows.append((ts, float(row[4])))
+            rows.append((ts, float(row[2]), float(row[3]), float(row[4])))
     return rows
 
 
@@ -88,13 +88,14 @@ def sim_config(cfg, journal_name: str):
         notify=dataclasses.replace(cfg.notify, format="none"),
         halt_file="",
         paper_state_path="",
+        risk_state_path="",  # リスク状態も永続化しない(シミュレーション間の汚染防止)
         journal_path=f"data/{journal_name}.csv",
         shortfall_path=f"data/{journal_name}_exec.csv",
         price_sanity_pct=0.0,  # 歴史データのギャップで止まらないように
     )
 
 
-def run_sim(cfg, data: list[tuple[datetime, float]], journal_name: str) -> dict:
+def run_sim(cfg, data: list[tuple[datetime, float, float, float]], journal_name: str) -> dict:
     """1系列ぶんのシミュレーション。実運転と同じBotRunner.stepを駆動する。"""
     scfg = sim_config(cfg, journal_name)
     for p in (scfg.journal_path, scfg.shortfall_path):
@@ -108,11 +109,23 @@ def run_sim(cfg, data: list[tuple[datetime, float]], journal_name: str) -> dict:
     trades = skipped = 0
     equity_curve = [float(scfg.budget_jpy)]
 
+    # DCAはclosesもhighs/lowsも使わない(strategy.pyのDCAStrategy参照)ので、
+    # ma_crossのときだけH/Lを蓄積する(大量データでの無駄なコピーを避ける)
+    need_hl = scfg.strategy == "ma_cross"
     closes: list[float] = []
-    for ts, close in data:
+    highs: list[float] = []
+    lows: list[float] = []
+    for ts, high, low, close in data:
         closes.append(close)
         feed.set_now(ts)
-        result = runner.step(ts, close, closes[-window:])
+        if need_hl:
+            highs.append(high)
+            lows.append(low)
+            result = runner.step(
+                ts, close, closes[-window:], highs[-window:], lows[-window:]
+            )
+        else:
+            result = runner.step(ts, close, [])
         if result.startswith(("BUY ", "SELL ")):
             trades += 1
         elif "却下" in result or "スキップ" in result or "見送り" in result:
@@ -190,16 +203,28 @@ def main() -> None:
     if args.walk_forward >= 2:
         print(f"\n=== ウォークフォワード({args.walk_forward}区間) ===")
         segments = walk_forward_segments(len(data), args.walk_forward)
-        positives = 0
+        if len(segments) < 2:
+            print("❌ データ不足でウォークフォワード不能 — より長い期間のデータで検証すること")
+            gate_ok = False
+        positives = traded = 0
         for i, (s, e) in enumerate(segments, 1):
             seg = run_sim(cfg, data[s:e], f"backtest_wf{i}")
-            mark = "+" if seg["return_pct"] >= 0 else "-"
-            positives += seg["return_pct"] >= 0
+            # 無取引区間は「戦略が機能した証拠」ではないので合格票に数えない
+            if seg["trades"] > 0:
+                traded += 1
+                positives += seg["return_pct"] > 0
+                mark = "+" if seg["return_pct"] > 0 else "-"
+            else:
+                mark = "無取引"
             print(f"区間{i}: {data[s][0]:%Y-%m-%d}〜{data[e-1][0]:%Y-%m-%d} "
                   f"{seg['return_pct']:+.2f}% 取引{seg['trades']}回 [{mark}]")
-        ratio = positives / len(segments)
-        print(f"プラス区間: {positives}/{len(segments)}({ratio:.0%})")
-        gate_ok = gate_ok and ratio >= 0.6
+        if traded == 0 or traded < len(segments) / 2:
+            print(f"取引のあった区間が{traded}/{len(segments)}のみ — 検証として不十分")
+            gate_ok = False
+        else:
+            ratio = positives / traded
+            print(f"プラス区間: {positives}/{traded}(取引のあった区間の{ratio:.0%})")
+            gate_ok = gate_ok and ratio >= 0.6
 
     print("\n=== 昇格ゲート判定 ===")
     if gate_ok and args.walk_forward >= 2:

@@ -12,6 +12,7 @@
 from __future__ import annotations
 
 import csv
+from collections import deque
 from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
@@ -61,6 +62,8 @@ class TradeJournal:
         self.win_count = 0
         self.total_win_jpy = 0.0
         self.total_loss_jpy = 0.0
+        # 直近30回の売却リターン率(古い成績が永久に推定を支配しないための窓)
+        self.recent_returns: deque[float] = deque(maxlen=30)
         if self.path.exists():
             self._replay_existing()
         else:
@@ -106,6 +109,9 @@ class TradeJournal:
             if amount > self.position_amount + EPS:
                 raise ValueError(f"保有量{self.position_amount}を超える売却: {amount}")
             realized = (price - self.avg_cost) * amount - fee_jpy
+            cost_basis = self.avg_cost * amount
+            if cost_basis > 0:
+                self.recent_returns.append(realized / cost_basis)
             self.position_amount -= amount
             if self.position_amount <= EPS:
                 self.position_amount = 0.0
@@ -121,23 +127,28 @@ class TradeJournal:
         raise ValueError(f"不正なside: {side}")
 
     def kelly_fraction(self) -> float | None:
-        """売却実績からケリー比率 f = W - (1-W)/R を推定する。
+        """直近の売却リターン率からケリー比率 f = W - (1-W)/R を推定する。
 
-        サンプル不足・引き分けのみの場合は None。負の値は「統計上、期待値が負」を意味し、
-        呼び出し側は新規エントリーを止める判断材料にする。
+        - 直近30回のローリング窓(古い成績が推定を永久支配しない)
+        - リターン率ベース(賭け金の大小に汚染されない)
+        - 全勝はNone(判定保留)を返す: サンプル不足の全勝を「無制限」と
+          解釈してはいけない
+        負の値は「統計上、期待値が負」を意味し、呼び出し側は新規エントリーを止める。
         """
-        if self.sell_count == 0:
+        n = len(self.recent_returns)
+        if n == 0:
             return None
-        wins, losses = self.win_count, self.sell_count - self.win_count
-        if losses == 0:
-            return 1.0  # 全勝(サンプル不足の可能性大。上限キャップ側で守る)
-        if wins == 0:
+        wins = [r for r in self.recent_returns if r > 0]
+        losses = [r for r in self.recent_returns if r <= 0]
+        if not losses:
+            return None  # 全勝は判定保留(まぐれの可能性を無制限と混同しない)
+        if not wins:
             return -1.0
-        avg_win = self.total_win_jpy / wins
-        avg_loss = self.total_loss_jpy / losses
+        avg_win = sum(wins) / len(wins)
+        avg_loss = abs(sum(losses) / len(losses))
         if avg_loss <= 0:
-            return 1.0
-        w = wins / self.sell_count
+            return None
+        w = len(wins) / n
         r = avg_win / avg_loss
         return w - (1 - w) / r
 

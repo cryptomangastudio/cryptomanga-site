@@ -2,15 +2,19 @@
 
 方針:
 - 買い(リスクを増やす注文)は厳しく制限する
-- 売り(リスクを減らす注文)はクールダウン・損失停止の対象外
-- 全停止(halt)だけはすべての注文を止める。haltはファイルに永続化され、
-  人間がファイルを消すまで再起動しても解除されない
+- 売り(リスクを減らす注文)は一切ブロックしない。halt中であっても
+  「ポジション解消の売り」は常に許可する(DD超過=最も売るべき局面で
+  売りを止めるのは停止の目的と真逆になるため)
+- halt(買い全停止)はファイルに永続化され、人間が消すまで解除されない
 
 多層ブレーカー(リサーチ#2): 日次損失 / 週次損失 / 連敗数 / 最大ドローダウン。
 売買頻度ガバナー(リサーチ#3): 月間の買い回数上限(バグ暴走の最終防波堤)。
+損失カウンタ・ピーク資産は risk_state.json に永続化され、再起動で
+ブレーカーが武装解除されない(レッドチーム指摘対応)。
 """
 from __future__ import annotations
 
+import json
 from collections.abc import Callable
 from dataclasses import dataclass
 from datetime import datetime, timedelta
@@ -33,10 +37,12 @@ class RiskManager:
         halt_file: str | Path | None = None,
         on_halt: Callable[[str], None] | None = None,
         max_buys_per_month: int | None = None,
+        state_file: str | Path | None = None,
     ):
         self.cfg = cfg
         self.budget_jpy = budget_jpy
         self.halt_file = Path(halt_file) if halt_file else None
+        self.state_file = Path(state_file) if state_file else None
         self.on_halt = on_halt  # 停止イベントのフック(通知など)。halt()から必ず呼ばれる
         self.max_buys_per_month = max_buys_per_month
         self.halted = False
@@ -50,12 +56,55 @@ class RiskManager:
         self._monthly_buys = 0
         self._monthly_key: str | None = None
         self._peak_equity: float | None = None
+        self._load_state()
         if self.halt_file and self.halt_file.exists():
             self.halted = True
             self.halt_reason = (
                 self.halt_file.read_text(encoding="utf-8").strip()
                 or f"停止ファイル {self.halt_file} が存在"
             )
+
+    def _load_state(self) -> None:
+        """損失カウンタ・ピーク資産の復元(再起動でブレーカーが消えないように)。"""
+        if not (self.state_file and self.state_file.exists()):
+            return
+        try:
+            s = json.loads(self.state_file.read_text(encoding="utf-8"))
+        except (json.JSONDecodeError, OSError):
+            return  # 壊れていたら無視(保守側フォールバックはupdate_equityで効く)
+        self._daily_date = s.get("daily_date")
+        self._daily_realized_loss = float(s.get("daily_loss", 0.0))
+        self._weekly_key = s.get("weekly_key")
+        self._weekly_realized_loss = float(s.get("weekly_loss", 0.0))
+        self._monthly_key = s.get("monthly_key")
+        self._monthly_buys = int(s.get("monthly_buys", 0))
+        self._consecutive_losses = int(s.get("consecutive_losses", 0))
+        if s.get("peak_equity") is not None:
+            self._peak_equity = float(s["peak_equity"])
+        if s.get("last_buy_at"):
+            self._last_buy_at = datetime.fromisoformat(s["last_buy_at"])
+
+    def _save_state(self) -> None:
+        if not self.state_file:
+            return
+        self.state_file.parent.mkdir(parents=True, exist_ok=True)
+        self.state_file.write_text(
+            json.dumps(
+                {
+                    "daily_date": self._daily_date,
+                    "daily_loss": self._daily_realized_loss,
+                    "weekly_key": self._weekly_key,
+                    "weekly_loss": self._weekly_realized_loss,
+                    "monthly_key": self._monthly_key,
+                    "monthly_buys": self._monthly_buys,
+                    "consecutive_losses": self._consecutive_losses,
+                    "peak_equity": self._peak_equity,
+                    "last_buy_at": self._last_buy_at.isoformat() if self._last_buy_at else None,
+                },
+                ensure_ascii=False,
+            ),
+            encoding="utf-8",
+        )
 
     def halt(self, reason: str) -> None:
         self.halted = True
@@ -90,14 +139,11 @@ class RiskManager:
     ) -> RiskDecision:
         """発注前チェック。position_cost_jpy は現在保有の取得原価合計。"""
         self._roll_day(now)
-        if self.halted:
-            return RiskDecision(
-                False,
-                f"bot停止中: {self.halt_reason}"
-                + (f"(再開するには {self.halt_file} を削除)" if self.halt_file else ""),
-            )
         if side != "buy":
+            # 売り(リスク削減)はhalt中でも常に許可する。DD超過で止めるべきは買いだけ
             return RiskDecision(True, "OK(売りはリスク削減のため制限なし)")
+        if self.halted:
+            return RiskDecision(False, f"bot停止中(買い禁止): {self.halt_reason}")
 
         if self._daily_realized_loss >= self.cfg.max_daily_loss_jpy:
             return RiskDecision(
@@ -151,14 +197,21 @@ class RiskManager:
         if realized_pnl_jpy < 0:
             self._daily_realized_loss += -realized_pnl_jpy
             self._weekly_realized_loss += -realized_pnl_jpy
+        self._save_state()
 
     def update_equity(self, equity_jpy: float) -> None:
-        """資産評価額の更新。最大ドローダウン超過でbotを恒久停止する。"""
-        if self._peak_equity is None or equity_jpy > self._peak_equity:
+        """資産評価額の更新。最大ドローダウン超過で買いを恒久停止する。"""
+        if self._peak_equity is None:
+            # 状態ファイルがない初回は、少なくとも予算額をピークとみなす
+            # (暴落後の再起動で「今の資産が新ピーク」になるラチェットを防ぐ)
+            self._peak_equity = max(float(self.budget_jpy), equity_jpy)
+        elif equity_jpy > self._peak_equity:
             self._peak_equity = equity_jpy
+        self._save_state()
         drawdown_pct = (1 - equity_jpy / self._peak_equity) * 100
         if drawdown_pct >= self.cfg.max_drawdown_pct and not self.halted:
             self.halt(
                 f"最大ドローダウン{self.cfg.max_drawdown_pct}%超過"
-                f"(現在{drawdown_pct:.1f}%)。人間の判断があるまで再開しない"
+                f"(現在{drawdown_pct:.1f}%)。買いを停止(売り・ポジション解消は可能)。"
+                "人間の判断があるまで再開しない"
             )

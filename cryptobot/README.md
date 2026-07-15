@@ -98,14 +98,38 @@ python report.py --config config.yaml
 ccxtに実装のある金融庁登録業者: `bitflyer` / `coincheck` / `bitbank` / `zaif`。
 GMOコインはccxt未対応のため、使う場合は専用アダプタの追加実装が必要です。
 
-### 通知(任意)
+### 📱 スマホで「実際の画面」を見る(share.ps1・無料)
 
-約定・全停止イベントをDiscord/Slack互換Webhookに通知できます。
+botを起動した状態で、**もう1つ**PowerShellを開いて次の1行を貼るだけです。
 
-```bash
-export CRYPTOBOT_WEBHOOK_URL="https://discord.com/api/webhooks/..."
-# config.yaml で notify.format を discord または slack に
+```powershell
+irm https://raw.githubusercontent.com/cryptomangastudio/cryptomanga-site/claude/crypto-bot-foundation-ioefuq/cryptobot/share.ps1 | iex
 ```
+
+Cloudflare Tunnel(無料・アカウント不要)でスマホ用URLが表示されるので、
+LINE等で自分に送ってタップすれば、**動いているダッシュボードそのもの**が見られます。
+
+- URLには自動生成のアクセスキーが付いており、URLを知らない第三者は開けません
+- botのウィンドウ+共有ウィンドウを開けている間だけ有効。URLは毎回変わります
+- PCがスリープすると見えなくなります(電源設定に注意)
+
+### 📱 スマホで確認する(Discord通知・無料・5分で設定)
+
+外出中でもスマホで状況が分かるように、約定・全停止・**1時間ごとの資産レポート**を
+Discordに送れます。ダッシュボード(localhost)はセキュリティのため自分のPCから
+しか見られない設計なので、外から見る手段はこの通知が正解です。
+
+1. スマホに **Discord** アプリを入れて無料アカウントを作る
+2. 「サーバーを追加 → オリジナルの作成」で自分だけのサーバーを作る
+3. チャンネルの ⚙(設定)→「連携サービス」→「ウェブフック」→「新しいウェブフック」
+   →「ウェブフックURLをコピー」
+4. PCの `cryptobot` フォルダにメモ帳で **`notify_url.txt`** というファイルを作り、
+   コピーしたURLを貼り付けて保存(このファイルはgitに入りません)
+5. `config.yaml` の `notify.format:` を `discord` に変更
+6. botを再起動(黒い画面を閉じて、いつもの1行を貼り直す)
+
+以後、スマホのDiscordに「🚀起動」「🟢買付」「📊定期レポート(資産・損益・保有)」
+「🛑全停止」が届きます。環境変数 `CRYPTOBOT_WEBHOOK_URL` でも設定できます。
 
 ### 社内ネットワーク等のプロキシ環境
 
@@ -185,12 +209,49 @@ cryptobot/
 1銘柄あたりの予算が小さくなるほど取引所の最低注文数量に引っかかりやすくなるので、
 実弾前は必ず `--check` で全銘柄の整合を確認してください。
 
+## 過去データの取得(バックテスト用)
+
+`backtest.py` に食わせるOHLCVをbitbankから無料でダウンロードします。
+
+```bash
+python fetch_history.py --symbol BTC/JPY --timeframe 1h --years 2
+python backtest.py --data data/BTC_JPY_1h.csv --walk-forward 5 --trials <試行総数>
+```
+
+bitbankのcandlestick APIは1時間足以下だと「1リクエスト=1日分」の仕様のため、
+数年分だと数百回のリクエストになります(公式レート制限に従い自動でゆっくり進みます。
+数分かかるのは正常です)。
+
+## 実弾昇格チェック
+
+「好成績だから」で実弾に進まないための、機械的なチェックリストです。
+
+```bash
+python promote.py --config config.yaml
+```
+
+ペーパー運用日数・売却回数の最低ラインをプロップファーム(FTMO等)の評価基準や
+アルゴトレード実務の統計的目安から設定しています。バックテストの過学習ゲート
+(`backtest.py --walk-forward`)のPASSは自動確認できないため、必ず目視で確認して
+ください。合格しても段階投入(まず総予算の20%から)を推奨します。
+
+## ストレステスト
+
+暴落・急騰急落など合成相場シナリオで「どんな相場でも壊滅しないか」を確認します。
+
+```bash
+python stress_test.py --out docs/stress
+```
+
 ## ロードマップ(土台の次)
 
-- [x] 適合性チェックコマンド(`--check`)
+- [x] 適合性チェックコマンド(`--check`、手数料率の自動突合つき)
 - [x] 通知(約定・停止イベントをDiscord/Slack Webhookへ)
 - [x] 月次レポート生成(`report.py` → Driveへ月次アップ)
 - [x] 停止状態・帳簿の再起動復元
+- [x] 過去データ取得ツール(`fetch_history.py`)
+- [x] 実弾昇格チェッカー(`promote.py`)
+- [x] ストレステスト基盤(`stress_test.py`)
 - [ ] ユーザー環境での取引所本番接続テスト(この開発環境からは取引所APIへの接続が許可されていないため)
 - [ ] GMOコイン用アダプタ(ccxt未対応のため必要なら)
 - [ ] 戦略の追加(RSI逆張り、グリッドなど)と比較検証

@@ -1,6 +1,7 @@
-"""通知。約定・停止イベントをWebhook(Discord/Slack互換)に送る。
+"""通知。約定・停止イベント・定期レポートをWebhook(Discord/Slack互換)に送る。
 
-Webhook URLは秘密情報なので環境変数 CRYPTOBOT_WEBHOOK_URL からのみ読む。
+Webhook URLは秘密情報なので設定ファイル(git管理)には書かない。
+環境変数 CRYPTOBOT_WEBHOOK_URL、なければ notify_url.txt(git管理外)から読む。
 通知の失敗でbot本体を止めないこと(ログに残すだけ)。
 """
 from __future__ import annotations
@@ -10,8 +11,11 @@ import logging
 import os
 import ssl
 import urllib.request
+from pathlib import Path
 
 log = logging.getLogger("cryptobot.notify")
+
+URL_FILE = "notify_url.txt"  # メモ帳でこのファイルを作ってWebhook URLを1行貼るだけでよい
 
 # 唯一の正当値定義(config.pyはここをimportする)
 VALID_FORMATS = ("none", "discord", "slack")
@@ -28,16 +32,27 @@ def _ssl_context() -> ssl.SSLContext | None:
 
 
 class Notifier:
-    def __init__(self, fmt: str = "none", url: str | None = None, timeout: float = 5.0):
+    def __init__(
+        self,
+        fmt: str = "none",
+        url: str | None = None,
+        timeout: float = 5.0,
+        url_file: str | Path = URL_FILE,
+    ):
         if fmt not in VALID_FORMATS:
             raise ValueError(f"notify.format は {VALID_FORMATS} のいずれか: {fmt!r}")
         self.fmt = fmt
-        self.url = url if url is not None else os.environ.get("CRYPTOBOT_WEBHOOK_URL", "")
+        if url is not None:
+            self.url = url
+        else:
+            self.url = os.environ.get("CRYPTOBOT_WEBHOOK_URL", "")
+            if not self.url and Path(url_file).exists():
+                self.url = Path(url_file).read_text(encoding="utf-8").strip()
         self.timeout = timeout  # 売買ループを塞がないよう短めに
         if self.fmt != "none" and not self.url:
             log.warning(
-                "notify.format=%s ですが環境変数 CRYPTOBOT_WEBHOOK_URL が未設定のため"
-                "通知は送られません", self.fmt,
+                "notify.format=%s ですがWebhook URLが未設定のため通知は送られません"
+                "(環境変数 CRYPTOBOT_WEBHOOK_URL か %s に設定)", self.fmt, url_file,
             )
 
     def build_payload(self, text: str) -> dict:

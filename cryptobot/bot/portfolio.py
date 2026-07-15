@@ -12,7 +12,7 @@ from datetime import datetime
 from pathlib import Path
 
 from .config import BotConfig
-from .runner import BotRunner, fetch_closes
+from .runner import BotRunner, fetch_window
 
 log = logging.getLogger("cryptobot.portfolio")
 
@@ -56,6 +56,10 @@ def sub_config(cfg: BotConfig, symbol: str) -> BotConfig:
             "shortfall_path": str(
                 Path(cfg.shortfall_path).with_name(f"execution_{slug}.csv")
             ),
+            "risk_state_path": (
+                str(Path(cfg.risk_state_path).with_name(f"risk_state_{slug}.json"))
+                if cfg.risk_state_path else cfg.risk_state_path
+            ),
         }
     return dataclasses.replace(
         cfg, symbol=symbol, symbols=[symbol], budget_jpy=budget,
@@ -71,8 +75,16 @@ class PortfolioRunner:
             sym: BotRunner(sub_config(cfg, sym), exchange) for sym in cfg.symbols
         }
 
-    def step_symbol(self, symbol: str, now: datetime, price: float, closes: list[float]) -> str:
-        return self.runners[symbol].step(now, price, closes)
+    def step_symbol(
+        self,
+        symbol: str,
+        now: datetime,
+        price: float,
+        closes: list[float],
+        highs: list[float] | None = None,
+        lows: list[float] | None = None,
+    ) -> str:
+        return self.runners[symbol].step(now, price, closes, highs, lows)
 
     def step_all(self, now: datetime) -> dict[str, str]:
         """全銘柄について価格取得→判断を1周する(exchange必須)。"""
@@ -80,8 +92,8 @@ class PortfolioRunner:
         for sym, runner in self.runners.items():
             try:
                 price = self.exchange.fetch_price(sym)
-                closes = fetch_closes(self.exchange, runner.cfg)
-                results[sym] = runner.step(now, price, closes)
+                closes, highs, lows = fetch_window(self.exchange, runner.cfg)
+                results[sym] = runner.step(now, price, closes, highs, lows)
             except Exception as e:
                 results[sym] = f"エラー: {type(e).__name__}: {e}"
                 log.warning("%s のサイクル失敗: %s", sym, e)
@@ -96,4 +108,4 @@ class PortfolioRunner:
         while True:
             for sym, result in self.step_all(datetime.now()).items():
                 log.info("%s | %s", sym, result)
-            time.sleep(self.cfg.interval_seconds)
+            time.sleep(min(r.next_sleep_seconds() for r in self.runners.values()))

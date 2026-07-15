@@ -28,6 +28,8 @@ class MarketSnapshot:
     closes: list[float]  # 直近の終値(古い→新しい)。DCAでは空でよい
     position_amount: float  # 保有数量(BTCなど)
     position_cost_jpy: float  # 保有分の取得原価合計
+    highs: list[float] | None = None  # 高値(ATRのTrue Range計算用。無ければ終値差で近似)
+    lows: list[float] | None = None
 
 
 class Strategy:
@@ -50,7 +52,15 @@ def sma(values: list[float], window: int) -> float:
 
 
 class MACrossStrategy(Strategy):
-    """単純移動平均のクロス。ゴールデンクロスで買い、デッドクロスで全量売却。"""
+    """単純移動平均のクロス。ゴールデンクロスで買い、fast<slowの間は売り。
+
+    出口は「クロスの瞬間」ではなく「fastがslowを下回っている状態」で判定する
+    (レベル判定)。クロス瞬間のみの判定だと、その1バーで売り損ねたとき
+    (未約定・再起動・halt中)に出口シグナルが二度と出ない。
+    買いには小さなヒステリシス(閾値)を設け、ノイズ1本での往復を減らす。
+    """
+
+    BUY_HYSTERESIS = 0.001  # fastがslowを0.1%以上上抜けた場合のみ買い
 
     def __init__(self, fast: int, slow: int, buy_amount_jpy: int):
         assert fast < slow
@@ -66,12 +76,14 @@ class MACrossStrategy(Strategy):
         slow_now = sma(closes, self.slow)
         fast_prev = sma(closes[:-1], self.fast)
         slow_prev = sma(closes[:-1], self.slow)
-        golden = fast_prev <= slow_prev and fast_now > slow_now
-        dead = fast_prev >= slow_prev and fast_now < slow_now
+        if market.position_amount > 0 and fast_now < slow_now:
+            return Signal(Action.SELL, 0.0, "fastがslowを下回った(全量売却)")
+        golden = (
+            fast_prev <= slow_prev
+            and fast_now > slow_now * (1 + self.BUY_HYSTERESIS)
+        )
         if golden and market.position_amount == 0:
             return Signal(Action.BUY, float(self.buy_amount_jpy), "ゴールデンクロス")
-        if dead and market.position_amount > 0:
-            return Signal(Action.SELL, 0.0, "デッドクロス(全量売却)")
         return Signal.hold("クロスなし")
 
 

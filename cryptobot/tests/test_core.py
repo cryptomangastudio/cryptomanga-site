@@ -142,12 +142,13 @@ class TestRiskManager(unittest.TestCase):
         tomorrow = self.now + timedelta(days=1, minutes=61)
         self.assertTrue(self.risk.check_order("buy", 5_000, 0, tomorrow).approved)
 
-    def test_drawdown_halts_bot(self):
+    def test_drawdown_halts_buys_but_not_sells(self):
         self.risk.update_equity(100_000)
         self.risk.update_equity(84_000)  # -16% > 上限15%
         self.assertTrue(self.risk.halted)
         self.assertFalse(self.risk.check_order("buy", 5_000, 0, self.now).approved)
-        self.assertFalse(self.risk.check_order("sell", 5_000, 0, self.now).approved)
+        # halt中でも売り(リスク削減)は常に許可される — DD超過は最も売るべき局面
+        self.assertTrue(self.risk.check_order("sell", 5_000, 0, self.now).approved)
 
     def test_on_halt_hook_fires(self):
         events = []
@@ -224,6 +225,35 @@ class TestNotifier(unittest.TestCase):
     def test_invalid_format_rejected(self):
         with self.assertRaises(ValueError):
             Notifier("line")
+
+    def test_url_from_file_fallback(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            f = Path(tmp) / "notify_url.txt"
+            f.write_text("https://discord.com/api/webhooks/xxx\n", encoding="utf-8")
+            n = Notifier("discord", url_file=f)
+            self.assertEqual(n.url, "https://discord.com/api/webhooks/xxx")
+
+
+class TestStatusSummary(unittest.TestCase):
+    def test_summary_contains_key_numbers(self):
+        import dashboard as dash_mod
+        state = {
+            "lastRunAt": "09:00:00",
+            "equity": 101_234.5,
+            "cash": 90_999.0,
+            "realizedPnl": 1_234.5,
+            "status": "ok",
+            "statusText": "稼働中",
+            "perSymbol": [
+                {"symbol": "BTC/JPY", "price": 10_000_000, "position": 0.000299, "halted": False},
+                {"symbol": "XRP/JPY", "price": None, "position": 0.0, "halted": True},
+            ],
+        }
+        text = dash_mod.status_summary(state)
+        self.assertIn("資産評価額: 101,234円", text)
+        self.assertIn("累計実現損益: +1,234円", text)
+        self.assertIn("BTC/JPY: 10,000,000円", text)
+        self.assertIn("⛔停止中", text)
 
 
 class TestConfigGuards(unittest.TestCase):

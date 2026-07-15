@@ -19,6 +19,15 @@ log = logging.getLogger("cryptobot.execution")
 
 POLL_SECONDS = 2.0
 
+# bitbankはpost-only指値が板を食う価格だとエラーではなく自動キャンセルする
+# (CANCELED_UNFILLED / CANCELED_PARTIALLY_FILLED)。これらは正常系であり、
+# 既にキャンセル済みの注文へcancel_orderを呼ぶと無意味な失敗ログが出る。
+# ただし判定は「終端状態と確認できたリストに載っているか」の一択にし、
+# 未知のステータス(取得失敗・想定外の文字列等)は安全側=非終端として扱う
+# (「生存リストに載っていなければ安全」という判定だと、未知のステータスを
+# 誤って安全側と見なし、二重発注ガードが効かなくなる)
+_TERMINAL_STATUSES = ("closed", "canceled", "expired", "rejected")
+
 
 def paper_fee_rate(cfg: BotConfig) -> float:
     """ペーパー/バックテストで使う手数料率。メイカーなら負(リベート)になりうる。"""
@@ -96,9 +105,11 @@ class MakerExecutor:
                 price = self._best_quote(symbol, side)
                 order = self.exchange.limit_post_only(symbol, side, remaining, price)
             except Exception as e:
-                # post-only拒否(板を食う価格)や気配取得失敗は即座に次の気配で再試行
+                # post-only拒否(板を食う価格)や気配取得失敗は次の気配で再試行。
+                # レート制限中にAPIを連打しないよう線形バックオフを入れる
                 log.info("post-only発注できず(再試行): %s", e)
                 requotes += 1
+                time.sleep(POLL_SECONDS * (1 + requotes))
                 continue
 
             order_id = order["id"]
@@ -111,11 +122,37 @@ class MakerExecutor:
                         break
                     time.sleep(POLL_SECONDS)
                 if status.get("status") != "closed":
-                    try:
-                        client.cancel_order(order_id, symbol)
-                    except Exception as e:
-                        log.info("キャンセル失敗(直後に約定した可能性): %s", e)
-                    status = client.fetch_order(order_id, symbol)
+                    if status.get("status") not in _TERMINAL_STATUSES:
+                        # 終端状態と確信できない場合はキャンセルを試みる。
+                        # ("open"/"partially_filled" はもちろん、未知のステータスや
+                        # 取得失敗も「まだ生きているかもしれない」側に倒す。
+                        # bitbankは板を食う価格のpost-onlyを自動キャンセルするため、
+                        # ここに来た時点で既にcanceled等の終端状態のことが多いが、
+                        # それでも安全側はキャンセル試行であって省略ではない)
+                        try:
+                            client.cancel_order(order_id, symbol)
+                        except Exception as e:
+                            log.info("キャンセル失敗(直後に約定した可能性): %s", e)
+                    # 二重発注ガード: 前の注文が「終端状態と確認できた」ことを
+                    # 確認するまで絶対に次の指値を置かない(レート制限等でキャンセルが
+                    # 通っていないと、同一意図の注文が複数枚並んでしまう。未知の
+                    # ステータスを安全側=終端とみなさない)
+                    for _ in range(5):
+                        status = client.fetch_order(order_id, symbol)
+                        if status.get("status") in _TERMINAL_STATUSES:
+                            break
+                        time.sleep(POLL_SECONDS)
+                    if status.get("status") not in _TERMINAL_STATUSES:
+                        log.warning(
+                            "注文%sが板に残っている可能性があるため、二重発注を避けて"
+                            "この周期は見送ります", order_id,
+                        )
+                        fill, fill_price, fee = normalize_order_fill(status, base, 0.0, price)
+                        if fill > 0:
+                            filled_total += fill
+                            cost_total += fill * fill_price
+                            fee_total += fee
+                        return result()
             except Exception as e:
                 # 状態不明のまま続けると二重発注の危険。ここまでの約定分を返して終了
                 log.warning("注文状態の確認に失敗(ここまでの約定分のみ記帳): %s", e)

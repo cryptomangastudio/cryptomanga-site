@@ -24,6 +24,7 @@ class RiskConfig:
     max_weekly_loss_jpy: int = 7_000     # 週次損失上限(多層ブレーカー第2層)
     max_consecutive_losses: int = 5      # 連敗数上限(第3層)。到達で買い停止
     max_drawdown_pct: float = 15.0
+    hard_stop_pct: float = 10.0          # 取得単価比-この%で強制全量売却(ma_cross系。0で無効)
     cooldown_minutes: int = 60
 
 
@@ -52,7 +53,10 @@ class ExecutionConfig:
     maker_fee_rate: float = -0.0002   # bitbankは-0.02%(受け取り)。取引所に合わせて変更
     taker_fee_rate: float = 0.0012
     requote_seconds: int = 20     # live: 指値が約定しない場合の再指値までの秒数
-    max_requotes: int = 5         # live: 再指値の上限。超えたら見送り(テイカーに逃げない)
+    max_requotes: int = 5         # live: 再指値の上限。超えたら見送り(買いはテイカーに逃げない)
+    # 出口だけは非対称: 売りが約定しないままシグナル価格からこの%下がったら
+    # テイカー成行で確定させる(入口の見送りは仮説の損、出口の見送りは実損の拡大)
+    exit_taker_fallback_pct: float = 2.0  # 0で無効
 
 
 @dataclass
@@ -83,7 +87,10 @@ class RegimeConfig:
     """200日MAレジームフィルター+DCA傾斜(#8)。日足OHLCV対応の取引所でのみ有効。"""
     enabled: bool = True
     ma_days: int = 200
-    dca_tilt: float = 0.5     # 200日MAからの乖離に応じてDCA額を最大±この割合まで傾斜
+    # DCA額の傾斜(±この割合)。「MA乖離は回帰する」という未検証の仮説に賭けるレバーの
+    # ため既定は0(無効)。有効化する場合はバックテストでA/B検証してから
+    dca_tilt: float = 0.0
+    dca_hard_floor_pct: float = 25.0  # 価格がMA比-この%を割ったらDCAの新規買い自体を停止(0で無効)
 
 
 @dataclass
@@ -110,11 +117,24 @@ class BotConfig:
     paper_state_path: str = "data/paper_state.json"
     halt_file: str = "data/HALTED"
     shortfall_path: str = "data/execution_log.csv"
+    risk_state_path: str = "data/risk_state.json"
 
     def __post_init__(self):
         if not self.symbols:
             self.symbols = [self.symbol]
         self.symbol = self.symbols[0]
+        if self.mode == "live":
+            # paperの記録(仮想売買)がliveの帳簿・リスク状態・税務集計に混ざらないよう、
+            # 既定パスのままの場合はliveサフィックス付きに自動で分離する
+            defaults = {
+                "journal_path": ("data/trades.csv", "data/trades_live.csv"),
+                "shortfall_path": ("data/execution_log.csv", "data/execution_log_live.csv"),
+                "halt_file": ("data/HALTED", "data/HALTED_live"),
+                "risk_state_path": ("data/risk_state.json", "data/risk_state_live.json"),
+            }
+            for field_name, (paper_default, live_default) in defaults.items():
+                if getattr(self, field_name) == paper_default:
+                    setattr(self, field_name, live_default)
 
 
 class ConfigError(ValueError):
@@ -151,6 +171,7 @@ def load_config(path: str | Path) -> BotConfig:
         paper_state_path=raw.get("paper_state_path", "data/paper_state.json"),
         halt_file=raw.get("halt_file", "data/HALTED"),
         shortfall_path=raw.get("shortfall_path", "data/execution_log.csv"),
+        risk_state_path=raw.get("risk_state_path", "data/risk_state.json"),
     )
     validate(cfg)
     return cfg

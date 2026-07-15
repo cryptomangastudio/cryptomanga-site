@@ -20,9 +20,11 @@ import argparse
 import csv
 import json
 import logging
+import secrets
 import threading
 import time
 import webbrowser
+from urllib.parse import parse_qs, urlparse
 from collections import deque
 from datetime import datetime
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
@@ -31,8 +33,27 @@ from pathlib import Path
 from bot.config import load_config
 from bot.exchange import SpotOnlyExchange
 from bot.journal import COL_AMOUNT, COL_PRICE, COL_REALIZED, COL_SIDE, COL_TS, HEADER
+from bot.lock import acquire_singleton_lock
+from bot.notify import Notifier
 from bot.portfolio import PortfolioRunner
-from bot.runner import fetch_closes
+from bot.runner import fetch_window
+
+
+def status_summary(state: dict) -> str:
+    """スマホ通知用の定期レポート本文(Discord/Slackにそのまま送れるテキスト)。"""
+    lines = [
+        f"📊 CryptoBot定期レポート({state['lastRunAt']})",
+        f"資産評価額: {state['equity']:,.0f}円" if state["equity"] is not None
+        else "資産評価額: 計測中",
+        f"現金: {state['cash']:,.0f}円 / 累計実現損益: {state['realizedPnl']:+,.0f}円",
+    ]
+    for p in state["perSymbol"]:
+        price = f"{p['price']:,.0f}円" if p["price"] is not None else "—"
+        halted = " ⛔停止中" if p["halted"] else ""
+        lines.append(f"{p['symbol']}: {price} / 保有{p['position']:.6f}{halted}")
+    if state["status"] != "ok":
+        lines.append(f"⚠️ {state['statusText']}")
+    return "\n".join(lines)
 
 log = logging.getLogger("cryptobot.dashboard")
 
@@ -52,6 +73,8 @@ class Dashboard:
             )
         self.cfg = cfg
         self.portfolio = PortfolioRunner(cfg, SpotOnlyExchange(cfg))
+        self.notifier = Notifier(cfg.notify.format)  # 定期レポート用(約定通知は各runnerが送る)
+        self.key = self._load_or_create_key()  # トンネル共有時ののぞき見防止キー
         self.lock = threading.Lock()
         self.last_price: dict[str, float] = {}
         self.price_history = {s: deque(maxlen=PRICE_HISTORY_MAX) for s in cfg.symbols}
@@ -61,6 +84,18 @@ class Dashboard:
         self.last_results: dict[str, str] = {}
         self.last_error = ""
         self.last_run_at: datetime | None = None
+
+    def _load_or_create_key(self) -> str:
+        """アクセスキー。share.ps1でスマホ共有しても第三者に見られないようにする。"""
+        key_file = Path(self.cfg.journal_path).parent / "dashboard_key.txt"
+        if key_file.exists():
+            key = key_file.read_text(encoding="utf-8").strip()
+            if key:
+                return key
+        key = secrets.token_urlsafe(9)
+        key_file.parent.mkdir(parents=True, exist_ok=True)
+        key_file.write_text(key + "\n", encoding="utf-8")
+        return key
 
     @property
     def exchange(self):
@@ -78,8 +113,8 @@ class Dashboard:
                 try:
                     price = self.exchange.fetch_price(sym)
                     self._record_price(sym, price)
-                    closes = fetch_closes(self.exchange, runner.cfg)
-                    self.last_results[sym] = runner.step(datetime.now(), price, closes)
+                    closes, highs, lows = fetch_window(self.exchange, runner.cfg)
+                    self.last_results[sym] = runner.step(datetime.now(), price, closes, highs, lows)
                 except Exception as e:
                     errors.append(f"{sym}: {type(e).__name__}: {e}")
                     log.warning("%s のサイクル失敗: %s", sym, e)
@@ -114,9 +149,13 @@ class Dashboard:
                 self.market_trades[sym].append(t)
 
     def bot_loop(self) -> None:
+        self.notifier.send("🚀 CryptoBot起動(ペーパートレード)。このあと判断のたびに定期レポートを送ります")
         while True:
             self.run_cycle()
-            time.sleep(self.cfg.interval_seconds)
+            # スマホ用の定期レポート(interval_secondsごと=既定1時間ごと)
+            self.notifier.send(status_summary(self.state()))
+            # 売り残りのある銘柄がある間は短周期で再試行する
+            time.sleep(min(r.next_sleep_seconds() for r in self.portfolio.runners.values()))
 
     def price_loop(self) -> None:
         time.sleep(PRICE_POLL_SECONDS)  # 起動直後はbot_loopが取得するので待つ
@@ -539,9 +578,10 @@ function render(s) {
   lastTradeKey = key;
 }
 
+const KEY = new URLSearchParams(location.search).get("key") || "";
 async function refresh() {
   try {
-    const s = await (await fetch("/api/state")).json();
+    const s = await (await fetch("/api/state?key=" + encodeURIComponent(KEY))).json();
     render(s);
   } catch (e) {
     $("statustext").textContent = "画面とbotの接続が切れました(黒い画面が閉じていませんか?)";
@@ -550,7 +590,7 @@ async function refresh() {
 }
 $("stepbtn").onclick = async () => {
   const b = $("stepbtn"); b.disabled = true; b.textContent = "⏳ 判断中…";
-  try { await fetch("/step", { method: "POST" }); await refresh(); }
+  try { await fetch("/step?key=" + encodeURIComponent(KEY), { method: "POST" }); await refresh(); }
   finally { b.disabled = false; b.textContent = "⚡ 今すぐ全銘柄を1回判断する"; }
 };
 if (window.MOCK_STATE) { render(window.MOCK_STATE); }
@@ -567,10 +607,24 @@ def make_handler(dash: Dashboard):
             self.end_headers()
             self.wfile.write(body)
 
+        def _route(self) -> tuple[str, bool]:
+            """(パス, 認証OKか)。キー必須: トンネル共有時に第三者から守るため。"""
+            parsed = urlparse(self.path)
+            key = (parse_qs(parsed.query).get("key") or [""])[0]
+            return parsed.path, key == dash.key
+
         def do_GET(self):
-            if self.path == "/":
+            path, ok = self._route()
+            if not ok:
+                self._send(
+                    "アクセスキーが必要です。PCの黒い画面に表示されたURL"
+                    "(?key=... 付き)から開いてください。".encode("utf-8"),
+                    "text/plain; charset=utf-8", 401,
+                )
+                return
+            if path == "/":
                 self._send(PAGE.encode("utf-8"), "text/html; charset=utf-8")
-            elif self.path == "/api/state":
+            elif path == "/api/state":
                 self._send(
                     json.dumps(dash.state(), ensure_ascii=False).encode("utf-8"),
                     "application/json; charset=utf-8",
@@ -579,7 +633,11 @@ def make_handler(dash: Dashboard):
                 self.send_error(404)
 
         def do_POST(self):
-            if self.path != "/step":
+            path, ok = self._route()
+            if not ok:
+                self._send(b'{"error": "unauthorized"}', "application/json", 401)
+                return
+            if path != "/step":
                 self.send_error(404)
                 return
             dash.run_cycle()
@@ -598,13 +656,15 @@ def main() -> None:
     args = parser.parse_args()
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
 
+    _lock = acquire_singleton_lock()  # 二重起動防止(帳簿の交錯を防ぐ)。プロセス終了まで保持
     dash = Dashboard(load_config(args.config))
     threading.Thread(target=dash.bot_loop, daemon=True).start()
     threading.Thread(target=dash.price_loop, daemon=True).start()
 
-    url = f"http://127.0.0.1:{args.port}"
+    url = f"http://127.0.0.1:{args.port}/?key={dash.key}"
     server = ThreadingHTTPServer(("127.0.0.1", args.port), make_handler(dash))
-    print(f"ダッシュボード起動: {url} (この画面を閉じるとbotも止まります)")
+    print(f"ダッシュボード起動: {url}")
+    print("(この画面を閉じるとbotも止まります。スマホで見るには share.ps1 を実行)")
     threading.Timer(1.0, webbrowser.open, args=(url,)).start()
     try:
         server.serve_forever()

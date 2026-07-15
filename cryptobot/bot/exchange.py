@@ -108,6 +108,16 @@ class SpotOnlyExchange:
         limits = self._market(symbol).get("limits") or {}
         return (limits.get("amount") or {}).get("min")
 
+    def fee_rates(self, symbol: str) -> tuple[float | None, float | None]:
+        """取引所が公開する銘柄ごとの(メイカー, テイカー)手数料率。
+
+        bitbankはGET /spot/pairsで銘柄ごとに手数料率を返す(altcoinはBTCと
+        異なることがある)ため、config.yamlの固定値と乖離していないか
+        `--check` で突き合わせる。取得できなければ (None, None)。
+        """
+        m = self._market(symbol)
+        return m.get("maker"), m.get("taker")
+
     def fetch_price(self, symbol: str) -> float:
         return float(self.client.fetch_ticker(symbol)["last"])
 
@@ -118,6 +128,11 @@ class SpotOnlyExchange:
         """発注に使えるJPY残高(liveモード用)。"""
         balance = self.client.fetch_balance()
         return float((balance.get("JPY") or {}).get("free") or 0.0)
+
+    def fetch_base_balance(self, symbol: str) -> float:
+        """基軸通貨(BTC等)の実残高(liveモード用)。帳簿との突合に使う。"""
+        balance = self.client.fetch_balance()
+        return float((balance.get(self.base_currency(symbol)) or {}).get("free") or 0.0)
 
     def fetch_public_trades(self, symbol: str, limit: int = 30) -> list[dict]:
         """市場全体の約定履歴(公開データ)。ダッシュボードのフィード表示用。"""
