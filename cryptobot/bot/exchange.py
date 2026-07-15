@@ -121,8 +121,52 @@ class SpotOnlyExchange:
     def fetch_price(self, symbol: str) -> float:
         return float(self.client.fetch_ticker(symbol)["last"])
 
+    def _bitbank_bucket_ms(self, timeframe: str) -> int:
+        """bitbankのローソク足APIが1回で返す時間バケットの大きさ(ミリ秒)。
+
+        日中足(1h等)は「その日ぶん(YYYYMMDD)」、日足以上は「その年ぶん(YYYY)」
+        しか返さない。fetch_history.py の bucket_gap_ms と同じ考え方。
+        """
+        try:
+            tf_s = self.client.parse_timeframe(timeframe)
+        except Exception:
+            tf_s = 3600
+        day_ms = 24 * 3600 * 1000
+        return day_ms if tf_s < 24 * 3600 else 365 * day_ms
+
     def fetch_ohlcv(self, symbol: str, timeframe: str, limit: int = 100) -> list[list[float]]:
-        return self.client.fetch_ohlcv(symbol, timeframe=timeframe, limit=limit)
+        """直近limit本のOHLCV。
+
+        bitbankの日中足APIは「その日ぶん」しか返さないため、1回の呼び出しでは
+        午前中だと数本しか得られない(→ma_crossが常にデータ不足でHOLDになる)。
+        足りない場合は過去の日/年バケットを遡ってマージし、limit本を満たす。
+        他の取引所は1回の呼び出しがlimit本を返すのでそのまま使う。
+        """
+        rows = self.client.fetch_ohlcv(symbol, timeframe=timeframe, limit=limit)
+        if self.cfg.exchange != "bitbank" or len(rows) >= limit:
+            return rows[-limit:] if len(rows) > limit else rows
+        bucket = self._bitbank_bucket_ms(timeframe)
+        merged: dict[int, list] = {int(c[0]): c for c in rows if c and c[0] is not None}
+        since = self.client.milliseconds()
+        dry = 0
+        for _ in range(40):  # 暴走防止の上限。通常は数バケットでlimitに達する
+            if len(merged) >= limit:
+                break
+            since -= bucket
+            try:
+                more = self.client.fetch_ohlcv(symbol, timeframe=timeframe, since=since, limit=limit)
+            except Exception:
+                break
+            added = 0
+            for c in more:
+                if c and c[0] is not None and int(c[0]) not in merged:
+                    merged[int(c[0])] = c
+                    added += 1
+            dry = dry + 1 if added == 0 else 0
+            if dry >= 3:  # これ以上遡ってもデータが無い(未上場前など)
+                break
+        out = [merged[k] for k in sorted(merged)]
+        return out[-limit:]
 
     def fetch_jpy_balance(self) -> float:
         """発注に使えるJPY残高(liveモード用)。"""

@@ -62,7 +62,7 @@ PRICE_POLL_SECONDS = 5
 PRICE_HISTORY_MAX = 2880   # 5秒×2880 = 4時間ぶん
 TRADES_POLL_SECONDS = 10   # 市場の約定フィードの取得間隔(銘柄を順繰りに取得)
 MARKET_TRADES_MAX = 60
-CANDLE_POLL_SECONDS = 60   # 戦略チャート用のOHLCV(ローソク足)の取得間隔
+CANDLE_POLL_SECONDS = 180  # 戦略チャート用OHLCVの取得間隔(1時間足は毎分更新不要+遡り取得のため控えめに)
 CANDLE_DISPLAY_MAX = 120   # 戦略チャートに描くローソク足の本数(判断より多めに見せる)
 
 
