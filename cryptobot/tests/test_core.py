@@ -12,7 +12,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-from bot.config import BotConfig, ConfigError, RiskConfig, validate
+from bot.config import BotConfig, ConfigError, RiskConfig, load_config, validate
 from bot.exchange import normalize_order_fill
 from bot.journal import Fill, TradeJournal
 from bot.notify import Notifier
@@ -266,6 +266,31 @@ class TestConfigGuards(unittest.TestCase):
         cfg = BotConfig(mode="live")
         with self.assertRaises(ConfigError):
             validate(cfg)  # CRYPTOBOT_LIVE=YES がない
+
+    def test_load_config_tolerates_shift_jis(self):
+        # PowerShellのSet-Contentが日本語WindowsでShift-JIS(cp932)保存しても
+        # 落ちずに読めること(UnicodeDecodeErrorで起動不能にならない回帰テスト)
+        yaml_text = (
+            "exchange: bitbank\n"
+            "symbol: BTC/JPY\n"
+            "mode: paper\n"
+            "notify:\n"
+            "  format: slack  # 日本語コメント(手数料の受け取り)\n"
+        )
+        with tempfile.TemporaryDirectory() as tmp:
+            p = Path(tmp) / "config.yaml"
+            p.write_bytes(yaml_text.encode("cp932"))  # わざとShift-JISで書く
+            cfg = load_config(p)
+            self.assertEqual(cfg.notify.format, "slack")
+
+    def test_load_config_tolerates_utf8_bom(self):
+        # -Encoding UTF8(PS5.1)はBOM付きで書く。BOMを剥がして読めること
+        yaml_text = "exchange: bitbank\nnotify:\n  format: slack\n"
+        with tempfile.TemporaryDirectory() as tmp:
+            p = Path(tmp) / "config.yaml"
+            p.write_bytes(b"\xef\xbb\xbf" + yaml_text.encode("utf-8"))
+            cfg = load_config(p)
+            self.assertEqual(cfg.notify.format, "slack")
 
 
 if __name__ == "__main__":

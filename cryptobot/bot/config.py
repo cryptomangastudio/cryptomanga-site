@@ -141,8 +141,25 @@ class ConfigError(ValueError):
     pass
 
 
+def _read_config_text(path: str | Path) -> str:
+    """config.yaml を文字コードに寛容に読む。
+
+    Windows PowerShell の Set-Content は日本語Windowsの既定コードページ(cp932/
+    Shift-JIS)でファイルを書き出すことがあり、日本語コメントを含む config.yaml が
+    UTF-8として壊れて読めなくなる。utf-8(BOM付きも許容)→ cp932 の順に試す。
+    """
+    data = Path(path).read_bytes()
+    for enc in ("utf-8-sig", "cp932"):
+        try:
+            return data.decode(enc)
+        except UnicodeDecodeError:
+            continue
+    # 最後はUTF-8で読み、壊れた文字は失敗させずに落とす(値のASCIIキーは生き残る)
+    return data.decode("utf-8", errors="replace")
+
+
 def load_config(path: str | Path) -> BotConfig:
-    raw = yaml.safe_load(Path(path).read_text(encoding="utf-8")) or {}
+    raw = yaml.safe_load(_read_config_text(path)) or {}
     if "fee_rate" in raw:
         raise ConfigError(
             "fee_rate は廃止されました。execution: の maker_fee_rate / taker_fee_rate に"
