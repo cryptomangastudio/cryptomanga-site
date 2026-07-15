@@ -38,6 +38,7 @@ class MACrossConfig:
     timeframe: str = "1h"
     fast: int = 9
     slow: int = 26
+    ma_type: str = "sma"  # sma | ema。emaは直近の値を重く見るため反応が速い(シグナルが増える)
 
 
 @dataclass
@@ -215,6 +216,8 @@ def validate(cfg: BotConfig) -> None:
         raise ConfigError("max_drawdown_pct は 0〜100 の範囲")
     if cfg.ma_cross.fast >= cfg.ma_cross.slow:
         raise ConfigError("ma_cross.fast は slow より小さくしてください")
+    if cfg.ma_cross.ma_type not in ("sma", "ema"):
+        raise ConfigError("ma_cross.ma_type は sma か ema")
     if cfg.notify.format not in VALID_NOTIFY_FORMATS:
         raise ConfigError(f"notify.format は {VALID_NOTIFY_FORMATS} のいずれか")
     if len(cfg.symbols) != len(set(cfg.symbols)):

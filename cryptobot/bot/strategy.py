@@ -51,6 +51,25 @@ def sma(values: list[float], window: int) -> float:
     return sum(values[-window:]) / window
 
 
+def ema(values: list[float], window: int) -> float:
+    """指数移動平均(最新の終値ほど重み大)。SMAより反応が速くシグナルが増える。
+
+    直近 window*3 本だけで十分収束するので、SMAと同じ本数の窓で運用できる
+    (closes_needed は変えなくてよい)。SMAシードから漸化式で立ち上げる。
+    """
+    n = min(len(values), max(window * 3, window))
+    seg = values[-n:]
+    k = 2.0 / (window + 1)
+    e = sum(seg[:window]) / window  # 最初のwindow本の単純平均をシードにする
+    for v in seg[window:]:
+        e = v * k + e * (1 - k)
+    return e
+
+
+def moving_avg(values: list[float], window: int, ma_type: str) -> float:
+    return ema(values, window) if ma_type == "ema" else sma(values, window)
+
+
 class MACrossStrategy(Strategy):
     """単純移動平均のクロス。ゴールデンクロスで買い、fast<slowの間は売り。
 
@@ -62,20 +81,21 @@ class MACrossStrategy(Strategy):
 
     BUY_HYSTERESIS = 0.001  # fastがslowを0.1%以上上抜けた場合のみ買い
 
-    def __init__(self, fast: int, slow: int, buy_amount_jpy: int):
+    def __init__(self, fast: int, slow: int, buy_amount_jpy: int, ma_type: str = "sma"):
         assert fast < slow
         self.fast = fast
         self.slow = slow
         self.buy_amount_jpy = buy_amount_jpy
+        self.ma_type = ma_type
 
     def decide(self, market: MarketSnapshot) -> Signal:
         closes = market.closes
         if len(closes) < self.slow + 1:
             return Signal.hold("データ不足")
-        fast_now = sma(closes, self.fast)
-        slow_now = sma(closes, self.slow)
-        fast_prev = sma(closes[:-1], self.fast)
-        slow_prev = sma(closes[:-1], self.slow)
+        fast_now = moving_avg(closes, self.fast, self.ma_type)
+        slow_now = moving_avg(closes, self.slow, self.ma_type)
+        fast_prev = moving_avg(closes[:-1], self.fast, self.ma_type)
+        slow_prev = moving_avg(closes[:-1], self.slow, self.ma_type)
         if market.position_amount > 0 and fast_now < slow_now:
             return Signal(Action.SELL, 0.0, "fastがslowを下回った(全量売却)")
         golden = (
@@ -91,5 +111,7 @@ def build_strategy(cfg) -> Strategy:
     if cfg.strategy == "dca":
         return DCAStrategy(cfg.dca.buy_amount_jpy)
     if cfg.strategy == "ma_cross":
-        return MACrossStrategy(cfg.ma_cross.fast, cfg.ma_cross.slow, cfg.risk.max_order_jpy)
+        return MACrossStrategy(
+            cfg.ma_cross.fast, cfg.ma_cross.slow, cfg.risk.max_order_jpy, cfg.ma_cross.ma_type
+        )
     raise ValueError(f"未知の戦略: {cfg.strategy}")

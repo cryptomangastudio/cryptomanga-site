@@ -139,6 +139,61 @@ Discordの方が使い慣れている場合は、`notify.format:` を `discord` 
 DiscordのWebhook URL(サーバー設定→連携サービス→ウェブフック)を同じ
 `notify_url.txt` に貼るだけで切り替えられます。
 
+### 売買設定と「積極運用」プリセット
+
+現在の既定(安全寄り):
+
+| 項目 | 既定値 | 意味 |
+|---|---|---|
+| strategy | `ma_cross` | 移動平均クロスで売買(`dca`は積立のみで売らない) |
+| ma_cross | 1h / fast 9 / slow 26 / `sma` | 1時間足、9本と26本の単純移動平均のクロス |
+| cost_gate.k | 2.0 | 「期待値動き ≥ 往復コスト×2」でないと買わない(高いほど慎重) |
+| cooldown_minutes | 60 | 買いの連続発注クールダウン |
+| max_buys_per_month | 40 | 月の買い回数上限 |
+| max_order_jpy / max_position_jpy | 1万 / 5万 | 1回の買い額 / 保有上限 |
+
+**積極運用プリセット(ガンガン売買したい人向け)**。BTCで最も検証されている
+`EMA 9/21`(EMAは反応が速くシグナルが増える)をベースに、各ゲートを緩めて
+1回の買い額も上げます。リサーチ+合成シナリオのストレステストで、この設定でも
+全シナリオが生存floor(初期資金の75%)を割らないことは確認済みですが、
+**取引が増える=手数料と往復負けも増え、勝ちを保証するものではありません。**
+実データのバックテストで必ず確認してください。
+
+`config.yaml` を次のように変更(`ma_cross:` と `risk:` と `cost_gate:` と `governor:`):
+
+```yaml
+ma_cross:
+  timeframe: 1h
+  fast: 9
+  slow: 21
+  ma_type: ema
+cost_gate:
+  k: 1.0
+risk:
+  cooldown_minutes: 30
+  max_order_jpy: 30000
+  max_position_jpy: 80000
+governor:
+  max_buys_per_month: 80
+```
+
+手で書き換えるのが不安なら、PowerShellに次の1行を貼れば安全にUTF-8で書き換えます
+(bot起動中でもOK。書き換え後に再起動):
+
+```powershell
+$b = Get-ChildItem -Path (Join-Path $HOME "cryptobot-app") -Directory -Recurse -Filter cryptobot | Select-Object -First 1
+& "$($b.FullName)\.venv\Scripts\python.exe" "$($b.FullName)\apply_preset.py" aggressive
+```
+
+実データで検証してから使うのが鉄則です:
+
+```bash
+python fetch_history.py --symbol BTC/JPY --timeframe 1h --years 2
+python backtest.py --config config.yaml --data data/BTC_JPY_1h.csv --walk-forward 5 --trials 20
+```
+
+元の安全寄りに戻すには `apply_preset.py safe` を使います。
+
 ### 社内ネットワーク等のプロキシ環境
 
 ccxtは環境変数のプロキシ/CA設定を無視するため、bot側で `HTTPS_PROXY` と

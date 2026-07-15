@@ -207,6 +207,24 @@ class TestMACross(unittest.TestCase):
         signal = strategy.decide(self._market([100.0] * 10))
         self.assertEqual(signal.action, Action.HOLD)
 
+    def test_ema_reacts_faster_than_sma(self):
+        from bot.strategy import ema, sma
+        # 一定値のあと急上昇。EMAは直近を重く見るのでSMAより上に来る(反応が速い)
+        closes = [100.0] * 20 + [130.0]
+        self.assertGreater(ema(closes, 9), sma(closes, 9))
+
+    def test_ema_golden_cross_buys(self):
+        strategy = MACrossStrategy(fast=2, slow=3, buy_amount_jpy=5_000, ma_type="ema")
+        closes = [100.0, 90.0, 80.0, 70.0, 60.0, 100.0]
+        signal = strategy.decide(self._market(closes))
+        self.assertEqual(signal.action, Action.BUY)
+
+    def test_ema_death_cross_sells_when_holding(self):
+        strategy = MACrossStrategy(fast=2, slow=3, buy_amount_jpy=5_000, ma_type="ema")
+        closes = [60.0, 70.0, 80.0, 90.0, 100.0, 60.0]  # 上昇後に急落(保有中→売り)
+        signal = strategy.decide(self._market(closes, position=0.001))
+        self.assertEqual(signal.action, Action.SELL)
+
 
 class TestNotifier(unittest.TestCase):
     def test_payload_formats(self):
@@ -261,6 +279,46 @@ class TestStrategyChartHelpers(unittest.TestCase):
         slow = [None, 2.0, 2.0]
         cr = dash_mod._crosses(fast, slow, [1, 2, 3], [9, 9, 9])
         self.assertEqual([c["type"] for c in cr], ["golden"])
+
+
+class TestApplyPreset(unittest.TestCase):
+    def _apply(self, preset: str) -> dict:
+        import yaml
+        import apply_preset
+        src = Path(__file__).resolve().parent.parent / "config.example.yaml"
+        with tempfile.TemporaryDirectory() as tmp:
+            cfg = Path(tmp) / "config.yaml"
+            cfg.write_text(src.read_text(encoding="utf-8"), encoding="utf-8")
+            orig_cfg = apply_preset.CFG
+            apply_preset.CFG = cfg
+            try:
+                apply_preset.apply(preset)
+                return yaml.safe_load(cfg.read_text(encoding="utf-8"))
+            finally:
+                apply_preset.CFG = orig_cfg
+
+    def test_aggressive_sets_ema_and_bigger_size(self):
+        raw = self._apply("aggressive")
+        self.assertEqual(raw["ma_cross"]["ma_type"], "ema")
+        self.assertEqual(raw["ma_cross"]["slow"], 21)
+        self.assertEqual(raw["risk"]["max_order_jpy"], 30000)
+        self.assertEqual(raw["cost_gate"]["k"], 1.0)
+
+    def test_safe_restores_defaults(self):
+        raw = self._apply("safe")
+        self.assertEqual(raw["ma_cross"]["ma_type"], "sma")
+        self.assertEqual(raw["ma_cross"]["slow"], 26)
+        self.assertEqual(raw["risk"]["max_order_jpy"], 10000)
+
+    def test_preserves_unrelated_keys(self):
+        raw = self._apply("aggressive")
+        self.assertIn("notify", raw)  # notify等の既存設定が消えない
+        self.assertIn("budget_jpy", raw)
+
+    def test_unknown_preset_rejected(self):
+        import apply_preset
+        with self.assertRaises(SystemExit):
+            apply_preset.apply("moon")
 
 
 class TestStatusSummary(unittest.TestCase):

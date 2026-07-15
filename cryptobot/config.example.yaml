@@ -60,9 +60,18 @@ dca:
   buy_amount_jpy: 3000        # 1回あたりの積立額
 
 ma_cross:
-  timeframe: 1h
+  timeframe: 1h            # 1h推奨。15m等の短い足はシグナルが増えるがダマシ(往復負け)も増える
   fast: 9
   slow: 26
+  ma_type: sma            # sma | ema。emaは直近を重く見るため反応が速く、売買が増える
+  # ── 積極運用プリセット(ガンガン売買したい場合)──────────────
+  # リサーチ上、BTCで最も検証されたペアは EMA 9/21。上をこう書き換える:
+  #   fast: 9  /  slow: 21  /  ma_type: ema
+  # あわせて cost_gate.k を 1.0、risk.cooldown_minutes を 30、
+  # governor.max_buys_per_month を 80、risk.max_order_jpy を 30000、
+  # risk.max_position_jpy を 80000 にすると「1回の買いも回数も」増える。
+  # ※取引が増える=手数料と往復負けも増える。必ず実データのバックテストで
+  #   検証してから(python fetch_history.py → python backtest.py --walk-forward 5)。
 
 notify:
   format: none              # none | discord | slack。URLは環境変数 CRYPTOBOT_WEBHOOK_URL で渡す
