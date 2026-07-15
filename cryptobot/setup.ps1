@@ -35,8 +35,11 @@ try {
     Write-Host "[4/5] 部品をインストール中(初回は1〜3分かかります。そのままお待ちください)..."
     & $py.Source -m venv .venv
     & ".venv\Scripts\python.exe" -m pip install --quiet --disable-pip-version-check -r requirements.txt
-    # 旧形式の設定(fee_rate)は新形式(execution:)に置き換わったため退避して作り直す
-    if ((Test-Path "config.yaml") -and (Select-String -Path "config.yaml" -Pattern "fee_rate" -Quiet)) {
+    # 旧形式の設定(トップレベルの fee_rate)は新形式(execution.maker_fee_rate等)に
+    # 置き換わったため退避して作り直す。行頭一致にしないと execution.maker_fee_rate /
+    # taker_fee_rate(新形式の正規のキー)まで誤検知して、更新のたびに正常な設定
+    # (notify.format等のユーザー設定)が消えてしまう
+    if ((Test-Path "config.yaml") -and (Select-String -Path "config.yaml" -Pattern "^fee_rate:" -Quiet)) {
         Move-Item "config.yaml" "config_old.yaml" -Force
         Write-Host "旧形式の config.yaml を config_old.yaml に退避し、新しい設定で作り直しました" -ForegroundColor Yellow
     }
