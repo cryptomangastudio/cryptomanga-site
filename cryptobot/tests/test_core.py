@@ -234,6 +234,35 @@ class TestNotifier(unittest.TestCase):
             self.assertEqual(n.url, "https://discord.com/api/webhooks/xxx")
 
 
+class TestStrategyChartHelpers(unittest.TestCase):
+    def test_ma_series_matches_sma_and_pads_none(self):
+        import dashboard as dash_mod
+        closes = [float(i) for i in range(1, 11)]  # 1..10
+        s = dash_mod._ma_series(closes, 3)
+        self.assertEqual(s[:2], [None, None])  # 窓が埋まるまではNone
+        self.assertAlmostEqual(s[2], (1 + 2 + 3) / 3)
+        self.assertAlmostEqual(s[-1], (8 + 9 + 10) / 3)
+
+    def test_crosses_detects_golden_and_dead(self):
+        import dashboard as dash_mod
+        # fastがslowを上抜け(ゴールデン)→下抜け(デッド)する系列を作る
+        fast = [1.0, 1.0, 3.0, 3.0, 1.0]
+        slow = [2.0, 2.0, 2.0, 2.0, 2.0]
+        ts = [10, 20, 30, 40, 50]
+        closes = [100.0, 100.0, 100.0, 100.0, 100.0]
+        cr = dash_mod._crosses(fast, slow, ts, closes)
+        self.assertEqual([c["type"] for c in cr], ["golden", "dead"])
+        self.assertEqual(cr[0]["ts"], 30)
+        self.assertEqual(cr[1]["ts"], 50)
+
+    def test_crosses_skips_none_gaps(self):
+        import dashboard as dash_mod
+        fast = [None, 1.0, 3.0]
+        slow = [None, 2.0, 2.0]
+        cr = dash_mod._crosses(fast, slow, [1, 2, 3], [9, 9, 9])
+        self.assertEqual([c["type"] for c in cr], ["golden"])
+
+
 class TestStatusSummary(unittest.TestCase):
     def test_summary_contains_key_numbers(self):
         import dashboard as dash_mod

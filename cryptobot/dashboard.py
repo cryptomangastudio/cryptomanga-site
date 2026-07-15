@@ -36,7 +36,8 @@ from bot.journal import COL_AMOUNT, COL_PRICE, COL_REALIZED, COL_SIDE, COL_TS, H
 from bot.lock import acquire_singleton_lock
 from bot.notify import Notifier
 from bot.portfolio import PortfolioRunner
-from bot.runner import fetch_window
+from bot.runner import closes_needed, fetch_window
+from bot.strategy import sma
 
 
 def status_summary(state: dict) -> str:
@@ -61,6 +62,31 @@ PRICE_POLL_SECONDS = 5
 PRICE_HISTORY_MAX = 2880   # 5秒×2880 = 4時間ぶん
 TRADES_POLL_SECONDS = 10   # 市場の約定フィードの取得間隔(銘柄を順繰りに取得)
 MARKET_TRADES_MAX = 60
+CANDLE_POLL_SECONDS = 60   # 戦略チャート用のOHLCV(ローソク足)の取得間隔
+CANDLE_DISPLAY_MAX = 120   # 戦略チャートに描くローソク足の本数(判断より多めに見せる)
+
+
+def _ma_series(closes: list[float], window: int) -> list[float | None]:
+    """終値列に対する単純移動平均の系列(足りない区間はNone)。戦略のsmaと一致させる。"""
+    out: list[float | None] = []
+    for i in range(len(closes)):
+        out.append(sma(closes[: i + 1], window) if i + 1 >= window else None)
+    return out
+
+
+def _crosses(fast: list[float | None], slow: list[float | None], ts: list[int],
+             closes: list[float]) -> list[dict]:
+    """fast/slowのゴールデン/デッドクロス点を検出する(戦略の判定と同じ向き)。"""
+    out = []
+    for i in range(1, len(ts)):
+        fp, sp, fn, sn = fast[i - 1], slow[i - 1], fast[i], slow[i]
+        if None in (fp, sp, fn, sn):
+            continue
+        if fp <= sp and fn > sn:
+            out.append({"ts": ts[i], "type": "golden", "price": closes[i]})
+        elif fp >= sp and fn < sn:
+            out.append({"ts": ts[i], "type": "dead", "price": closes[i]})
+    return out
 
 
 class Dashboard:
@@ -81,6 +107,7 @@ class Dashboard:
         self.market_trades = {s: deque(maxlen=MARKET_TRADES_MAX) for s in cfg.symbols}
         self._seen_ids = {s: deque(maxlen=MARKET_TRADES_MAX * 4) for s in cfg.symbols}
         self._trade_poll_i = 0
+        self.candles: dict[str, list] = {s: [] for s in cfg.symbols}  # 戦略チャート用OHLCV
         self.last_results: dict[str, str] = {}
         self.last_error = ""
         self.last_run_at: datetime | None = None
@@ -132,6 +159,46 @@ class Dashboard:
                     errors.append(f"{sym}: {type(e).__name__}: {e}")
             self.last_error = " / ".join(errors)
 
+    def poll_candles(self) -> None:
+        """戦略チャート用のOHLCV(ローソク足)を取得してキャッシュする(ma_crossのみ)。"""
+        if self.cfg.strategy != "ma_cross":
+            return
+        tf = self.cfg.ma_cross.timeframe
+        limit = max(closes_needed(self.cfg), CANDLE_DISPLAY_MAX)
+        for sym in self.cfg.symbols:
+            try:
+                rows = self.exchange.fetch_ohlcv(sym, tf, limit=limit)
+            except Exception as e:
+                log.debug("%s のローソク足取得失敗: %s", sym, e)
+                continue
+            with self.lock:
+                self.candles[sym] = rows[-CANDLE_DISPLAY_MAX:]
+
+    def strategy_chart(self, sym: str) -> dict | None:
+        """選択銘柄の戦略チャート(ローソク足+移動平均+クロス点)を組み立てる。"""
+        if self.cfg.strategy != "ma_cross":
+            return None
+        rows = self.candles.get(sym) or []
+        if len(rows) < 2:
+            return None
+        ts = [int(r[0]) for r in rows]
+        o = [float(r[1]) for r in rows]
+        h = [float(r[2]) for r in rows]
+        low = [float(r[3]) for r in rows]
+        c = [float(r[4]) for r in rows]
+        fast_n, slow_n = self.cfg.ma_cross.fast, self.cfg.ma_cross.slow
+        fast = _ma_series(c, fast_n)
+        slow = _ma_series(c, slow_n)
+        gap = None
+        if fast[-1] is not None and slow[-1] not in (None, 0):
+            gap = (fast[-1] - slow[-1]) / slow[-1] * 100
+        return {
+            "ts": ts, "open": o, "high": h, "low": low, "close": c,
+            "maFast": fast, "maSlow": slow, "fast": fast_n, "slow": slow_n,
+            "crosses": _crosses(fast, slow, ts, c), "gapPct": gap,
+            "timeframe": self.cfg.ma_cross.timeframe,
+        }
+
     def poll_market_trades(self) -> None:
         """市場全体の約定(公開データ)を銘柄を順繰りに取り込む。"""
         sym = self.cfg.symbols[self._trade_poll_i % len(self.cfg.symbols)]
@@ -159,11 +226,14 @@ class Dashboard:
 
     def price_loop(self) -> None:
         time.sleep(PRICE_POLL_SECONDS)  # 起動直後はbot_loopが取得するので待つ
+        self.poll_candles()  # 起動直後に戦略チャートを一度埋める(以後は定期更新)
         tick = 0
         while True:
             self.poll_prices()
             if tick % max(1, TRADES_POLL_SECONDS // PRICE_POLL_SECONDS) == 0:
                 self.poll_market_trades()
+            if tick % max(1, CANDLE_POLL_SECONDS // PRICE_POLL_SECONDS) == 0:
+                self.poll_candles()
             tick += 1
             time.sleep(PRICE_POLL_SECONDS)
 
@@ -242,6 +312,7 @@ class Dashboard:
                 "history": {s: list(d) for s, d in self.price_history.items()},
                 "marketTrades": {s: list(d)[::-1] for s, d in self.market_trades.items()},
                 "trades": self.recent_trades(),
+                "strategyChart": {s: self.strategy_chart(s) for s in self.cfg.symbols},
             }
 
 
@@ -364,6 +435,11 @@ section { margin-top:14px }
 
 .cols { display:grid; grid-template-columns:5fr 7fr; gap:12px; margin-top:14px }
 @media (max-width:760px) { .cols { grid-template-columns:1fr } }
+@media (max-width:520px) {
+  .chart-head { flex-wrap:wrap; gap:2px }
+  #bigprice { font-size:1.45rem }
+  .legend { margin-left:0; width:100% }
+}
 #feed { margin-top:8px; height:320px; overflow:hidden; position:relative;
   mask-image:linear-gradient(#000 78%, transparent 100%) }
 .frow { display:grid; grid-template-columns:52px 44px 1fr 1fr; gap:8px;
@@ -379,6 +455,38 @@ section { margin-top:14px }
 .livechip::before { content:""; width:7px; height:7px; border-radius:50%;
   background:var(--bad); animation:blink 1.2s infinite }
 @keyframes blink { 50% { opacity:.25 } }
+
+/* チャートのモード切替(セグメントボタン) */
+.chart-toggle { display:flex; flex-wrap:wrap; align-items:center; gap:8px; margin:2px 0 10px }
+.seg {
+  background:rgba(120,180,255,.06); border:1px solid var(--line); color:var(--muted);
+  padding:6px 14px; border-radius:9px; font-size:.78rem; font-weight:600; letter-spacing:.06em;
+  cursor:pointer; transition:all .3s; box-shadow:none;
+}
+.seg:hover { color:var(--ink); border-color:rgba(120,200,255,.3); transform:none }
+.seg.active { color:var(--accent); border-color:rgba(56,225,255,.5);
+  background:linear-gradient(90deg, rgba(56,225,255,.14), rgba(124,140,255,.12));
+  box-shadow:0 0 18px rgba(56,225,255,.15) }
+.legend { display:flex; gap:14px; font-size:.72rem; color:var(--muted); margin-left:auto;
+  flex-wrap:wrap; font-variant-numeric:tabular-nums }
+.legend .lg { display:inline-flex; align-items:center; gap:6px }
+.legend .sw { width:16px; height:0; border-top-width:2px; border-top-style:solid; border-radius:2px }
+.stratline { margin-top:10px; font-size:.8rem; color:var(--muted); line-height:1.6;
+  border-left:2px solid var(--line); padding-left:12px; min-height:1.2em; transition:border-color .5s }
+.stratline b { color:var(--ink); font-variant-numeric:tabular-nums }
+.stratline .up { color:var(--ok) } .stratline .down { color:var(--bad) }
+
+/* チャート内の描画要素 */
+.gline { stroke:#38e1ff; stroke-width:2; fill:none; stroke-linejoin:round;
+  filter:drop-shadow(0 0 6px rgba(56,225,255,.55)) }
+.gline.draw { stroke-dasharray:var(--len); stroke-dashoffset:var(--len); animation:draw 1.1s ease forwards }
+@keyframes draw { to { stroke-dashoffset:0 } }
+.candle-up { stroke:var(--ok); fill:rgba(61,220,151,.85) }
+.candle-dn { stroke:var(--bad); fill:rgba(255,93,115,.85) }
+.ma-fast { stroke:#ffc857; stroke-width:1.6; fill:none; stroke-linejoin:round; opacity:.95 }
+.ma-slow { stroke:#7c8cff; stroke-width:1.6; fill:none; stroke-linejoin:round; opacity:.95 }
+.xmark { font-weight:700 }
+.tmark-buy { fill:var(--ok) } .tmark-sell { fill:var(--bad) }
 </style></head><body><main>
 <header>
   <h1>CRYPTOBOT CONSOLE</h1>
@@ -398,12 +506,18 @@ section { margin-top:14px }
 <div class="symrow" id="symrow"></div>
 
 <section class="card">
-  <div class="chart-head"><h2>PRICE — <span id="chartsymbol"></span>(直近4時間)</h2>
+  <div class="chart-head"><h2 id="charttitle">PRICE — <span id="chartsymbol"></span></h2>
     <span id="bigprice">—</span></div>
+  <div class="chart-toggle">
+    <button class="seg active" id="modeLive">ライブ ・ 直近4時間</button>
+    <button class="seg" id="modeStrat">戦略 ・ 移動平均クロス</button>
+    <span class="legend" id="legend"></span>
+  </div>
   <div id="chartwrap">
-    <svg id="chart" viewBox="0 0 960 220" width="100%" height="220" preserveAspectRatio="none"></svg>
+    <svg id="chart" viewBox="0 0 960 240" width="100%" height="240" preserveAspectRatio="none"></svg>
     <div id="tooltip"></div>
   </div>
+  <div class="stratline" id="stratline"></div>
 </section>
 
 <div class="grid">
@@ -453,57 +567,164 @@ function tween(id, target, fmt) {
   })(t0);
 }
 
-function drawChart(hist) {
+const CW = 960, CH = 240, PL = 8, PR = 74, PT = 14, PB = 22;
+let chartMode = "live";      // "live"(ライブ線) | "strat"(戦略ローソク)
+let lastChartKey = "";        // mode+銘柄。変わったときだけ描画アニメを流す
+
+const pad2 = n => String(n).padStart(2, "0");
+const hm = d => `${pad2(d.getHours())}:${pad2(d.getMinutes())}`;
+function parseTs(s) { const d = new Date(String(s).replace(" ", "T")); return isNaN(d) ? null : d.getTime(); }
+function gridLines(lo, hi, Y) {
+  return [0, .25, .5, .75, 1].map(f => {
+    const p = lo + (hi - lo) * f, y = Y(p).toFixed(1);
+    return `<line x1="${PL}" y1="${y}" x2="${CW-PR}" y2="${y}" stroke="rgba(120,180,255,.07)"/>` +
+      `<text x="${CW-PR+6}" y="${(+y+3.5)}">${Math.round(p).toLocaleString()}</text>`;
+  }).join("");
+}
+// botの売買を三角マーカーとして返す(範囲外・解析不能は捨てる)
+function tradeMarks(trades, sym, t0, t1, xForTs, Y) {
+  if (!trades) return "";
+  return trades.filter(t => t.symbol === sym).map(t => {
+    const ms = parseTs(t.ts); if (ms == null || ms < t0 || ms > t1) return "";
+    const x = xForTs(ms), y = Y(t.price), buy = t.side === "買" || t.side === "buy";
+    const cls = buy ? "tmark-buy" : "tmark-sell", dy = buy ? 9 : -9, tip = buy ? "買" : "売";
+    return `<path class="${cls}" d="M${x-5},${y+dy} L${x+5},${y+dy} L${x},${y+(buy?0:0)+(buy?-0:0)} Z"
+      transform="translate(0,${buy?4:-4})" opacity=".95"/>` +
+      `<text class="${cls}" x="${x}" y="${buy?y+22:y-14}" text-anchor="middle" font-size="10">${tip}</text>`;
+  }).join("");
+}
+function animateLine(svg) {
+  const p = svg.querySelector(".gline"); if (!p) return;
+  try { const L = p.getTotalLength(); p.style.setProperty("--len", L.toFixed(0)); p.classList.add("draw"); } catch (e) {}
+}
+
+function drawChart(hist, trades, animate) {
   const svg = $("chart");
   if (!hist || hist.length < 2) {
-    svg.innerHTML = '<text x="480" y="115" text-anchor="middle">データ収集中…(5秒ごとに増えます)</text>';
+    svg.innerHTML = '<text x="480" y="120" text-anchor="middle">データ収集中…(5秒ごとに増えます)</text>';
     return;
   }
   if (hist.length > 400) {
     const step = Math.ceil(hist.length / 400);
     hist = hist.filter((_, i) => i % step === 0 || i === hist.length - 1);
   }
-  const W = 960, H = 220, PL = 8, PR = 74, PT = 14, PB = 22;
   const ts = hist.map(h => h[0]), ps = hist.map(h => h[1]);
   let lo = Math.min(...ps), hi = Math.max(...ps);
   if (hi - lo < hi * 1e-4) { const m = (hi + lo) / 2; lo = m * 0.9995; hi = m * 1.0005; }
-  const pad = (hi - lo) * 0.12; lo -= pad; hi += pad;
-  const X = t => PL + (t - ts[0]) / Math.max(1, ts[ts.length-1] - ts[0]) * (W - PL - PR);
-  const Y = p => PT + (1 - (p - lo) / (hi - lo)) * (H - PT - PB);
+  const p0 = (hi - lo) * 0.12; lo -= p0; hi += p0;
+  const X = t => PL + (t - ts[0]) / Math.max(1, ts[ts.length-1] - ts[0]) * (CW - PL - PR);
+  const Y = p => PT + (1 - (p - lo) / (hi - lo)) * (CH - PT - PB);
   let d = "";
   hist.forEach((h, i) => { d += (i ? "L" : "M") + X(h[0]).toFixed(1) + "," + Y(h[1]).toFixed(1); });
-  const area = d + `L${(W-PR).toFixed(1)},${H-PB}L${PL},${H-PB}Z`;
-  const gl = [0, .5, 1].map(f => {
-    const p = lo + (hi - lo) * f, y = Y(p).toFixed(1);
-    return `<line x1="${PL}" y1="${y}" x2="${W-PR}" y2="${y}" stroke="rgba(120,180,255,.08)"/>` +
-           `<text x="${W-PR+6}" y="${(+y+3.5)}">${Math.round(p).toLocaleString()}</text>`;
-  }).join("");
+  const area = d + `L${(CW-PR).toFixed(1)},${CH-PB}L${PL},${CH-PB}Z`;
   svg.innerHTML = `
     <defs><linearGradient id="ag" x1="0" y1="0" x2="0" y2="1">
       <stop offset="0" stop-color="rgba(56,225,255,.28)"/>
       <stop offset="1" stop-color="rgba(56,225,255,0)"/></linearGradient></defs>
-    ${gl}
+    ${gridLines(lo, hi, Y)}
     <path d="${area}" fill="url(#ag)"/>
-    <path d="${d}" fill="none" stroke="#38e1ff" stroke-width="2" stroke-linejoin="round"
-      style="filter:drop-shadow(0 0 6px rgba(56,225,255,.6))"/>
-    <line id="xh" y1="${PT}" y2="${H-PB}" stroke="rgba(230,240,255,.35)" stroke-dasharray="3 3" visibility="hidden"/>
+    <path class="gline" d="${d}"/>
+    ${tradeMarks(trades, sel, ts[0], ts[ts.length-1], X, Y)}
+    <line id="xh" y1="${PT}" y2="${CH-PB}" stroke="rgba(230,240,255,.35)" stroke-dasharray="3 3" visibility="hidden"/>
     <circle id="xc" r="4" fill="#38e1ff" visibility="hidden" style="filter:drop-shadow(0 0 6px #38e1ff)"/>`;
+  if (animate) animateLine(svg);
   svg.onmousemove = ev => {
     const r = svg.getBoundingClientRect();
-    const mx = (ev.clientX - r.left) / r.width * W;
+    const mx = (ev.clientX - r.left) / r.width * CW;
     let best = 0, bd = 1e18;
     hist.forEach((h, i) => { const dx = Math.abs(X(h[0]) - mx); if (dx < bd) { bd = dx; best = i; } });
     const h = hist[best], x = X(h[0]), y = Y(h[1]);
     $("xh").setAttribute("x1", x); $("xh").setAttribute("x2", x); $("xh").style.visibility = "visible";
     $("xc").setAttribute("cx", x); $("xc").setAttribute("cy", y); $("xc").style.visibility = "visible";
-    const t = new Date(h[0]), tip = $("tooltip");
-    tip.textContent = `${String(t.getHours()).padStart(2,"0")}:${String(t.getMinutes()).padStart(2,"0")}  ${Math.round(h[1]).toLocaleString()}円`;
-    tip.style.left = Math.min(x / W * r.width + 12, r.width - 130) + "px";
-    tip.style.top = (y / H * r.height - 34) + "px";
+    const tip = $("tooltip");
+    tip.textContent = `${hm(new Date(h[0]))}  ${Math.round(h[1]).toLocaleString()}円`;
+    tip.style.left = Math.min(x / CW * r.width + 12, r.width - 130) + "px";
+    tip.style.top = (y / CH * r.height - 34) + "px";
     tip.style.opacity = 1;
   };
   svg.onmouseleave = () => { $("tooltip").style.opacity = 0;
     $("xh").style.visibility = "hidden"; $("xc").style.visibility = "hidden"; };
+}
+
+function drawStrategy(st, trades, animate) {
+  const svg = $("chart");
+  if (!st || !st.close || st.close.length < 2) {
+    svg.innerHTML = '<text x="480" y="120" text-anchor="middle">ローソク足を取得中…(戦略はma_crossのときに表示されます)</text>';
+    return;
+  }
+  const n = st.close.length, ts = st.ts;
+  const vals = st.high.concat(st.low, st.maFast.filter(v => v != null), st.maSlow.filter(v => v != null));
+  let lo = Math.min(...vals), hi = Math.max(...vals);
+  const p0 = (hi - lo) * 0.08 || hi * 0.01; lo -= p0; hi += p0;
+  const band = (CW - PL - PR) / n;
+  const cx = i => PL + (i + 0.5) * band;
+  const Y = p => PT + (1 - (p - lo) / (hi - lo)) * (CH - PT - PB);
+  const xForTs = ms => { let b = 0, bd = 1e18; ts.forEach((t, i) => { const dd = Math.abs(t - ms); if (dd < bd) { bd = dd; b = i; } }); return cx(b); };
+  const bw = Math.max(1.2, band * 0.6);
+  let candles = "";
+  for (let i = 0; i < n; i++) {
+    const up = st.close[i] >= st.open[i], cls = up ? "candle-up" : "candle-dn";
+    const x = cx(i), yH = Y(st.high[i]), yL = Y(st.low[i]);
+    const yO = Y(st.open[i]), yC = Y(st.close[i]);
+    const top = Math.min(yO, yC), h = Math.max(1, Math.abs(yO - yC));
+    candles += `<line class="${cls}" x1="${x}" y1="${yH.toFixed(1)}" x2="${x}" y2="${yL.toFixed(1)}" stroke-width="1"/>` +
+      `<rect class="${cls}" x="${(x-bw/2).toFixed(1)}" y="${top.toFixed(1)}" width="${bw.toFixed(1)}" height="${h.toFixed(1)}"/>`;
+  }
+  const maPath = (arr, cls) => {
+    let d = "", started = false;
+    arr.forEach((v, i) => { if (v == null) return; d += (started ? "L" : "M") + cx(i).toFixed(1) + "," + Y(v).toFixed(1); started = true; });
+    return d ? `<path class="${cls}" d="${d}"/>` : "";
+  };
+  const crossMarks = (st.crosses || []).map(cr => {
+    const x = xForTs(cr.ts), y = Y(cr.price), g = cr.type === "golden";
+    return `<circle cx="${x}" cy="${y}" r="6" fill="none" stroke="${g ? "var(--ok)" : "var(--bad)"}" stroke-width="1.5" opacity=".9"/>` +
+      `<text class="xmark" x="${x}" y="${g ? y+20 : y-12}" text-anchor="middle" fill="${g ? "var(--ok)" : "var(--bad)"}" font-size="11">${g ? "▲G" : "▼D"}</text>`;
+  }).join("");
+  svg.innerHTML = `${gridLines(lo, hi, Y)}${candles}
+    ${maPath(st.maSlow, "ma-slow")}${maPath(st.maFast, "ma-fast")}
+    ${crossMarks}
+    ${tradeMarks(trades, sel, ts[0], ts[n-1], xForTs, Y)}`;
+  svg.onmousemove = ev => {
+    const r = svg.getBoundingClientRect();
+    const mx = (ev.clientX - r.left) / r.width * CW;
+    const i = Math.max(0, Math.min(n - 1, Math.round((mx - PL) / band - 0.5)));
+    const tip = $("tooltip"), d = new Date(ts[i]);
+    tip.innerHTML = `${pad2(d.getMonth()+1)}/${pad2(d.getDate())} ${hm(d)}　終値 ${Math.round(st.close[i]).toLocaleString()}円` +
+      (st.maFast[i] != null ? `<br>短期 ${Math.round(st.maFast[i]).toLocaleString()} / 長期 ${st.maSlow[i]!=null?Math.round(st.maSlow[i]).toLocaleString():"—"}` : "");
+    tip.style.left = Math.min(cx(i) / CW * r.width + 12, r.width - 180) + "px";
+    tip.style.top = (Y(st.close[i]) / CH * r.height - 40) + "px";
+    tip.style.opacity = 1;
+  };
+  svg.onmouseleave = () => { $("tooltip").style.opacity = 0; };
+}
+
+function renderLegend(st) {
+  const lg = $("legend");
+  if (chartMode === "strat" && st) {
+    lg.innerHTML =
+      `<span class="lg"><span class="sw" style="border-color:#ffc857"></span>短期(${st.fast})</span>` +
+      `<span class="lg"><span class="sw" style="border-color:#7c8cff"></span>長期(${st.slow})</span>` +
+      `<span class="lg"><span style="color:var(--ok)">▲G</span>ゴールデン</span>` +
+      `<span class="lg"><span style="color:var(--bad)">▼D</span>デッド</span>`;
+  } else {
+    lg.innerHTML = `<span class="lg"><span class="sw" style="border-color:#38e1ff"></span>価格(5秒ごと)</span>` +
+      `<span class="lg"><span style="color:var(--ok)">▲</span>bot買 <span style="color:var(--bad)">▼</span>bot売</span>`;
+  }
+}
+
+// fast vs slow を平易な言葉で説明(なぜ売る/売らないかが分かる一文)
+function renderStratLine(st, hasPos) {
+  const el = $("stratline");
+  if (chartMode !== "strat") { el.textContent = "チャートにカーソルを合わせると、その時刻の価格が出ます。▲▼はbotが実際に売買した地点です。"; return; }
+  if (!st || st.gapPct == null) { el.textContent = "移動平均を計算するのに十分なローソク足がまだありません(取得中)。"; return; }
+  const up = st.gapPct >= 0, cls = up ? "up" : "down";
+  const arrow = up ? "上回っています" : "下回っています";
+  let verdict;
+  if (up) verdict = hasPos ? "上昇トレンド。保有を継続します(短期が長期を下回ると売りシグナル)。"
+    : "上昇トレンド。次にゴールデンクロスが出れば買います。";
+  else verdict = hasPos ? "下降トレンド。<b class='down'>売りシグナル点灯中</b>(次の判断で全量売却します)。"
+    : "下降トレンド。今は買いません(様子見)。";
+  el.innerHTML = `短期線(${st.fast}本)は長期線(${st.slow}本)を <b class="${cls}">${up?"+":""}${st.gapPct.toFixed(2)}%</b> ${arrow}。${verdict}`;
 }
 
 const seenFeed = new Set();
@@ -541,6 +762,15 @@ function renderSymbols(s) {
 function pick(sym) { sel = sym; seenFeed.clear(); if (lastState) render(lastState); }
 window.pick = pick;
 
+function setMode(m) {
+  chartMode = m;
+  $("modeLive").classList.toggle("active", m === "live");
+  $("modeStrat").classList.toggle("active", m === "strat");
+  if (lastState) render(lastState);
+}
+$("modeLive").onclick = () => setMode("live");
+$("modeStrat").onclick = () => setMode("strat");
+
 let lastTradeKey = "";
 function render(s) {
   lastState = s;
@@ -562,12 +792,23 @@ function render(s) {
   tween("cash", s.cash, v => Math.round(v).toLocaleString("ja-JP") + "円");
   tween("pnl", s.realizedPnl, v => (v >= 0 ? "+" : "") + Math.round(v).toLocaleString("ja-JP") + "円");
   $("pnl").style.color = s.realizedPnl > 0 ? "var(--ok)" : s.realizedPnl < 0 ? "var(--bad)" : "";
-  drawChart(s.history[sel]);
+  // 戦略チャート(移動平均)は ma_cross のときだけ。DCAでは戦略ボタンを隠す
+  const st = (s.strategyChart || {})[sel];
+  const isMa = s.strategy === "ma_cross";
+  $("modeStrat").style.display = isMa ? "" : "none";
+  if (!isMa && chartMode === "strat") setMode("live");
+  const key = chartMode + "|" + sel;
+  const animate = key !== lastChartKey; lastChartKey = key;
+  $("charttitle").innerHTML = (chartMode === "strat" ? "STRATEGY — " : "PRICE — ") + `<span id="chartsymbol">${sel}</span>`;
+  if (chartMode === "strat") drawStrategy(st, s.trades, animate);
+  else drawChart(s.history[sel], s.trades, animate);
+  renderLegend(st);
+  renderStratLine(st, selInfo ? selInfo.position > 0 : false);
   renderFeed(s.marketTrades[sel]);
-  const key = s.trades.length ? s.trades[0].ts + s.trades[0].symbol + s.trades.length : "";
+  const tkey = s.trades.length ? s.trades[0].ts + s.trades[0].symbol + s.trades.length : "";
   if (s.trades.length) {
     $("trades").innerHTML = s.trades.map((t, i) =>
-      `<tr class="${i === 0 && key !== lastTradeKey ? "fresh" : ""}">` +
+      `<tr class="${i === 0 && tkey !== lastTradeKey ? "fresh" : ""}">` +
       `<td>${t.ts}</td><td>${t.symbol}</td>` +
       `<td class="${t.side === "買" ? "side-buy" : "side-sell"}">${t.side}</td>` +
       `<td class="num">${t.amount.toFixed(8)}</td><td class="num">${Math.round(t.price).toLocaleString()}</td>` +
@@ -575,7 +816,7 @@ function render(s) {
       `${t.side === "売" ? (t.realized >= 0 ? "+" : "") + Math.round(t.realized).toLocaleString() + "円" : "—"}</td></tr>`
     ).join("");
   }
-  lastTradeKey = key;
+  lastTradeKey = tkey;
 }
 
 const KEY = new URLSearchParams(location.search).get("key") || "";
