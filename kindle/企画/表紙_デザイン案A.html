@@ -1,0 +1,144 @@
+<style>
+  /* 本物のZen Maru Gothic（ブラウザで直接開いた時に有効。ArtifactのCSP下ではiOSの丸ゴシックにフォールバック） */
+  @import url('https://fonts.googleapis.com/css2?family=Zen+Maru+Gothic:wght@500;700;900&family=Noto+Sans+JP:wght@700;900&display=swap');
+
+  :root{
+    --cream:#FAF9F6;
+    --orange:#FF6B35;
+    --orange-deep:#E8531F;
+    --charcoal:#2B2D42;
+    --charcoal-soft:#5a5c70;
+    --round:'Zen Maru Gothic','Hiragino Maru Gothic ProN','ヒラギノ丸ゴ ProN',Quicksand,system-ui,sans-serif;
+    --gothic:'Noto Sans JP','Hiragino Kaku Gothic ProN','Yu Gothic',YuGothic,sans-serif;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{background:#e9e7e1}
+  .stage{
+    min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;
+    gap:18px;padding:36px 16px 48px;
+    background:radial-gradient(120% 80% at 50% 0%,#f2f0ea,#e2e0d9);
+  }
+  @media (prefers-color-scheme:dark){ body{background:#191a20} .stage{background:radial-gradient(120% 80% at 50% 0%,#23242c,#15161b)} .cap{color:#9a9ba6!important} }
+
+  /* ===== 表紙本体 1000 x 1600 (1 : 1.6) ===== */
+  .cover{
+    width:min(500px,92vw); aspect-ratio:1000/1600;
+    container-type:inline-size;
+    background:var(--cream);
+    border-radius:6px; overflow:hidden; position:relative;
+    box-shadow:0 2px 4px rgba(30,25,15,.14), 0 30px 60px -22px rgba(30,25,15,.5);
+    display:flex; flex-direction:column;
+    font-family:var(--gothic); color:var(--charcoal);
+  }
+
+  /* --- カバー本体（上70%） --- */
+  .body{
+    flex:1 1 auto; padding:8cqw 7cqw 4cqw;
+    display:flex; flex-direction:column; align-items:center;
+  }
+
+  /* 最上部：シリーズ名＋飾り罫 */
+  .series{display:flex;align-items:center;gap:3.4cqw;width:100%;justify-content:center;color:var(--charcoal-soft)}
+  .series .rule{height:0;flex:1;max-width:12cqw;border-top:1px solid rgba(43,45,66,.35);position:relative}
+  .series .rule::after{content:"";position:absolute;left:0;right:0;top:2.2px;border-top:1px solid rgba(43,45,66,.18)}
+  .series span{font-family:var(--gothic);font-weight:700;font-size:3.1cqw;letter-spacing:.24em;white-space:nowrap}
+
+  /* タグ（手書き風あしらい） */
+  .tag{
+    align-self:flex-end; margin:4cqw 1cqw -1cqw 0;
+    font-family:var(--round);font-weight:700;font-size:3cqw;color:var(--orange-deep);
+    border:1.6px dashed var(--orange); border-radius:40px; padding:1.4cqw 3.4cqw;
+    transform:rotate(-3deg); background:rgba(255,107,53,.06);
+  }
+
+  /* 上部：メインタイトル */
+  .title{
+    margin-top:2cqw; width:100%; text-align:center;
+    font-family:var(--round); font-weight:900; color:var(--charcoal);
+    font-size:15.5cqw; line-height:1.02; letter-spacing:.01em;
+  }
+  .title .l2{position:relative; display:inline-block}
+  .title .wave{position:absolute; left:-2%; right:-2%; bottom:-3.2cqw; width:104%; height:5cqw}
+
+  /* 中央：イラスト用プレースホルダー（丸） */
+  .ph{
+    margin-top:8.5cqw; width:44cqw; height:44cqw; border-radius:50%;
+    border:2.4px dashed rgba(43,45,66,.28);
+    display:flex; align-items:center; justify-content:center; text-align:center;
+    color:rgba(43,45,66,.4); font-family:var(--round); font-weight:500; font-size:3.1cqw; line-height:1.6;
+    position:relative;
+  }
+  .ph::before{content:"";position:absolute;inset:2.4cqw;border-radius:50%;border:1px dotted rgba(43,45,66,.18)}
+  .ph small{display:block;font-size:2.6cqw;margin-top:.6cqw;opacity:.8}
+
+  /* 中央下：キャッチコピー */
+  .catch{margin-top:auto; padding-top:6cqw; text-align:center; font-family:var(--round); color:var(--charcoal)}
+  .catch .q{font-weight:700;font-size:4.2cqw;color:var(--charcoal-soft);letter-spacing:.02em}
+  .catch .big{font-weight:900;font-size:6.6cqw;line-height:1.18;margin-top:.6cqw}
+  .catch .big mark{background:linear-gradient(transparent 58%, rgba(255,107,53,.28) 58%); color:inherit; padding:0 .1em}
+
+  /* --- 本の帯（下30%） --- */
+  .obi{
+    flex:0 0 30cqh; min-height:47cqw; position:relative;
+    background:var(--orange);
+    display:flex; flex-direction:column; align-items:center; justify-content:center;
+    padding:7cqw 7cqw 5cqw; text-align:center; color:#fff;
+  }
+  .obi::before{ /* 帯の上辺の手書き風2本線 */
+    content:""; position:absolute; top:2.6cqw; left:7cqw; right:7cqw; height:0;
+    border-top:1.4px solid rgba(255,255,255,.55);
+    box-shadow:0 3px 0 -1.3px rgba(255,255,255,.3);
+  }
+  /* 帯にかかる白い吹き出しタブ */
+  .obi .tab{
+    position:absolute; top:-3.4cqw; left:50%; transform:translateX(-50%);
+    background:#fff; color:var(--orange-deep); font-family:var(--round); font-weight:900;
+    font-size:3.2cqw; letter-spacing:.02em; padding:1.5cqw 4.6cqw; border-radius:40px;
+    box-shadow:0 6px 14px -6px rgba(0,0,0,.35);
+  }
+  .obi .tab::after{content:"";position:absolute;bottom:-1.6cqw;left:50%;transform:translateX(-50%) rotate(45deg);width:3.2cqw;height:3.2cqw;background:#fff}
+  .obi .sub{font-family:var(--round);font-weight:900;font-size:5.6cqw;line-height:1.4;text-shadow:0 1px 0 rgba(0,0,0,.08)}
+  .obi .sub b{background:rgba(255,255,255,.16); border-radius:6px; padding:0 .15em}
+  .obi .author{margin-top:3cqw;font-family:var(--gothic);font-weight:700;font-size:3.4cqw;letter-spacing:.16em}
+  .obi .author em{font-style:normal;font-weight:500;font-size:2.7cqw;opacity:.85;margin-right:.5em}
+
+  .cap{font-family:var(--gothic);font-size:.78rem;color:#6b6c78;letter-spacing:.04em;text-align:center}
+</style>
+
+<div class="stage">
+  <div class="cover">
+
+    <div class="body">
+      <div class="series">
+        <span class="rule"></span>
+        <span>消耗しない所得の増やし方　VOL.1</span>
+        <span class="rule"></span>
+      </div>
+
+      <div class="tag">三児の父の、正直な告白</div>
+
+      <h1 class="title">
+        副業、<br>
+        <span class="l2">やめました。<svg class="wave" viewBox="0 0 300 22" preserveAspectRatio="none" aria-hidden="true"><path d="M3 13 Q19 3 37 13 T71 13 T105 13 T139 13 T173 13 T207 13 T241 13 T275 13 T297 13" fill="none" stroke="#FF6B35" stroke-width="5.5" stroke-linecap="round"/></svg></span>
+      </h1>
+
+      <div class="ph">
+        （ここに手書き<br>イラストが入る<br>スペース）
+      </div>
+
+      <div class="catch">
+        <div class="q">「稼いだ。そのうえで、</div>
+        <div class="big"><mark>割に合わなかった。</mark>」</div>
+      </div>
+    </div>
+
+    <div class="obi">
+      <div class="tab">始める前に、これだけは。</div>
+      <div class="sub">1000万稼いで<b>700万溶かした</b>僕が、<br>あなたに勧めない理由</div>
+      <div class="author"><em>著</em>軌道キャリ</div>
+    </div>
+
+  </div>
+
+  <p class="cap">案A：白地 × 極太丸ゴシック × 下30%オレンジ帯（「こっそり副業術」型）／ 1000 × 1600px</p>
+</div>
