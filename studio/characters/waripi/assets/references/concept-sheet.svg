@@ -1,0 +1,163 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 920 1180" font-family="'Hiragino Maru Gothic ProN','Yu Gothic',sans-serif">
+  <defs>
+    <style>
+      .ol{fill:none;stroke:#6b5d4d;stroke-width:6;stroke-linecap:round;stroke-linejoin:round;}
+      .olt{fill:none;stroke:#6b5d4d;stroke-width:4;stroke-linecap:round;stroke-linejoin:round;}
+      .body{fill:#f4ecd6;}
+      .tag{fill:#ef6a2e;}
+      .blush{fill:#f3b3bd;}
+      .eye{fill:#4a4038;}
+      .lbl{fill:#6b5d4d;font-size:22px;font-weight:700;}
+      .cap{fill:#8a7d6c;font-size:16px;}
+      .ttl{fill:#4a4038;font-size:40px;font-weight:800;}
+      .sub{fill:#8a7d6c;font-size:18px;}
+    </style>
+  </defs>
+
+  <rect width="920" height="1180" fill="#fbf7ee"/>
+
+  <!-- header -->
+  <text x="60" y="72" class="ttl">わりぴ</text>
+  <text x="60" y="104" class="sub">見切り品売り場の民 ／ 半額シールの生きもの ・ コンセプト叩き(SVG)</text>
+  <line x1="60" y1="126" x2="860" y2="126" stroke="#e6ddca" stroke-width="2"/>
+
+  <!-- ================= MASTER ================= -->
+  <g transform="translate(255,360)">
+    <!-- back tag peeking (behind body, right side) -->
+    <g transform="translate(92,18) rotate(14)">
+      <rect x="-6" y="-34" width="86" height="66" rx="12" class="tag"/>
+      <rect x="-6" y="-34" width="86" height="66" rx="12" class="olt"/>
+      <!-- price-down arrow (original mark, not a real logo) -->
+      <path d="M28,-20 v22 M14,-6 l14,14 l14,-14" fill="none" stroke="#fff" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>
+    </g>
+    <!-- body (rounded onigiri blob) -->
+    <path class="body" d="M0,-118 C74,-112 104,26 86,74 C76,100 42,110 0,110 C-42,110 -76,100 -86,74 C-104,26 -74,-112 0,-118 Z"/>
+    <path class="ol"   d="M0,-118 C74,-112 104,26 86,74 C76,100 42,110 0,110 C-42,110 -76,100 -86,74 C-104,26 -74,-112 0,-118 Z"/>
+    <!-- little feet -->
+    <ellipse cx="-30" cy="112" rx="20" ry="12" class="body"/><ellipse cx="-30" cy="112" rx="20" ry="12" class="olt"/>
+    <ellipse cx="30" cy="112" rx="20" ry="12" class="body"/><ellipse cx="30" cy="112" rx="20" ry="12" class="olt"/>
+    <!-- tiny arm holding a peeled sticker backing (its quirk) -->
+    <path class="olt" d="M-78,40 q-24,6 -34,26"/>
+    <rect x="-124" y="60" width="26" height="20" rx="4" fill="#fff"/><rect x="-124" y="60" width="26" height="20" rx="4" class="olt"/>
+    <!-- face: "まあいっか" half-lidded -->
+    <path class="olt" d="M-40,-14 q12,10 24,0"/>
+    <path class="olt" d="M16,-14 q12,10 24,0"/>
+    <ellipse cx="-46" cy="8" rx="13" ry="8" class="blush"/>
+    <ellipse cx="46" cy="8" rx="13" ry="8" class="blush"/>
+    <path class="olt" d="M-8,10 q8,7 16,0"/>
+  </g>
+  <text x="255" y="520" text-anchor="middle" class="lbl">マスター（まあいっか顔）</text>
+  <text x="255" y="546" text-anchor="middle" class="cap">生成り色／背中にオレンジの割引タグ／フラット3色</text>
+
+  <!-- ================= EXPRESSIONS ================= -->
+  <text x="560" y="176" class="lbl">表情ぜんぶ</text>
+
+  <!-- helper heads (blob + face only) -->
+  <!-- 無 -->
+  <g transform="translate(600,270)">
+    <path class="body" d="M0,-70 C46,-66 62,20 50,46 C44,62 26,68 0,68 C-26,68 -44,62 -50,46 C-62,20 -46,-66 0,-70 Z"/>
+    <path class="ol"   d="M0,-70 C46,-66 62,20 50,46 C44,62 26,68 0,68 C-26,68 -44,62 -50,46 C-62,20 -46,-66 0,-70 Z"/>
+    <circle cx="-18" cy="-6" r="5" class="eye"/><circle cx="18" cy="-6" r="5" class="eye"/>
+    <ellipse cx="-28" cy="8" rx="8" ry="5" class="blush"/><ellipse cx="28" cy="8" rx="8" ry="5" class="blush"/>
+    <path class="olt" d="M-5,10 q5,3 10,0"/>
+  </g>
+  <text x="600" y="360" text-anchor="middle" class="cap">無（デフォルト）</text>
+
+  <!-- ぽわっ -->
+  <g transform="translate(790,270)">
+    <path class="body" d="M0,-70 C46,-66 62,20 50,46 C44,62 26,68 0,68 C-26,68 -44,62 -50,46 C-62,20 -46,-66 0,-70 Z"/>
+    <path class="ol"   d="M0,-70 C46,-66 62,20 50,46 C44,62 26,68 0,68 C-26,68 -44,62 -50,46 C-62,20 -46,-66 0,-70 Z"/>
+    <path d="M-24,-8 l4,-9 l4,9 z" fill="#4a4038"/><circle cx="-18" cy="-4" r="5.5" class="eye"/>
+    <path d="M12,-8 l4,-9 l4,9 z" fill="#4a4038"/><circle cx="18" cy="-4" r="5.5" class="eye"/>
+    <ellipse cx="-28" cy="10" rx="9" ry="6" class="blush"/><ellipse cx="28" cy="10" rx="9" ry="6" class="blush"/>
+    <ellipse cx="0" cy="12" rx="6" ry="7" fill="#4a4038"/>
+    <path d="M56,-20 l6,-14 M62,-6 l14,-6" stroke="#f4b400" stroke-width="4" stroke-linecap="round"/>
+  </g>
+  <text x="790" y="360" text-anchor="middle" class="cap">ぽわっ（19時半）</text>
+
+  <!-- しょんぼり -->
+  <g transform="translate(600,450)">
+    <path class="body" d="M0,-70 C46,-66 62,20 50,46 C44,62 26,68 0,68 C-26,68 -44,62 -50,46 C-62,20 -46,-66 0,-70 Z"/>
+    <path class="ol"   d="M0,-70 C46,-66 62,20 50,46 C44,62 26,68 0,68 C-26,68 -44,62 -50,46 C-62,20 -46,-66 0,-70 Z"/>
+    <path class="olt" d="M-25,-2 q7,-8 14,0"/>
+    <path class="olt" d="M11,-2 q7,-8 14,0"/>
+    <ellipse cx="-28" cy="12" rx="8" ry="5" class="blush"/><ellipse cx="28" cy="12" rx="8" ry="5" class="blush"/>
+    <path class="olt" d="M-6,14 q6,-4 12,0"/>
+    <circle cx="34" cy="6" r="4" fill="#bcd7e6"/>
+  </g>
+  <text x="600" y="540" text-anchor="middle" class="cap">しょんぼり</text>
+
+  <!-- まあいっか -->
+  <g transform="translate(790,450)">
+    <path class="body" d="M0,-70 C46,-66 62,20 50,46 C44,62 26,68 0,68 C-26,68 -44,62 -50,46 C-62,20 -46,-66 0,-70 Z"/>
+    <path class="ol"   d="M0,-70 C46,-66 62,20 50,46 C44,62 26,68 0,68 C-26,68 -44,62 -50,46 C-62,20 -46,-66 0,-70 Z"/>
+    <path class="olt" d="M-26,-6 q10,8 20,0"/>
+    <path class="olt" d="M6,-6 q10,8 20,0"/>
+    <ellipse cx="-28" cy="10" rx="8" ry="5" class="blush"/><ellipse cx="28" cy="10" rx="8" ry="5" class="blush"/>
+    <path class="olt" d="M-6,10 q6,6 12,0"/>
+  </g>
+  <text x="790" y="540" text-anchor="middle" class="cap">まあいっか（代表顔）</text>
+
+  <line x1="60" y1="600" x2="860" y2="600" stroke="#e6ddca" stroke-width="2"/>
+
+  <!-- ================= COLLECTION ================= -->
+  <text x="60" y="650" class="lbl">収集バリエーション（タグ色ちがい／シークレット＝定価）</text>
+
+  <!-- mini body generator: 5 across -->
+  <!-- 半額 orange -->
+  <g transform="translate(140,780)">
+    <g transform="translate(58,10) rotate(14)"><rect x="-4" y="-22" width="58" height="44" rx="9" fill="#ef6a2e"/><rect x="-4" y="-22" width="58" height="44" rx="9" class="olt"/></g>
+    <path class="body" d="M0,-72 C46,-68 64,16 52,44 C46,60 26,66 0,66 C-26,66 -46,60 -52,44 C-64,16 -46,-68 0,-72 Z"/>
+    <path class="ol"   d="M0,-72 C46,-68 64,16 52,44 C46,60 26,66 0,66 C-26,66 -46,60 -52,44 C-64,16 -46,-68 0,-72 Z"/>
+    <path class="olt" d="M-24,-8 q9,7 18,0"/><path class="olt" d="M6,-8 q9,7 18,0"/>
+    <ellipse cx="-26" cy="8" rx="8" ry="5" class="blush"/><ellipse cx="26" cy="8" rx="8" ry="5" class="blush"/>
+  </g>
+  <text x="140" y="882" text-anchor="middle" class="cap">半額（本命）</text>
+
+  <!-- 3割引 yellow -->
+  <g transform="translate(300,780)">
+    <g transform="translate(58,10) rotate(14)"><rect x="-4" y="-22" width="58" height="44" rx="9" fill="#f4b400"/><rect x="-4" y="-22" width="58" height="44" rx="9" class="olt"/></g>
+    <path class="body" d="M0,-72 C46,-68 64,16 52,44 C46,60 26,66 0,66 C-26,66 -46,60 -52,44 C-64,16 -46,-68 0,-72 Z"/>
+    <path class="ol"   d="M0,-72 C46,-68 64,16 52,44 C46,60 26,66 0,66 C-26,66 -46,60 -52,44 C-64,16 -46,-68 0,-72 Z"/>
+    <path class="olt" d="M-24,-8 q9,7 18,0"/><path class="olt" d="M6,-8 q9,7 18,0"/>
+    <ellipse cx="-26" cy="8" rx="8" ry="5" class="blush"/><ellipse cx="26" cy="8" rx="8" ry="5" class="blush"/>
+  </g>
+  <text x="300" y="882" text-anchor="middle" class="cap">3割引</text>
+
+  <!-- タイムセール red -->
+  <g transform="translate(460,780)">
+    <g transform="translate(58,10) rotate(14)"><rect x="-4" y="-22" width="58" height="44" rx="9" fill="#e23b3b"/><rect x="-4" y="-22" width="58" height="44" rx="9" class="olt"/></g>
+    <path class="body" d="M0,-72 C46,-68 64,16 52,44 C46,60 26,66 0,66 C-26,66 -46,60 -52,44 C-64,16 -46,-68 0,-72 Z"/>
+    <path class="ol"   d="M0,-72 C46,-68 64,16 52,44 C46,60 26,66 0,66 C-26,66 -46,60 -52,44 C-64,16 -46,-68 0,-72 Z"/>
+    <path class="olt" d="M-24,-8 q9,7 18,0"/><path class="olt" d="M6,-8 q9,7 18,0"/>
+    <ellipse cx="-26" cy="8" rx="8" ry="5" class="blush"/><ellipse cx="26" cy="8" rx="8" ry="5" class="blush"/>
+  </g>
+  <text x="460" y="882" text-anchor="middle" class="cap">タイムセール</text>
+
+  <!-- ポイント5倍 green -->
+  <g transform="translate(620,780)">
+    <g transform="translate(58,10) rotate(14)"><rect x="-4" y="-22" width="58" height="44" rx="9" fill="#43a047"/><rect x="-4" y="-22" width="58" height="44" rx="9" class="olt"/></g>
+    <path class="body" d="M0,-72 C46,-68 64,16 52,44 C46,60 26,66 0,66 C-26,66 -46,60 -52,44 C-64,16 -46,-68 0,-72 Z"/>
+    <path class="ol"   d="M0,-72 C46,-68 64,16 52,44 C46,60 26,66 0,66 C-26,66 -46,60 -52,44 C-64,16 -46,-68 0,-72 Z"/>
+    <path class="olt" d="M-24,-8 q9,7 18,0"/><path class="olt" d="M6,-8 q9,7 18,0"/>
+    <ellipse cx="-26" cy="8" rx="8" ry="5" class="blush"/><ellipse cx="26" cy="8" rx="8" ry="5" class="blush"/>
+  </g>
+  <text x="620" y="882" text-anchor="middle" class="cap">ポイント5倍</text>
+
+  <!-- シークレット: 定価 (no tag) -->
+  <g transform="translate(780,780)">
+    <path class="body" d="M0,-72 C46,-68 64,16 52,44 C46,60 26,66 0,66 C-26,66 -46,60 -52,44 C-64,16 -46,-68 0,-72 Z"/>
+    <path class="ol"   d="M0,-72 C46,-68 64,16 52,44 C46,60 26,66 0,66 C-26,66 -46,60 -52,44 C-64,16 -46,-68 0,-72 Z"/>
+    <circle cx="-16" cy="-6" r="5" class="eye"/><circle cx="16" cy="-6" r="5" class="eye"/>
+    <ellipse cx="-26" cy="8" rx="8" ry="5" class="blush"/><ellipse cx="26" cy="8" rx="8" ry="5" class="blush"/>
+    <path class="olt" d="M-5,10 q5,3 10,0"/>
+    <path d="M-70,-70 l16,-8 M74,-70 l-16,-8" stroke="#c9a24a" stroke-width="4" stroke-linecap="round"/>
+  </g>
+  <text x="780" y="882" text-anchor="middle" class="cap">★定価（シークレット）</text>
+
+  <line x1="60" y1="930" x2="860" y2="930" stroke="#e6ddca" stroke-width="2"/>
+  <text x="60" y="978" class="cap">※方向性を見るためのSVG叩き。本作画は prompt-library.md のプロンプトで生成する。</text>
+  <text x="60" y="1004" class="cap">※タグ意匠は実在店舗を模さないオリジナル。フラット3色＝スタンプ／アクキー／ぬいぐるみ化しやすい。</text>
+  <text x="60" y="1030" class="cap">フック：「わたし、安くなってからが本番なんだ」</text>
+  <text x="60" y="1056" class="cap">口ぐせ：「…まあ、いっか」　／　癖：剥がれたシールの台紙を集める（意味はない）。</text>
+</svg>
