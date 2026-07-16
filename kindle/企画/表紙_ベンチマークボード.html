@@ -1,0 +1,412 @@
+<style>
+  :root{
+    --bg:#f5f4f0; --bg-elev:#fffefb; --ink:#191d21; --ink-soft:#4c545b;
+    --line:#dcdad2; --line-soft:#e8e6df;
+    --accent:#256b73; --accent-ink:#1a4f55; --accent-wash:#e4eeee;
+    --warn:#b23b2e; --gold:#b9922e;
+    --shadow:0 1px 2px rgba(20,25,30,.06),0 12px 30px -12px rgba(20,25,30,.18);
+    --maxw:1120px;
+  }
+  @media (prefers-color-scheme:dark){
+    :root{
+      --bg:#131619; --bg-elev:#1b1f23; --ink:#e9eae6; --ink-soft:#9aa2a8;
+      --line:#2b3136; --line-soft:#232a2f;
+      --accent:#5aa0a8; --accent-ink:#8fc4ca; --accent-wash:#1d2b2d;
+      --warn:#d1594a; --gold:#cba646;
+      --shadow:0 1px 2px rgba(0,0,0,.4),0 16px 34px -14px rgba(0,0,0,.6);
+    }
+  }
+  :root[data-theme="light"]{
+    --bg:#f5f4f0; --bg-elev:#fffefb; --ink:#191d21; --ink-soft:#4c545b;
+    --line:#dcdad2; --line-soft:#e8e6df; --accent:#256b73; --accent-ink:#1a4f55;
+    --accent-wash:#e4eeee; --warn:#b23b2e; --gold:#b9922e;
+    --shadow:0 1px 2px rgba(20,25,30,.06),0 12px 30px -12px rgba(20,25,30,.18);
+  }
+  :root[data-theme="dark"]{
+    --bg:#131619; --bg-elev:#1b1f23; --ink:#e9eae6; --ink-soft:#9aa2a8;
+    --line:#2b3136; --line-soft:#232a2f; --accent:#5aa0a8; --accent-ink:#8fc4ca;
+    --accent-wash:#1d2b2d; --warn:#d1594a; --gold:#cba646;
+    --shadow:0 1px 2px rgba(0,0,0,.4),0 16px 34px -14px rgba(0,0,0,.6);
+  }
+
+  *{box-sizing:border-box}
+  html{-webkit-text-size-adjust:100%}
+  body{margin:0}
+  .page{
+    background:var(--bg); color:var(--ink);
+    font-family:"Hiragino Kaku Gothic ProN","Yu Gothic Medium",YuGothic,"Noto Sans JP",system-ui,sans-serif;
+    line-height:1.75; letter-spacing:.01em;
+    padding:clamp(20px,5vw,64px) clamp(16px,4vw,40px) 96px;
+    min-height:100vh;
+  }
+  .wrap{max-width:var(--maxw);margin:0 auto}
+  .mincho{font-family:"Hiragino Mincho ProN","Yu Mincho",YuMincho,"Noto Serif JP",serif}
+
+  .eyebrow{
+    font-size:.72rem;letter-spacing:.22em;text-transform:uppercase;
+    color:var(--accent-ink);font-weight:700;margin:0 0 14px;
+  }
+  h1{
+    font-family:"Hiragino Mincho ProN","Yu Mincho",YuMincho,"Noto Serif JP",serif;
+    font-size:clamp(1.9rem,4.6vw,3rem);line-height:1.18;margin:0 0 18px;
+    letter-spacing:.01em;text-wrap:balance;font-weight:600;
+  }
+  .lede{font-size:clamp(1rem,1.6vw,1.12rem);color:var(--ink-soft);max-width:60ch;margin:0}
+
+  .brief{
+    margin:34px 0 0;padding:22px 24px;background:var(--bg-elev);
+    border:1px solid var(--line);border-radius:14px;box-shadow:var(--shadow);
+  }
+  .brief h2{font-size:.9rem;letter-spacing:.04em;margin:0 0 14px;color:var(--ink)}
+  .chips{display:flex;flex-wrap:wrap;gap:8px}
+  .chip{
+    font-size:.82rem;padding:6px 12px;border-radius:999px;
+    border:1px solid var(--line);background:transparent;color:var(--ink-soft);
+    display:inline-flex;align-items:center;gap:7px;
+  }
+  .chip.yes{border-color:color-mix(in srgb,var(--accent) 45%,var(--line));color:var(--accent-ink);background:var(--accent-wash)}
+  .chip.no{border-color:color-mix(in srgb,var(--warn) 40%,var(--line));color:var(--warn)}
+  .chip b{font-weight:700}
+
+  .sect{margin-top:64px}
+  .sect > .eyebrow{margin-bottom:8px}
+  .sect h2.title{
+    font-family:"Hiragino Mincho ProN","Yu Mincho",YuMincho,"Noto Serif JP",serif;
+    font-size:clamp(1.4rem,2.8vw,1.9rem);margin:0 0 6px;font-weight:600;
+  }
+  .sect .sub{color:var(--ink-soft);margin:0 0 26px;max-width:62ch}
+
+  /* Benchmark type cards */
+  .bm-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:16px}
+  .bm{
+    background:var(--bg-elev);border:1px solid var(--line);border-radius:14px;
+    padding:20px 20px 18px;box-shadow:var(--shadow);display:flex;flex-direction:column;gap:10px;
+  }
+  .bm .k{font-size:.72rem;letter-spacing:.14em;text-transform:uppercase;color:var(--accent-ink);font-weight:700}
+  .bm h3{margin:0;font-size:1.05rem;font-weight:700}
+  .bm .real{font-size:.82rem;color:var(--ink-soft)}
+  .bm .real b{color:var(--ink);font-weight:600}
+  .bm p{margin:0;font-size:.9rem;color:var(--ink-soft)}
+  .bm .take{margin-top:2px;font-size:.86rem;padding-top:12px;border-top:1px dashed var(--line);color:var(--ink)}
+  .bm .take b{color:var(--accent-ink)}
+
+  /* Cover mockups */
+  .covers{display:grid;grid-template-columns:repeat(auto-fill,minmax(248px,1fr));gap:26px}
+  .cov-card{display:flex;flex-direction:column;gap:14px}
+  .cov-frame{
+    position:relative;border-radius:8px;overflow:hidden;
+    box-shadow:0 2px 4px rgba(20,25,30,.14),0 22px 40px -18px rgba(20,25,30,.45);
+    transition:transform .28s ease, box-shadow .28s ease;
+  }
+  .cov-card:hover .cov-frame{transform:translateY(-4px);box-shadow:0 4px 8px rgba(20,25,30,.18),0 30px 52px -18px rgba(20,25,30,.55)}
+  .cover{
+    aspect-ratio:10/16;width:100%;position:relative;overflow:hidden;
+    display:flex;flex-direction:column;
+    font-family:"Hiragino Mincho ProN","Yu Mincho",YuMincho,"Noto Serif JP",serif;
+    -webkit-font-smoothing:antialiased;
+  }
+  .cover .num{position:absolute;top:10px;left:12px;font-size:.62rem;letter-spacing:.1em;opacity:.7;font-family:system-ui,sans-serif}
+  .cover .series{font-family:"Hiragino Kaku Gothic ProN",YuGothic,sans-serif;font-size:.6rem;letter-spacing:.18em}
+  .cover .author{font-family:"Hiragino Kaku Gothic ProN",YuGothic,sans-serif}
+  .vline{writing-mode:vertical-rl}
+
+  /* A: 白地×極大明朝 */
+  .cA{background:linear-gradient(180deg,#fbfaf6,#f0eee7);color:#1c1f22;padding:30px 24px}
+  .cA .top{font-family:"Hiragino Kaku Gothic ProN",YuGothic,sans-serif;font-size:.6rem;letter-spacing:.16em;color:#7a7a72}
+  .cA .big{margin-top:auto;font-size:2.55rem;line-height:1.14;font-weight:600;letter-spacing:.02em}
+  .cA .big em{font-style:normal;color:#256b73;display:block}
+  .cA .sub{font-family:"Hiragino Kaku Gothic ProN",YuGothic,sans-serif;font-size:.66rem;line-height:1.7;color:#54544d;margin-top:14px;letter-spacing:.02em}
+  .cA .author{margin-top:16px;font-size:.66rem;letter-spacing:.14em;color:#33332e}
+
+  /* B: 黒地×内省（夜のリビングの光） */
+  .cB{background:radial-gradient(120% 70% at 72% 22%,#2b3336 0%,#181c1e 46%,#0e1011 100%);color:#eef0ec;padding:32px 24px}
+  .cB .top{font-family:"Hiragino Kaku Gothic ProN",YuGothic,sans-serif;font-size:.58rem;letter-spacing:.18em;color:#8b938f}
+  .cB .glow{position:absolute;top:14%;right:14%;width:70px;height:118px;border-radius:12px;
+    background:linear-gradient(160deg,rgba(180,205,210,.5),rgba(120,150,155,.08));filter:blur(3px);transform:rotate(9deg)}
+  .cB .big{margin-top:auto;font-size:2.5rem;line-height:1.16;font-weight:500;position:relative;z-index:2}
+  .cB .big em{font-style:normal;color:#9ec6cb;display:block}
+  .cB .sub{font-family:"Hiragino Kaku Gothic ProN",YuGothic,sans-serif;font-size:.64rem;line-height:1.7;color:#b6bcb9;margin-top:14px;position:relative;z-index:2}
+  .cB .author{margin-top:16px;font-size:.64rem;letter-spacing:.14em;color:#cdd2cf;position:relative;z-index:2}
+
+  /* C: 数字を武器（帯コピー・ゴシック） */
+  .cC{background:#1f4a52;color:#f3f1ea;padding:0;justify-content:stretch}
+  .cC .band{background:#f3f1ea;color:#1f4a52;padding:22px 22px 20px;display:flex;flex-direction:column;gap:2px}
+  .cC .nums{font-family:"Hiragino Kaku Gothic ProN",YuGothic,sans-serif;font-weight:800;font-size:1.62rem;line-height:1.1;letter-spacing:-.01em;font-variant-numeric:tabular-nums}
+  .cC .nums .plus{color:#256b73}
+  .cC .nums .minus{color:#b23b2e}
+  .cC .cap{font-family:"Hiragino Kaku Gothic ProN",YuGothic,sans-serif;font-size:.6rem;color:#5a5f5a;letter-spacing:.06em;margin-top:6px}
+  .cC .lower{padding:24px 22px;display:flex;flex-direction:column;height:100%}
+  .cC .big{font-size:2.5rem;font-weight:600;line-height:1.14;margin-top:auto}
+  .cC .big em{font-style:normal;color:#ffd9d2;display:block}
+  .cC .author{font-family:"Hiragino Kaku Gothic ProN",YuGothic,sans-serif;font-size:.62rem;letter-spacing:.14em;color:#cfe0e0;margin-top:14px}
+
+  /* D: 寒色ミニマル・折れ線（洋書型） */
+  .cD{background:linear-gradient(175deg,#20343a,#16262b);color:#eaf0ef;padding:30px 24px}
+  .cD .top{font-family:"Hiragino Kaku Gothic ProN",YuGothic,sans-serif;font-size:.56rem;letter-spacing:.2em;color:#7fa0a4}
+  .cD .chart{position:absolute;left:0;right:0;top:30%;height:34%;opacity:.9}
+  .cD .big{margin-top:auto;font-size:2.35rem;font-weight:500;line-height:1.16;position:relative;z-index:2}
+  .cD .big em{font-style:normal;color:#e8b4aa;display:block}
+  .cD .sub{font-family:"Hiragino Kaku Gothic ProN",YuGothic,sans-serif;font-size:.62rem;color:#a9bcbb;margin-top:12px;line-height:1.65;position:relative;z-index:2}
+  .cD .author{font-family:"Hiragino Kaku Gothic ProN",YuGothic,sans-serif;font-size:.62rem;letter-spacing:.14em;color:#cbdad9;margin-top:14px;position:relative;z-index:2}
+
+  /* E: ノート／告白・手記風 */
+  .cE{background:
+      repeating-linear-gradient(180deg,transparent 0 27px,#e3ded0 27px 28px),
+      linear-gradient(180deg,#faf7ee,#f4efe1);
+     color:#242019;padding:34px 26px}
+  .cE .tape{position:absolute;top:16px;right:22px;width:56px;height:20px;background:rgba(37,107,115,.22);transform:rotate(-6deg);border:1px solid rgba(37,107,115,.3)}
+  .cE .top{font-family:"Hiragino Kaku Gothic ProN",YuGothic,sans-serif;font-size:.58rem;letter-spacing:.14em;color:#8a8065}
+  .cE .big{margin-top:auto;font-size:2.4rem;font-weight:600;line-height:1.2;letter-spacing:.01em}
+  .cE .big em{font-style:normal;border-bottom:3px solid #b23b2e;padding-bottom:2px}
+  .cE .sub{font-family:"Hiragino Kaku Gothic ProN",YuGothic,sans-serif;font-size:.63rem;color:#5c5647;margin-top:16px;line-height:1.7}
+  .cE .author{font-family:"Hiragino Kaku Gothic ProN",YuGothic,sans-serif;font-size:.62rem;letter-spacing:.12em;color:#3a352a;margin-top:14px}
+
+  /* F: 避ける例（煽り系） */
+  .cF{background:linear-gradient(150deg,#1a1305,#3a2a08 55%,#1a1305);color:#ffe9a8;padding:26px 22px;text-align:center;align-items:center;justify-content:center}
+  .cF .badge{font-family:"Hiragino Kaku Gothic ProN",YuGothic,sans-serif;font-weight:800;font-size:.62rem;letter-spacing:.05em;color:#0e0b03;background:linear-gradient(90deg,#f6cf5a,#d99f22);padding:4px 10px;border-radius:4px;position:absolute;top:16px;left:50%;transform:translateX(-50%)}
+  .cF .big{font-family:"Hiragino Kaku Gothic ProN",YuGothic,sans-serif;font-weight:900;font-size:2.1rem;line-height:1.12;color:#ffd54a;text-shadow:0 2px 0 #7a5410,2px 4px 6px rgba(0,0,0,.5)}
+  .cF .big .red{color:#ff5a44;display:block;font-size:2.5rem}
+  .cF .yen{font-size:1.4rem;margin-top:10px}
+  .cF .sub{font-family:"Hiragino Kaku Gothic ProN",YuGothic,sans-serif;font-size:.6rem;color:#d8b96a;margin-top:12px}
+  .cov-frame.avoid{outline:2px solid var(--warn);outline-offset:3px;position:relative}
+  .cov-frame.avoid::after{content:"✕ こうはしない";position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
+    font-family:"Hiragino Kaku Gothic ProN",YuGothic,sans-serif;font-weight:800;font-size:1.1rem;color:#fff;
+    background:rgba(120,20,12,.5);letter-spacing:.06em}
+
+  .cov-meta .name{font-weight:700;font-size:1rem;margin:0 0 3px;display:flex;align-items:baseline;gap:8px}
+  .cov-meta .name .id{font-family:system-ui,sans-serif;font-size:.72rem;color:var(--accent-ink);font-weight:800;letter-spacing:.06em}
+  .cov-meta .from{font-size:.72rem;color:var(--ink-soft);margin:0 0 8px}
+  .cov-meta .from b{color:var(--ink);font-weight:600}
+  .cov-meta p{margin:0;font-size:.86rem;color:var(--ink-soft);line-height:1.65}
+  .pc{display:flex;gap:6px;margin-top:9px;font-size:.76rem;flex-wrap:wrap}
+  .pc span{padding:2px 8px;border-radius:6px;border:1px solid var(--line)}
+  .pc .p{color:var(--accent-ink);border-color:color-mix(in srgb,var(--accent) 35%,var(--line));background:var(--accent-wash)}
+  .pc .c{color:var(--warn);border-color:color-mix(in srgb,var(--warn) 30%,var(--line))}
+
+  /* decision */
+  .decide{margin-top:26px;display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:16px}
+  .step{background:var(--bg-elev);border:1px solid var(--line);border-radius:14px;padding:20px;box-shadow:var(--shadow)}
+  .step .n{font-family:system-ui,sans-serif;font-weight:800;color:var(--accent-ink);font-size:.8rem;letter-spacing:.1em}
+  .step h3{margin:8px 0 6px;font-size:1rem}
+  .step p{margin:0;font-size:.87rem;color:var(--ink-soft)}
+  .step a{color:var(--accent-ink);text-decoration:underline;text-underline-offset:2px}
+
+  .foot{margin-top:56px;padding-top:20px;border-top:1px solid var(--line);font-size:.8rem;color:var(--ink-soft)}
+  .foot a{color:var(--accent-ink)}
+
+  @media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+  .rise{opacity:0;transform:translateY(14px);animation:rise .6s ease forwards}
+  @keyframes rise{to{opacity:1;transform:none}}
+</style>
+
+<div class="page">
+  <div class="wrap">
+
+    <header class="rise">
+      <p class="eyebrow">Kindle 第1巻 ／ 表紙ディレクション</p>
+      <h1 class="mincho">「副業、やめました。」<br>表紙ベンチマーク・ボード</h1>
+      <p class="lede">売れている同ジャンルの表紙を4つの「型」に分解し、その型で本書の実タイトルを組んだ見本を6案。ここから方向性を1つ選び、デザイナー／生成に渡します。<br><span style="font-size:.86rem">※各カバーは<b>レイアウト・文字の見本</b>です（写真・質感は最終制作で差し替え）。比べるのは配色・文字組み・トーンです。</span></p>
+    </header>
+
+    <section class="brief rise" style="animation-delay:.05s">
+      <h2>すでに決まっている前提（出版パッケージ §3 より）</h2>
+      <div class="chips">
+        <span class="chip yes"><b>◎</b> サムネ（小）で「副業、やめました。」が読める大文字</span>
+        <span class="chip yes"><b>◎</b> 落ち着いた寒色〜モノトーン＋差し色1つ</span>
+        <span class="chip yes"><b>◎</b> 「煽り本じゃない、正直な告白」という信頼感</span>
+        <span class="chip yes"><b>◎</b> “やめました。”の意外性を1点だけ立てる</span>
+        <span class="chip no"><b>✕</b> 金・札束・過度な赤</span>
+        <span class="chip no"><b>✕</b> 成功者風・キラキラ・誇大ビジュアル</span>
+      </div>
+    </section>
+
+    <!-- BENCHMARKS -->
+    <section class="sect">
+      <p class="eyebrow">STEP 1</p>
+      <h2 class="title mincho">参考にした実在ベストセラーの「型」</h2>
+      <p class="sub">奇抜さではなく、この棚で信頼されている売れ方を分解。実物はAmazonで検索して見比べてください。本書に効くのは主に <b>①</b> と <b>②</b> です。</p>
+      <div class="bm-grid">
+
+        <div class="bm">
+          <span class="k">型 ①</span>
+          <h3>白地 × 極大タイトル</h3>
+          <p class="real"><b>『転職の思考法』</b>（北野唯我／ダイヤモンド社）ほか働き方書の王道。</p>
+          <p>白〜淡色の余白に、太めの一語をどんと。装飾を削るほど「中身で勝負している」誠実さが出る。サムネ最強。</p>
+          <p class="take"><b>借りる点：</b>タイトルを面積の30%以上に。“やめました。”だけ差し色で意外性を。</p>
+        </div>
+
+        <div class="bm">
+          <span class="k">型 ②</span>
+          <h3>写真 × 内省トーン</h3>
+          <p class="real"><b>『苦しかったときの話をしようか』</b>（森岡毅）系の、静かで少し暗い情緒。</p>
+          <p>人物・光・夜など“感情の温度”を写真で。告白・エッセイ寄りの本と相性がよく、共感で手に取らせる。</p>
+          <p class="take"><b>借りる点：</b>夜のリビング／スマホの光という本書の原風景を、静かな暗さで。</p>
+        </div>
+
+        <div class="bm">
+          <span class="k">型 ③</span>
+          <h3>数字を主役にした帯コピー</h3>
+          <p class="real">お金・年収系の実用書に多い、<b>大きな数字</b>で瞬間的に引き込む手法。</p>
+          <p>「1000万／700万」のような具体数を最大の視覚要素に。強いが、やり過ぎると煽り棚に見えるので寒色で品を保つ。</p>
+          <p class="take"><b>借りる点：</b>稼いだ額と溶かした額の対比。ただし金色は使わない。</p>
+        </div>
+
+        <div class="bm">
+          <span class="k">型 ④</span>
+          <h3>寒色ミニマル（洋書翻訳書風）</h3>
+          <p class="real"><b>『DIE WITH ZERO』</b>など翻訳書に多い、記号1つ＋深い単色。</p>
+          <p>深い青緑などの単色地に、折れ線・矢印などの記号を1つ。知的で流行に左右されにくく、シリーズ展開に強い。</p>
+          <p class="take"><b>借りる点：</b>「消耗しない所得の増やし方」シリーズの統一フォーマットに。</p>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- COVERS -->
+    <section class="sect">
+      <p class="eyebrow">STEP 2</p>
+      <h2 class="title mincho">本書の表紙・方向性 6案</h2>
+      <p class="sub">上の型で実タイトルを組んだもの。A・Bが本命候補（誠実×サムネ強）、C・Dはシリーズ拡張向き、Eは親近感、Fは<b>やってはいけない例</b>としてあえて置いています。</p>
+
+      <div class="covers">
+
+        <!-- A -->
+        <div class="cov-card rise">
+          <div class="cov-frame"><div class="cover cA">
+            <div class="series">消耗しない所得の増やし方 ＿1</div>
+            <div class="big">副業、<em>やめました。</em></div>
+            <div class="sub">1000万稼いで700万溶かした僕が、<br>あなたに勧めない理由</div>
+            <div class="author">軌道キャリ</div>
+          </div></div>
+          <div class="cov-meta">
+            <p class="name"><span class="id">A</span> 白地 × 極大明朝</p>
+            <p class="from">型①より <b>本命候補</b></p>
+            <p>いちばん“棚で信頼される”正攻法。白地に明朝の大文字、「やめました。」だけ差し色。サムネで最強。無難だが外さない。</p>
+            <div class="pc"><span class="p">サムネ判読◎</span><span class="p">誠実</span><span class="c">個性は控えめ</span></div>
+          </div>
+        </div>
+
+        <!-- B -->
+        <div class="cov-card rise" style="animation-delay:.04s">
+          <div class="cov-frame"><div class="cover cB">
+            <div class="glow"></div>
+            <div class="top">消耗しない所得の増やし方　1</div>
+            <div class="big">副業、<em>やめました。</em></div>
+            <div class="sub">1000万稼いで700万溶かした僕が、あなたに勧めない理由</div>
+            <div class="author">軌道キャリ</div>
+          </div></div>
+          <div class="cov-meta">
+            <p class="name"><span class="id">B</span> 黒地 × 内省（夜の光）</p>
+            <p class="from">型②より <b>本命候補</b></p>
+            <p>本書の原風景＝深夜のリビング、スマホの白い光。告白調の中身と最も一致。共感で手に取らせる。差別化も効く。</p>
+            <div class="pc"><span class="p">中身と一致</span><span class="p">情緒・共感</span><span class="c">写真の質で決まる</span></div>
+          </div>
+        </div>
+
+        <!-- C -->
+        <div class="cov-card rise" style="animation-delay:.08s">
+          <div class="cov-frame"><div class="cover cC">
+            <div class="band">
+              <div class="nums"><span class="plus">＋1000万</span> <span style="opacity:.5">/</span> <span class="minus">−700万</span></div>
+              <div class="cap">稼いだ。そのうえで、割に合わなかった。</div>
+            </div>
+            <div class="lower">
+              <div class="big">副業、<em>やめました。</em></div>
+              <div class="author">軌道キャリ ／ 消耗しない所得の増やし方 1</div>
+            </div>
+          </div></div>
+          <div class="cov-meta">
+            <p class="name"><span class="id">C</span> 数字を武器に</p>
+            <p class="from">型③より</p>
+            <p>「＋1000万／−700万」の対比を最大の要素に。瞬間的な引きは最強。金色を排し寒色でまとめ、煽り棚に落ちないよう品を担保。</p>
+            <div class="pc"><span class="p">引きが強い</span><span class="c">煽りに寄るリスク</span></div>
+          </div>
+        </div>
+
+        <!-- D -->
+        <div class="cov-card rise" style="animation-delay:.12s">
+          <div class="cov-frame"><div class="cover cD">
+            <svg class="chart" viewBox="0 0 200 70" preserveAspectRatio="none" aria-hidden="true">
+              <polyline points="0,20 40,14 75,26 100,10 130,34 160,52 200,64" fill="none" stroke="#e8b4aa" stroke-width="2.5"/>
+              <circle cx="200" cy="64" r="3.4" fill="#e8b4aa"/>
+            </svg>
+            <div class="top">消耗しない所得の増やし方　VOL.1</div>
+            <div class="big">副業、<em>やめました。</em></div>
+            <div class="sub">1000万稼いで700万溶かした僕が、あなたに勧めない理由</div>
+            <div class="author">軌道キャリ</div>
+          </div></div>
+          <div class="cov-meta">
+            <p class="name"><span class="id">D</span> 寒色ミニマル・折れ線</p>
+            <p class="from">型④より <b>シリーズ向き</b></p>
+            <p>深い青緑地に落ちていく折れ線1本。翻訳書のような知的トーン。第2巻以降を色替えで量産できる統一フォーマットになる。</p>
+            <div class="pc"><span class="p">シリーズ統一</span><span class="p">知的</span><span class="c">やや無機質</span></div>
+          </div>
+        </div>
+
+        <!-- E -->
+        <div class="cov-card rise" style="animation-delay:.16s">
+          <div class="cov-frame"><div class="cover cE">
+            <div class="tape"></div>
+            <div class="top">消耗しない所得の増やし方　1</div>
+            <div class="big">副業、<em>やめました</em>。</div>
+            <div class="sub">1000万稼いで700万溶かした僕が、あなたに勧めない理由</div>
+            <div class="author">軌道キャリ</div>
+          </div></div>
+          <div class="cov-meta">
+            <p class="name"><span class="id">E</span> ノート／手記風</p>
+            <p class="from">型①×②の中間</p>
+            <p>罫線ノート＋テープの個人的な手記トーン。親近感は最上位。ただしビジネス棚では素人っぽく見えるリスクがあり、扱いは慎重に。</p>
+            <div class="pc"><span class="p">親近感</span><span class="c">安っぽく見える恐れ</span></div>
+          </div>
+        </div>
+
+        <!-- F avoid -->
+        <div class="cov-card rise" style="animation-delay:.2s">
+          <div class="cov-frame avoid"><div class="cover cF">
+            <div class="badge">副業で人生逆転！</div>
+            <div class="big">月収<span class="red">100万</span>副業術</div>
+            <div class="yen">💴 ¥¥¥</div>
+            <div class="sub">※誇大・金色・札束・赤の全部乗せ</div>
+          </div></div>
+          <div class="cov-meta">
+            <p class="name"><span class="id">F</span> 避ける例（煽り系）</p>
+            <p class="from">アンチパターン</p>
+            <p>金色・札束・誇大コピー。クリックはされても「またこれか」と信頼を失う。本書のブランド（誠実な逆張り）と正反対。基準として置いています。</p>
+            <div class="pc"><span class="c">ブランド毀損</span><span class="c">前提①②に反する</span></div>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- DECIDE -->
+    <section class="sect">
+      <p class="eyebrow">STEP 3</p>
+      <h2 class="title mincho">選び方と、次の一手</h2>
+      <p class="sub">私の推し順は <b>B（内省）→ A（白地）→ D（シリーズ）</b>。中身が告白調なのでBが最も一致し、Aは事故らない安全牌、Dは6冊シリーズの資産になります。C/E/Fは狙いが尖る・危ういので今回は非推奨。</p>
+      <div class="decide">
+        <div class="step">
+          <span class="n">01 ／ 選ぶ観点</span>
+          <h3>3秒で読めるか</h3>
+          <p>スマホ検索結果の小さいサムネで、タイトルと“やめました。”が一瞬で読めるか。ここを最優先に。</p>
+        </div>
+        <div class="step">
+          <span class="n">02 ／ 選ぶ観点</span>
+          <h3>中身と一致するか</h3>
+          <p>本書は稼ぎ自慢ではなく後悔の告白。表紙の温度が中身とズレると、レビューで裏切られたと感じさせる。</p>
+        </div>
+        <div class="step">
+          <span class="n">03 ／ 決めたら</span>
+          <h3>ブリーフに渡す</h3>
+          <p>案を1つ選んで教えてください。§3の表紙ブリーフに配色・写真指定を追記し、生成AI用プロンプト／デザイナー発注文まで私が用意します。</p>
+        </div>
+      </div>
+    </section>
+
+    <footer class="foot">
+      前提の出典：<b>kindle/企画/第1巻_出版パッケージ.md §3・§4</b>（表紙ブリーフ／AI利用開示）。ベンチマーク調査：働き方・キャリア書の売れ筋装丁より。<br>
+      このボードは方向性の選択用。最終の書影は、選んだ案をもとに生成AIまたはデザイナーで制作します（AI生成時はKDPで画像のAI利用を開示）。
+    </footer>
+
+  </div>
+</div>
