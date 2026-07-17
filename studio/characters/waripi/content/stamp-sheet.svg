@@ -1,0 +1,99 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 900" font-family="'Hiragino Maru Gothic ProN','Yu Gothic',sans-serif">
+  <defs>
+    <style>
+      .ol{fill:none;stroke:#6b5d4d;stroke-width:5;stroke-linecap:round;stroke-linejoin:round;}
+      .olt{fill:none;stroke:#6b5d4d;stroke-width:3.5;stroke-linecap:round;stroke-linejoin:round;}
+      .body{fill:#f4ecd6;}.blush{fill:#f3b3bd;}.eye{fill:#4a4038;}
+      .tile{fill:#fffdf8;stroke:#e6ddca;stroke-width:3;}
+      .word{fill:#4a4038;font-size:26px;font-weight:800;}
+      .ttl{fill:#4a4038;font-size:26px;font-weight:800;}
+      .sub{fill:#8a7d6c;font-size:15px;}
+    </style>
+    <path id="b" d="M0,-56 C36,-52 50,14 42,36 C37,50 21,55 0,55 C-21,55 -37,50 -42,36 C-50,14 -36,-52 0,-56 Z"/>
+    <g id="tag"><g transform="translate(38,6) rotate(14)"><rect x="-3" y="-15" width="40" height="30" rx="7" fill="#ef6a2e"/><rect x="-3" y="-15" width="40" height="30" rx="7" class="olt"/></g></g>
+  </defs>
+
+  <rect width="600" height="900" fill="#fbf7ee"/>
+  <text x="34" y="44" class="ttl">わりぴ　LINEスタンプ叩き</text>
+  <text x="34" y="68" class="sub">実用7:あるある3。※本番はAI作画を人の手で加工＋[AI]ラベル運用。透過PNG化前提。</text>
+
+  <!-- tile helper positions: 2 cols x 3 rows -->
+  <!-- 1: まあ、いっか -->
+  <g transform="translate(30,92)">
+    <rect width="264" height="238" rx="18" class="tile"/>
+    <g transform="translate(132,110)">
+      <use href="#tag"/><use href="#b" class="body"/><use href="#b" class="ol"/>
+      <path class="olt" d="M-22,-4 q9,7 18,0"/><path class="olt" d="M4,-4 q9,7 18,0"/>
+      <ellipse cx="-24" cy="8" rx="7.5" ry="5" class="blush"/><ellipse cx="24" cy="8" rx="7.5" ry="5" class="blush"/>
+      <path class="olt" d="M-5,10 q5,4 10,0"/>
+    </g>
+    <text x="132" y="212" text-anchor="middle" class="word">まあ、いっか</text>
+  </g>
+
+  <!-- 2: たすかる -->
+  <g transform="translate(306,92)">
+    <rect width="264" height="238" rx="18" class="tile"/>
+    <g transform="translate(132,108)">
+      <use href="#tag"/><use href="#b" class="body"/><use href="#b" class="ol"/>
+      <path d="M-20,-8 l3,-8 l3,8 z" fill="#4a4038"/><circle cx="-14" cy="-4" r="4.8" class="eye"/>
+      <path d="M8,-8 l3,-8 l3,8 z" fill="#4a4038"/><circle cx="14" cy="-4" r="4.8" class="eye"/>
+      <ellipse cx="-24" cy="9" rx="8" ry="5.5" class="blush"/><ellipse cx="24" cy="9" rx="8" ry="5.5" class="blush"/>
+      <path class="olt" d="M-6,11 q6,6 12,0"/>
+    </g>
+    <text x="132" y="212" text-anchor="middle" class="word">たすかる…！</text>
+  </g>
+
+  <!-- 3: おつかれさま (holding daishi) -->
+  <g transform="translate(30,340)">
+    <rect width="264" height="238" rx="18" class="tile"/>
+    <g transform="translate(132,108)">
+      <use href="#tag"/><use href="#b" class="body"/><use href="#b" class="ol"/>
+      <rect x="-64" y="14" width="26" height="20" rx="4" fill="#fff"/><rect x="-64" y="14" width="26" height="20" rx="4" class="olt"/>
+      <path class="olt" d="M-42,18 q-9,4 -14,0"/>
+      <path class="olt" d="M-20,-6 q7,7 14,0"/><path class="olt" d="M6,-6 q7,7 14,0"/>
+      <ellipse cx="-22" cy="8" rx="7" ry="4.5" class="blush"/><ellipse cx="26" cy="8" rx="7" ry="4.5" class="blush"/>
+      <path class="olt" d="M-3,11 q4,3 8,0"/>
+    </g>
+    <text x="132" y="212" text-anchor="middle" class="word">おつかれさま</text>
+  </g>
+
+  <!-- 4: ありがとう…(shy) -->
+  <g transform="translate(306,340)">
+    <rect width="264" height="238" rx="18" class="tile"/>
+    <g transform="translate(132,108)">
+      <use href="#tag"/><use href="#b" class="body"/><use href="#b" class="ol"/>
+      <path class="olt" d="M-22,-2 q9,-8 18,0"/><path class="olt" d="M4,-2 q9,-8 18,0"/>
+      <ellipse cx="-24" cy="10" rx="9" ry="6" class="blush"/><ellipse cx="24" cy="10" rx="9" ry="6" class="blush"/>
+      <path class="olt" d="M-3,10 q4,3 8,0"/>
+    </g>
+    <text x="132" y="212" text-anchor="middle" class="word" font-size="23">ありがとう…(小声)</text>
+  </g>
+
+  <!-- 5: わかる (nod, closed smile) -->
+  <g transform="translate(30,588)">
+    <rect width="264" height="238" rx="18" class="tile"/>
+    <g transform="translate(132,112) rotate(8)">
+      <use href="#tag"/><use href="#b" class="body"/><use href="#b" class="ol"/>
+      <path class="olt" d="M-22,-4 q9,7 18,0"/><path class="olt" d="M4,-4 q9,7 18,0"/>
+      <ellipse cx="-24" cy="8" rx="7.5" ry="5" class="blush"/><ellipse cx="24" cy="8" rx="7.5" ry="5" class="blush"/>
+      <path class="olt" d="M-5,10 q5,4 10,0"/>
+    </g>
+    <text x="132" y="212" text-anchor="middle" class="word">わかる</text>
+  </g>
+
+  <!-- 6: 19:30 まってる (powatt glow) -->
+  <g transform="translate(306,588)">
+    <rect width="264" height="238" rx="18" class="tile"/>
+    <g stroke="#f4a03a" stroke-width="4.5" stroke-linecap="round" opacity="0.9" transform="translate(132,104)">
+      <path d="M0,-64 v-14"/><path d="M-44,-46 l-9,-11"/><path d="M44,-46 l9,-11"/><path d="M-58,0 l-14,-4"/><path d="M58,0 l14,-4"/>
+    </g>
+    <g transform="translate(132,104)">
+      <use href="#tag"/><use href="#b" class="body"/><use href="#b" class="ol"/>
+      <path d="M-20,-8 l3,-8 l3,8 z" fill="#4a4038"/><circle cx="-14" cy="-4" r="4.8" class="eye"/>
+      <path d="M8,-8 l3,-8 l3,8 z" fill="#4a4038"/><circle cx="14" cy="-4" r="4.8" class="eye"/>
+      <ellipse cx="-24" cy="9" rx="8" ry="5.5" class="blush"/><ellipse cx="24" cy="9" rx="8" ry="5.5" class="blush"/>
+      <ellipse cx="0" cy="10" rx="4.5" ry="5.5" fill="#4a4038"/>
+    </g>
+    <text x="132" y="212" text-anchor="middle" class="word">19:30 まってる</text>
+  </g>
+</svg>
