@@ -1,0 +1,390 @@
+<style>
+  :root{
+    --bg:#f4f2ec; --bg-elev:#fffdf8; --ink:#1c1a16; --ink-soft:#585349;
+    --line:#ddd8cc; --line-soft:#e9e4d8;
+    --accent:#c8492f; --accent-ink:#a83a22; --accent-wash:#f7e4dd;
+    --navy:#20344f; --amber:#e79a1f; --hl:#ffe14d;
+    --shadow:0 1px 2px rgba(30,25,15,.06),0 14px 32px -14px rgba(30,25,15,.2);
+    --maxw:1180px;
+  }
+  @media (prefers-color-scheme:dark){
+    :root{
+      --bg:#16150f; --bg-elev:#1f1d15; --ink:#efe9dc; --ink-soft:#a49c8a;
+      --line:#332f22; --line-soft:#28251b;
+      --accent:#e2694f; --accent-ink:#eb8168; --accent-wash:#2c211c;
+      --navy:#7ea0c4; --amber:#e79a1f; --hl:#ffe14d;
+      --shadow:0 1px 2px rgba(0,0,0,.4),0 18px 36px -16px rgba(0,0,0,.65);
+    }
+  }
+  :root[data-theme="light"]{
+    --bg:#f4f2ec; --bg-elev:#fffdf8; --ink:#1c1a16; --ink-soft:#585349;
+    --line:#ddd8cc; --line-soft:#e9e4d8; --accent:#c8492f; --accent-ink:#a83a22;
+    --accent-wash:#f7e4dd; --navy:#20344f; --shadow:0 1px 2px rgba(30,25,15,.06),0 14px 32px -14px rgba(30,25,15,.2);
+  }
+  :root[data-theme="dark"]{
+    --bg:#16150f; --bg-elev:#1f1d15; --ink:#efe9dc; --ink-soft:#a49c8a;
+    --line:#332f22; --line-soft:#28251b; --accent:#e2694f; --accent-ink:#eb8168;
+    --accent-wash:#2c211c; --navy:#7ea0c4; --shadow:0 1px 2px rgba(0,0,0,.4),0 18px 36px -16px rgba(0,0,0,.65);
+  }
+
+  *{box-sizing:border-box}
+  html{-webkit-text-size-adjust:100%}
+  body{margin:0}
+  .page{
+    background:var(--bg); color:var(--ink);
+    font-family:"Hiragino Kaku Gothic ProN","Yu Gothic Medium",YuGothic,"Noto Sans JP",system-ui,sans-serif;
+    line-height:1.72; letter-spacing:.01em;
+    padding:clamp(20px,5vw,60px) clamp(16px,4vw,40px) 96px; min-height:100vh;
+  }
+  .wrap{max-width:var(--maxw);margin:0 auto}
+  .gothic{font-family:"Hiragino Kaku Gothic ProN","Yu Gothic",YuGothic,"Noto Sans JP",sans-serif}
+  .mincho{font-family:"Hiragino Mincho ProN","Yu Mincho",YuMincho,"Noto Serif JP",serif}
+
+  .eyebrow{font-size:.72rem;letter-spacing:.2em;text-transform:uppercase;color:var(--accent-ink);font-weight:800;margin:0 0 12px}
+  h1{font-size:clamp(1.9rem,4.6vw,2.9rem);line-height:1.16;margin:0 0 16px;font-weight:900;letter-spacing:.01em;text-wrap:balance}
+  .lede{font-size:clamp(1rem,1.6vw,1.12rem);color:var(--ink-soft);max-width:62ch;margin:0}
+  .lede b{color:var(--ink)}
+
+  .callout{margin:26px 0 0;padding:16px 20px;border-left:4px solid var(--accent);background:var(--accent-wash);border-radius:8px;font-size:.92rem}
+  .callout b{color:var(--accent-ink)}
+
+  .sect{margin-top:60px}
+  .sect h2.title{font-size:clamp(1.4rem,2.8vw,1.95rem);margin:0 0 6px;font-weight:900}
+  .sect .sub{color:var(--ink-soft);margin:0 0 24px;max-width:66ch}
+
+  /* ---- shared cover frame ---- */
+  .mini,.cover{aspect-ratio:10/14;width:100%;position:relative;overflow:hidden;display:flex;flex-direction:column}
+  .frame{border-radius:6px;overflow:hidden;box-shadow:0 2px 4px rgba(20,15,5,.12),0 20px 38px -18px rgba(20,15,5,.4);transition:transform .26s ease,box-shadow .26s ease}
+  .card:hover .frame{transform:translateY(-4px);box-shadow:0 4px 8px rgba(20,15,5,.16),0 28px 50px -18px rgba(20,15,5,.5)}
+  .fatg{font-family:"Hiragino Kaku Gothic StdN","Hiragino Kaku Gothic ProN","Yu Gothic",YuGothic,sans-serif;font-weight:900}
+  .num{font-variant-numeric:tabular-nums}
+
+  /* ===== STEP1 benchmark miniatures ===== */
+  .bm-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:22px}
+  .card{display:flex;flex-direction:column;gap:12px}
+  .bm-top{display:grid;grid-template-columns:112px 1fr;gap:16px;align-items:start}
+  .meta .real{font-size:.7rem;color:var(--ink-soft);letter-spacing:.02em;margin:0 0 4px}
+  .meta h3{margin:0 0 6px;font-size:1rem;font-weight:800;line-height:1.35}
+  .meta ul{margin:0;padding-left:1.05em;font-size:.82rem;color:var(--ink-soft);line-height:1.55}
+  .meta ul b{color:var(--ink)}
+
+  /* mini 1: こっそり副業術 */
+  .m1{background:#fff;padding:8% 7%}
+  .m1 .cap{border:1.5px solid #e79b95;border-radius:20px;color:#d8635a;font-size:.42rem;text-align:center;padding:2px;font-weight:800}
+  .m1 .t{font-size:1.5rem;color:#2a2622;text-align:center;margin-top:3%;line-height:1}
+  .m1 .fig{width:34%;height:22%;border-radius:50% 50% 45% 45%;background:#f3d3cf;margin:6% auto 0}
+  .m1 .band{margin-top:auto;background:#f7e0dd;height:26%;border-radius:3px}
+  /* mini 2: ゆる副業 */
+  .m2{background:#e7f0fa;padding:8% 7%}
+  .m2 .t1{font-size:.9rem;color:#2a2622;text-align:center}
+  .m2 .t1 .h{background:var(--hl);padding:0 2px;border-radius:2px}
+  .m2 .t2{font-size:1.15rem;color:#2a2622;text-align:center;line-height:1;margin-top:2%}
+  .m2 .dots{height:5%;background:repeating-linear-gradient(90deg,#7fb0e0 0 3px,transparent 3px 7px);margin-bottom:5%}
+  .m2 .band{margin-top:auto;background:#fbf3d6;height:30%;border-radius:3px}
+  /* mini 3: 月30万 */
+  .m3{background:#fff;padding:7%}
+  .m3 .t1{font-size:.5rem;color:#2a2622;text-align:center;transform:rotate(-2deg)}
+  .m3 .big{font-size:3.2rem;color:#e79a1f;text-align:center;line-height:.9;-webkit-text-stroke:1px #2a2622}
+  .m3 .t2{font-size:.7rem;color:#2a2622;text-align:center}
+  .m3 .steps{margin-top:auto;display:flex;gap:3%;align-items:flex-end;height:26%}
+  .m3 .steps i{flex:1;background:#f2e3cf;border-radius:50%;display:block}
+  .m3 .steps i:nth-child(1){height:40%}.m3 .steps i:nth-child(2){height:58%}.m3 .steps i:nth-child(3){height:76%}.m3 .steps i:nth-child(4){height:96%}
+  /* mini 4: note教科書 */
+  .m4{background:#fff;padding:8% 7%;overflow:hidden}
+  .m4 .ghost{position:absolute;inset:6% 4%;font-size:1.5rem;color:#e7e4de;text-align:justify;line-height:.9;z-index:0}
+  .m4 .note{font-size:.7rem;text-align:center;color:#2a2622;position:relative;z-index:1}
+  .m4 .t{font-size:1.5rem;color:#d8631f;text-align:center;line-height:1;position:relative;z-index:1;margin-top:2%}
+  .m4 .band{margin-top:auto;background:#e07b22;height:30%;border-radius:3px;position:relative;z-index:1}
+  /* mini 5: 副業の超基本 */
+  .m5{background:#fbfaf7;padding:7%}
+  .m5 .t1{font-size:.46rem;color:#2a2622;text-align:center}
+  .m5 .big{font-size:1.75rem;color:#20344f;text-align:center;line-height:.95;margin-top:3%}
+  .m5 .ico{display:flex;justify-content:space-between;margin-top:4%}
+  .m5 .ico i{width:14%;height:0;padding-bottom:14%;border-radius:4px;background:#f0dcc4;display:block}
+  .m5 .badge{margin-top:auto;width:30%;padding-bottom:30%;height:0;border-radius:50%;background:#d8dde0;align-self:flex-end;position:relative}
+
+  /* ===== STEP2 winning formula ===== */
+  .formula{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px;margin-top:6px}
+  .fx{background:var(--bg-elev);border:1px solid var(--line);border-radius:12px;padding:16px 18px;box-shadow:var(--shadow)}
+  .fx .n{font-family:system-ui,sans-serif;font-weight:900;color:var(--accent-ink);font-size:.78rem;letter-spacing:.08em}
+  .fx h3{margin:6px 0 4px;font-size:.98rem}
+  .fx p{margin:0;font-size:.84rem;color:var(--ink-soft)}
+
+  /* ===== STEP3 applied covers ===== */
+  .covers{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:28px}
+  .cover{aspect-ratio:10/14}
+  .cov-meta .name{font-weight:800;font-size:1rem;margin:0 0 3px;display:flex;gap:8px;align-items:baseline}
+  .cov-meta .name .id{font-family:system-ui,sans-serif;font-weight:900;color:var(--accent-ink);font-size:.74rem;letter-spacing:.06em}
+  .cov-meta .from{font-size:.72rem;color:var(--ink-soft);margin:0 0 7px}
+  .cov-meta .from b{color:var(--ink)}
+  .cov-meta p{margin:0;font-size:.85rem;color:var(--ink-soft);line-height:1.6}
+  .pc{display:flex;gap:6px;margin-top:9px;flex-wrap:wrap;font-size:.75rem}
+  .pc span{padding:2px 8px;border-radius:6px;border:1px solid var(--line)}
+  .pc .p{color:var(--accent-ink);border-color:color-mix(in srgb,var(--accent) 32%,var(--line));background:var(--accent-wash)}
+  .pc .c{color:var(--ink-soft)}
+
+  /* applied A: 白地×極太巨大（こっそり副業術／超基本型） */
+  .cA{background:#fffdf8;padding:8% 7%}
+  .cA .cap{border:2px solid #c8492f;border-radius:24px;color:#c8492f;font-size:.62rem;text-align:center;padding:4px 6px;font-weight:800;letter-spacing:.02em}
+  .cA .t{font-size:2.7rem;color:#211c17;text-align:center;line-height:1.02;margin-top:6%}
+  .cA .t em{font-style:normal;color:#c8492f}
+  .cA .sub{font-size:.62rem;color:#5a5348;text-align:center;margin-top:5%;line-height:1.5}
+  .cA .au{font-size:.6rem;color:#211c17;text-align:center;margin-top:3%;letter-spacing:.1em}
+  .cA .band{margin-top:auto;background:#f0ece1;border-radius:5px;padding:6% 7%;font-size:.54rem;color:#3a352c;line-height:1.7}
+  .cA .band .h{color:#c8492f;font-weight:800}
+  .cA .band .chk{display:block}
+
+  /* applied B: 数字を主役（月30万型） */
+  .cB{background:#fffdf8;padding:7% 6% 0}
+  .cB .t1{font-size:.7rem;color:#211c17;text-align:center;font-weight:800}
+  .cB .big{text-align:center;line-height:.86;margin-top:2%}
+  .cB .big .a{font-size:2.5rem;color:#211c17}
+  .cB .big .b{font-size:3.6rem;color:#c8492f;-webkit-text-stroke:1.5px #211c17;display:block;position:relative}
+  .cB .big .b::after{content:"";position:absolute;left:8%;right:8%;top:52%;height:5px;background:#211c17;transform:rotate(-6deg)}
+  .cB .t2{font-size:1.5rem;color:#211c17;text-align:center;margin-top:3%}
+  .cB .t2 em{font-style:normal;color:#c8492f}
+  .cB .band{margin-top:auto;background:#211c17;color:#fdf6e6;border-radius:5px 5px 0 0;padding:5% 6%;font-size:.56rem;text-align:center;line-height:1.6}
+  .cB .band .y{color:#ffd54a;font-weight:800}
+
+  /* applied C: 明朝×背景薄文字（note教科書型） */
+  .cC{background:#fffdf8;padding:9% 7%;overflow:hidden}
+  .cC .ghost{position:absolute;top:4%;right:2%;font-size:2rem;color:#efe9dc;line-height:.9;z-index:0;letter-spacing:-.04em}
+  .cC .t{font-size:2.3rem;color:#20344f;text-align:center;position:relative;z-index:1;line-height:1.08}
+  .cC .t em{font-style:normal;color:#c8492f}
+  .cC .sub{font-size:.6rem;color:#5a5348;text-align:center;margin-top:5%;position:relative;z-index:1;line-height:1.5}
+  .cC .au{font-size:.58rem;color:#20344f;text-align:center;margin-top:3%;position:relative;z-index:1;letter-spacing:.1em}
+  .cC .band{margin-top:auto;background:#20344f;color:#eaf0f7;border-radius:5px;padding:5% 6%;font-size:.55rem;line-height:1.65;position:relative;z-index:1}
+  .cC .band .y{color:#ffd54a;font-weight:800}
+
+  /* applied D: 淡色地×黄ハイライト（ゆる副業型） */
+  .cD{background:#eef2f6;padding:8% 7%}
+  .cD .t1{font-size:.72rem;color:#2a2622;text-align:center}
+  .cD .big{font-size:2.5rem;color:#211c17;text-align:center;line-height:1.05;margin-top:3%}
+  .cD .big .h{background:linear-gradient(transparent 55%,var(--hl) 55%);padding:0 4px}
+  .cD .sub{font-size:.6rem;color:#4a4a52;text-align:center;margin-top:5%;line-height:1.5}
+  .cD .au{font-size:.58rem;color:#2a2622;text-align:center;margin-top:3%;letter-spacing:.1em}
+  .cD .band{margin-top:auto;background:#fff;border:1px solid #d5dde5;border-radius:8px;padding:5% 6%;font-size:.54rem;color:#3a3a42;line-height:1.7}
+  .cD .band .chk{display:block}
+  .cD .band .h{color:#c8492f;font-weight:800}
+
+  /* decision */
+  .decide{margin-top:24px;display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:16px}
+  .step{background:var(--bg-elev);border:1px solid var(--line);border-radius:12px;padding:20px;box-shadow:var(--shadow)}
+  .step .n{font-family:system-ui,sans-serif;font-weight:900;color:var(--accent-ink);font-size:.78rem;letter-spacing:.1em}
+  .step h3{margin:8px 0 6px;font-size:1rem}
+  .step p{margin:0;font-size:.86rem;color:var(--ink-soft)}
+  .foot{margin-top:52px;padding-top:20px;border-top:1px solid var(--line);font-size:.8rem;color:var(--ink-soft)}
+
+  @media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+  .rise{opacity:0;transform:translateY(14px);animation:rise .55s ease forwards}
+  @keyframes rise{to{opacity:1;transform:none}}
+</style>
+
+<div class="page">
+  <div class="wrap">
+
+    <header class="rise">
+      <p class="eyebrow">Kindle 第1巻 ／ 表紙ディレクション v2（実売ベンチマーク版）</p>
+      <h1 class="gothic">売れてる副業本の「勝ちフォーマット」で<br>「副業、やめました。」を組む</h1>
+      <p class="lede">前回のミニマル寒色案は取り下げ。<b>あなたが選んだ実売5冊</b>を分解し、共通する“勝ちパターン”を抽出。その型で本書の実タイトルを組んだ新案を並べました。<br><span style="font-size:.86rem">※各カバーは<b>レイアウト見本</b>（イラスト・写真・実際の書影は最終制作で用意）。実売5冊の書影は著作権のため掲載せず、特徴をCSSで再現しています。</span></p>
+      <div class="callout">
+        <b>本書ならではの一線：</b> レイアウト（白地・極太巨大タイトル・帯・実績数字）は5冊を踏襲。ただし<b>金色・札束・「人生逆転」系の誇大コピーは使わない</b>（§3の前提を維持）。“稼ぐ煽り本”の外形に、“稼げた。それでも、やめた”という逆張りの中身を乗せて、棚で「同じ顔」をして中身で裏切るのが狙い。
+      </div>
+    </header>
+
+    <!-- STEP 1 -->
+    <section class="sect">
+      <p class="eyebrow">STEP 1</p>
+      <h2 class="title gothic">あなたが選んだ実売5冊 ── 何が効いているか</h2>
+      <p class="sub">奇抜さゼロ。この棚で“実際に売れている”定番の作り。5冊に共通するのは、白地・極太巨大タイトル・キーワードの囲み／ハイライト・下部の帯（悩み訴求＋実績数字）です。</p>
+      <div class="bm-grid">
+
+        <div class="card rise">
+          <div class="bm-top">
+            <div class="frame"><div class="mini m1 fatg">
+              <div class="cap">月収＋10万円</div><div class="t">副業術</div><div class="fig"></div><div class="band"></div>
+            </div></div>
+            <div class="meta">
+              <p class="real">日本能率協会マネジメントセンター／土谷愛</p>
+              <h3>月収+10万円 こっそり副業術</h3>
+              <ul><li><b>キーワードを丸囲み</b>（月収+10万円）</li><li>極太ゴシックの巨大「副業術」</li><li>下部帯に<b>悩みチェックリスト</b>5つ</li></ul>
+            </div>
+          </div>
+        </div>
+
+        <div class="card rise" style="animation-delay:.04s">
+          <div class="bm-top">
+            <div class="frame"><div class="mini m2 fatg">
+              <div class="dots"></div><div class="t1"><span class="h">ゆる副業</span>のはじめかた</div><div class="t2">アフィリ<br>エイト</div><div class="band"></div>
+            </div></div>
+            <div class="meta">
+              <p class="real">翔泳社／ヒトデ</p>
+              <h3>「ゆる副業」のはじめかた</h3>
+              <ul><li><b>黄色マーカー</b>でキーワードを強調</li><li>フラットイラストで親しみ</li><li>帯に<b>「安定的に月10万円！」＋実績</b></li></ul>
+            </div>
+          </div>
+        </div>
+
+        <div class="card rise" style="animation-delay:.08s">
+          <div class="bm-top">
+            <div class="frame"><div class="mini m3 fatg">
+              <div class="t1">会社員が働きながら</div><div class="big num">30</div><div class="t2">を稼ぐ起業法</div><div class="steps"><i></i><i></i><i></i><i></i></div>
+            </div></div>
+            <div class="meta">
+              <p class="real">東洋経済新報社／新井一</p>
+              <h3>月30万円を稼ぐ起業法</h3>
+              <ul><li><b>巨大な数字「30万円」</b>が主役</li><li>手描き風の極太で体温を出す</li><li>下部に<b>ステップ図解</b>（売上0→30万）</li></ul>
+            </div>
+          </div>
+        </div>
+
+        <div class="card rise" style="animation-delay:.12s">
+          <div class="bm-top">
+            <div class="frame"><div class="mini m4 fatg">
+              <div class="ghost">個人の力で稼ぐ</div><div class="note">note</div><div class="t">副業の<br>教科書</div><div class="band"></div>
+            </div></div>
+            <div class="meta">
+              <p class="real">ぱる出版／安斎響市</p>
+              <h3>note 副業の教科書</h3>
+              <ul><li>背景に<b>薄グレーの大文字</b>で世界観</li><li>オレンジ極太で主タイトル</li><li>帯に<b>「年間1000万稼ぐ筆者」</b>実績</li></ul>
+            </div>
+          </div>
+        </div>
+
+        <div class="card rise" style="animation-delay:.16s">
+          <div class="bm-top">
+            <div class="frame"><div class="mini m5 fatg">
+              <div class="t1">今さら聞けない</div><div class="big">副業の<br>超基本</div><div class="ico"><i></i><i></i><i></i><i></i></div><div class="badge"></div>
+            </div></div>
+            <div class="meta">
+              <p class="real">朝日新聞出版／監修 大村信夫・樫村周磨</p>
+              <h3>副業の超基本</h3>
+              <ul><li>紺の極太巨大タイトル＋オレンジ差し色</li><li>大量の<b>フラットアイコン</b>で網羅感</li><li><b>「185万部」バッジ</b>で信頼を担保</li></ul>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- STEP 2 -->
+    <section class="sect">
+      <p class="eyebrow">STEP 2</p>
+      <h2 class="title gothic">5冊に共通する「勝ちフォーマット」</h2>
+      <p class="sub">これを本書に移植します。前回私が外していたのは、まさにこの6点でした。</p>
+      <div class="formula">
+        <div class="fx"><span class="n">01</span><h3>白地ベースで明るい</h3><p>棚で暗く沈まない。清潔感＝信頼感。内省の黒地はサムネで埋もれる。</p></div>
+        <div class="fx"><span class="n">02</span><h3>極太・巨大タイトル</h3><p>面積の40〜50%。細い明朝より太いゴシック。3秒で読ませる。</p></div>
+        <div class="fx"><span class="n">03</span><h3>キーワードを囲む／光らせる</h3><p>丸囲み・黄色マーカーで“ここを見て”を作る。本書は数字と「やめました。」を。</p></div>
+        <div class="fx"><span class="n">04</span><h3>差し色は1〜2色</h3><p>5冊はコーラル/黄/オレンジ/紺。本書は<b>くすんだ朱＋紺</b>で誠実に。</p></div>
+        <div class="fx"><span class="n">05</span><h3>下部に“帯”を作る</h3><p>悩み訴求チェックリスト＋実績数字。情報量で「自分ごと」にさせる。</p></div>
+        <div class="fx"><span class="n">06</span><h3>実績数字を必ず載せる</h3><p>月10万／年1000万／185万部。本書は<b>「1000万／700万」</b>の対比が武器。</p></div>
+      </div>
+    </section>
+
+    <!-- STEP 3 -->
+    <section class="sect">
+      <p class="eyebrow">STEP 3</p>
+      <h2 class="title gothic">この型で「副業、やめました。」を組む ── 新4案</h2>
+      <p class="sub">5冊の勝ちフォーマットに、本書の逆張りタイトルと「1000万／700万」の対比を乗せたもの。差し色は誠実寄り（くすみ朱＋紺）、金・札束・誇大コピーは不採用。</p>
+
+      <div class="covers">
+
+        <!-- A -->
+        <div class="card rise">
+          <div class="frame"><div class="cover cA fatg">
+            <div class="cap">稼げた。1000万。それでも──</div>
+            <div class="t">副業、<em>やめ<br>ました。</em></div>
+            <div class="sub">700万溶かした僕が、あなたに勧めない理由</div>
+            <div class="au">軌道キャリ</div>
+            <div class="band">
+              <span class="chk">☑ 共働き・子育てで、本業だけでも手一杯</span>
+              <span class="chk">☑ 「みんなやってる」と焦っている</span>
+              <span class="chk">☑ 稼ぐ前に、失うものを知っておきたい</span>
+              <span class="h">→ 1つでも当てはまるなら、始める前に。</span>
+            </div>
+          </div></div>
+          <div class="cov-meta">
+            <p class="name"><span class="id">A</span> 白地×極太巨大＋悩み帯</p>
+            <p class="from">「こっそり副業術」「超基本」型 ／ <b>本命</b></p>
+            <p>王道の勝ち筋そのまま。巨大な「やめました。」＋丸囲みの逆説コピー＋下部に悩みチェックリスト。5冊と“同じ顔”で棚に並び、中身で裏切る。</p>
+            <div class="pc"><span class="p">サムネ最強</span><span class="p">情報量◎</span><span class="c">王道ゆえ既視感</span></div>
+          </div>
+        </div>
+
+        <!-- B -->
+        <div class="card rise" style="animation-delay:.04s">
+          <div class="frame"><div class="cover cB fatg">
+            <div class="t1">副業で稼いだ</div>
+            <div class="big num"><span class="a">＋1000万</span><span class="b">−700万</span></div>
+            <div class="t2">副業、<em>やめました。</em></div>
+            <div class="band">稼げなかったから、じゃない。<br><span class="y">稼げた。そのうえで、割に合わなかった。</span></div>
+          </div></div>
+          <div class="cov-meta">
+            <p class="name"><span class="id">B</span> 数字を主役に</p>
+            <p class="from">「月30万円」型</p>
+            <p>「＋1000万 → −700万」の落差を最大の視覚要素に。打ち消し線で“溶かした”を可視化。瞬間的な引きは最強。金色を排して煽り棚に落とさない。</p>
+            <div class="pc"><span class="p">引き最強</span><span class="p">逆説が一目で</span><span class="c">やや強め</span></div>
+          </div>
+        </div>
+
+        <!-- C -->
+        <div class="card rise" style="animation-delay:.08s">
+          <div class="frame"><div class="cover cC fatg">
+            <div class="ghost">稼いで、<br>溶かした</div>
+            <div class="t">副業、<br><em>やめました。</em></div>
+            <div class="sub">1000万稼いで700万溶かした僕が、勧めない理由</div>
+            <div class="au">軌道キャリ</div>
+            <div class="band">副業歴6年・三児の父が、<span class="y">家族との時間を取り戻すまで</span>の記録。</div>
+          </div></div>
+          <div class="cov-meta">
+            <p class="name"><span class="id">C</span> 紺×背景薄文字＋帯</p>
+            <p class="from">「note 副業の教科書」型</p>
+            <p>背景に薄グレーで「稼いで、溶かした」の世界観、主タイトルは紺の極太。教科書系の落ち着き＋情報量。誠実トーンと巨大タイトルの両立案。</p>
+            <div class="pc"><span class="p">誠実×売れ筋</span><span class="p">世界観</span><span class="c">数字の押しは弱め</span></div>
+          </div>
+        </div>
+
+        <!-- D -->
+        <div class="card rise" style="animation-delay:.12s">
+          <div class="frame"><div class="cover cD fatg">
+            <div class="t1">無理して"上乗せ"する前に</div>
+            <div class="big">副業、<br><span class="h">やめました。</span></div>
+            <div class="sub">1000万稼いで700万溶かした僕が、あなたに勧めない理由</div>
+            <div class="au">軌道キャリ</div>
+            <div class="band">
+              <span class="chk">☑ 睡眠と家族の時間を削る前提になってない？</span>
+              <span class="chk">☑ 1円にもならない半年、耐えられる？</span>
+              <span class="h">→ 答えは、本書のチェックリストで。</span>
+            </div>
+          </div></div>
+          <div class="cov-meta">
+            <p class="name"><span class="id">D</span> 淡色地×黄マーカー</p>
+            <p class="from">「ゆる副業」型</p>
+            <p>淡い地に「やめました。」を黄マーカーで。5冊で最も柔らかい親しみ路線。ただし本書の重い中身とトーンが少しズレるリスクあり。比較用。</p>
+            <div class="pc"><span class="p">親しみ</span><span class="c">中身と温度差</span></div>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- DECIDE -->
+    <section class="sect">
+      <p class="eyebrow">STEP 4</p>
+      <h2 class="title gothic">私の推しと、次の一手</h2>
+      <p class="sub">推し順は <b>A（悩み帯）→ B（数字）→ C（紺・教科書）</b>。Aは5冊の勝ち筋を最も忠実になぞりつつ逆説で差別化、Bは引きが最強、Cは誠実さと売れ筋の折衷。Dは親しみが出る分だけ中身と温度差が出るので候補外寄り。</p>
+      <div class="decide">
+        <div class="step"><span class="n">01 ／ 選ぶ</span><h3>案を1つ（or 混ぜ方）</h3><p>「Aでいく」「Aの帯＋Bの数字」等でOK。差し色（くすみ朱／紺／黄）の希望もあれば。</p></div>
+        <div class="step"><span class="n">02 ／ 私が作る</span><h3>発注一式</h3><p>選んだ案で§3ブリーフを更新し、<b>生成AI用プロンプト</b>と<b>デザイナー発注文</b>（文字・色・帯コピー確定）を用意。</p></div>
+        <div class="step"><span class="n">03 ／ 仕上げ</span><h3>実データ化</h3><p>KDP規格（2,560×1,600px）で書き出し、AI生成時は画像のAI利用をKDPで開示。</p></div>
+      </div>
+    </section>
+
+    <footer class="foot">
+      ベンチマーク5冊（あなた提供）：月収+10万円 こっそり副業術（日本能率協会）／「ゆる副業」のはじめかた（翔泳社）／月30万円を稼ぐ起業法（東洋経済）／note 副業の教科書（ぱる出版）／副業の超基本（朝日新聞出版）。書影は著作権のため非掲載、特徴をCSSで再現。<br>
+      本書側前提：<b>kindle/企画/第1巻_出版パッケージ.md §3・§4</b>。金・札束・誇大コピーは不採用のまま、レイアウトのみ勝ちフォーマットへ移植。
+    </footer>
+
+  </div>
+</div>
