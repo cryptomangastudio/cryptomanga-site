@@ -1,0 +1,190 @@
+<title>表紙テンプレート（全6巻）｜消耗しない所得の増やし方</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+:root{
+  --paper:#efece5; --panel:#f7f5f0; --ink:#232430; --ink-soft:#5c5d6e; --line:#dcd8cf;
+  --cream:#FAF9F6; --charcoal:#2B2D42; --charcoal-soft:#5a5c70;
+  --round:'Hiragino Maru Gothic ProN','ヒラギノ丸ゴ ProN','Zen Maru Gothic','Quicksand',system-ui,sans-serif;
+  --gothic:'Hiragino Kaku Gothic ProN','Yu Gothic','YuGothic','Noto Sans JP',sans-serif;
+}
+@media (prefers-color-scheme:dark){
+  :root{ --paper:#15161b; --panel:#1e1f27; --ink:#e9e8ee; --ink-soft:#a1a2b0; --line:#2c2e39; }
+}
+:root[data-theme="light"]{ --paper:#efece5; --panel:#f7f5f0; --ink:#232430; --ink-soft:#5c5d6e; --line:#dcd8cf; }
+:root[data-theme="dark"]{ --paper:#15161b; --panel:#1e1f27; --ink:#e9e8ee; --ink-soft:#a1a2b0; --line:#2c2e39; }
+*{box-sizing:border-box}
+body{margin:0;background:var(--paper);color:var(--ink);font-family:var(--gothic);line-height:1.7;}
+.wrap{max-width:74rem;margin:0 auto;padding:2.4rem 1.2rem 5rem;}
+
+/* ---- ヘッダ ---- */
+.head{border-bottom:1px solid var(--line);padding-bottom:1.6rem;margin-bottom:2rem;}
+.eyebrow{font-size:.72rem;letter-spacing:.28em;font-weight:700;color:var(--ink-soft);margin:0 0 .5rem;}
+.head h1{font-family:var(--round);font-size:clamp(1.5rem,4.5vw,2.1rem);font-weight:800;margin:0 0 .5rem;letter-spacing:.01em;text-wrap:balance;}
+.head p{margin:.2rem 0 0;color:var(--ink-soft);font-size:.92rem;max-width:52rem;}
+.specs{display:flex;flex-wrap:wrap;gap:.5rem;margin-top:1.1rem;}
+.chip{font-size:.78rem;font-weight:700;letter-spacing:.02em;background:var(--panel);border:1px solid var(--line);border-radius:999px;padding:.34rem .8rem;color:var(--ink);}
+.chip b{color:var(--ink-soft);font-weight:600;margin-right:.35em;}
+
+/* ---- 使い方メモ ---- */
+.howto{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:1.1rem 1.25rem;margin-bottom:2.4rem;}
+.howto h2{font-family:var(--round);font-size:1rem;font-weight:800;margin:0 0 .6rem;}
+.howto ol{margin:0;padding-left:1.2rem;}
+.howto li{font-size:.88rem;color:var(--ink-soft);margin-bottom:.35rem;line-height:1.75;}
+.howto li b{color:var(--ink);}
+.howto .fonts{margin-top:.7rem;font-size:.82rem;color:var(--ink-soft);}
+.howto code{font-family:ui-monospace,Menlo,Consolas,monospace;background:rgba(128,128,128,.14);padding:.05em .4em;border-radius:5px;font-size:.85em;}
+
+/* ---- カバーグリッド ---- */
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(232px,1fr));gap:2.2rem 1.6rem;align-items:start;}
+.slot{display:flex;flex-direction:column;gap:.7rem;}
+
+/* ===== 表紙本体 1000 x 1600 ===== */
+.cover{
+  width:100%; aspect-ratio:1000/1600; container-type:inline-size;
+  background:var(--cream); border-radius:5px; overflow:hidden; position:relative;
+  box-shadow:0 1px 3px rgba(30,25,15,.16), 0 22px 40px -20px rgba(30,25,15,.55);
+  display:flex; flex-direction:column; color:var(--charcoal);
+}
+.body{ flex:1 1 auto; padding:7.5cqw 7cqw 4cqw; display:flex; flex-direction:column; align-items:center; }
+.series{display:flex;align-items:center;gap:3cqw;width:100%;justify-content:center;color:var(--charcoal-soft);}
+.series .rule{height:0;flex:1;max-width:11cqw;border-top:1px solid rgba(43,45,66,.32);}
+.series span{font-family:var(--gothic);font-weight:700;font-size:2.9cqw;letter-spacing:.16em;white-space:nowrap;}
+.tag{
+  align-self:flex-end;margin:3.4cqw .5cqw -.5cqw 0;font-family:var(--round);font-weight:700;font-size:2.9cqw;
+  color:var(--cv-accent);border:1.5px dashed var(--cv-accent);border-radius:40px;padding:1.2cqw 3cqw;
+  transform:rotate(-3deg);background:color-mix(in srgb,var(--cv-accent) 8%,transparent);
+}
+.title{
+  margin-top:2.4cqw;width:100%;text-align:center;font-family:var(--round);font-weight:900;color:var(--charcoal);
+  font-size:calc(13.5cqw * var(--tscale,1));line-height:1.04;letter-spacing:.005em;
+}
+.title .lt{color:var(--cv-accent);font-size:.9em;padding:0 .04em;}
+.title .u{position:relative;display:inline-block;}
+.title .u::after{content:"";position:absolute;left:-3%;right:-3%;bottom:-2.4cqw;height:2.6cqw;
+  background:var(--cv-accent);border-radius:40px;opacity:.9;
+  clip-path:polygon(0 55%,6% 12%,12% 55%,18% 12%,24% 55%,30% 12%,36% 55%,42% 12%,48% 55%,54% 12%,60% 55%,66% 12%,72% 55%,78% 12%,84% 55%,90% 12%,96% 55%,100% 30%,100% 100%,0 100%);}
+.ph{
+  margin-top:9cqw;width:42cqw;height:42cqw;border-radius:50%;border:2px dashed rgba(43,45,66,.26);
+  display:flex;align-items:center;justify-content:center;text-align:center;color:rgba(43,45,66,.42);
+  font-family:var(--round);font-weight:500;font-size:2.9cqw;line-height:1.55;
+}
+.catch{margin-top:auto;padding-top:5.5cqw;text-align:center;font-family:var(--round);color:var(--charcoal);}
+.catch .q{font-weight:700;font-size:3.9cqw;color:var(--charcoal-soft);}
+.catch .big{font-weight:900;font-size:6cqw;line-height:1.16;margin-top:.5cqw;}
+.catch .big mark{background:linear-gradient(transparent 58%,color-mix(in srgb,var(--cv-accent) 30%,transparent) 58%);color:inherit;padding:0 .08em;}
+.obi{
+  flex:0 0 auto;min-height:31cqh;position:relative;background:var(--cv-accent);
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  padding:7cqw 6cqw 5cqw;text-align:center;color:#fff;
+}
+.obi .tab{
+  position:absolute;top:-3.2cqw;left:50%;transform:translateX(-50%);background:var(--cream);
+  color:var(--cv-accent);font-family:var(--round);font-weight:900;font-size:3cqw;letter-spacing:.01em;
+  padding:1.3cqw 4.2cqw;border-radius:40px;box-shadow:0 5px 12px -6px rgba(0,0,0,.4);white-space:nowrap;
+}
+.obi .sub{font-family:var(--round);font-weight:900;font-size:4.4cqw;line-height:1.42;text-shadow:0 1px 0 rgba(0,0,0,.08);}
+.obi .sub b{background:rgba(255,255,255,.2);border-radius:5px;padding:0 .12em;}
+.obi .author{margin-top:2.6cqw;font-family:var(--gothic);font-weight:700;font-size:3.1cqw;letter-spacing:.14em;}
+.obi .author em{font-style:normal;font-weight:500;font-size:2.5cqw;opacity:.85;margin-right:.5em;}
+
+/* ---- カード下のメタ ---- */
+.meta{font-size:.8rem;color:var(--ink-soft);line-height:1.55;}
+.meta .vt{font-family:var(--round);font-weight:800;color:var(--ink);font-size:.92rem;display:block;margin-bottom:.15rem;}
+.meta .sw{display:inline-block;width:.72em;height:.72em;border-radius:50%;vertical-align:-1px;margin-right:.35em;}
+.meta code{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:.82em;}
+</style>
+
+<div class="wrap">
+  <header class="head">
+    <p class="eyebrow">KINDLE COVER SYSTEM ／ 全6巻テンプレート</p>
+    <h1>シリーズ「消耗しない所得の増やし方」表紙テンプレート</h1>
+    <p>白地 × 極太丸ゴシック × 下30%カラー帯（帯の色だけ巻ごとに変える＝シリーズ統一）。Canvaでこの見た目を再現するための下敷きです。※既存「デザイン案A」を、確定タイトル・新サブタイトル・「三児の父」非開示で全6巻に展開。</p>
+    <div class="specs">
+      <span class="chip"><b>推奨サイズ</b>2560 × 1600 px（縦長・比率1.6:1）</span>
+      <span class="chip"><b>形式</b>JPEG／RGB</span>
+      <span class="chip"><b>著者</b>軌道キャリ</span>
+      <span class="chip"><b>価格</b>①⑤⑥④③=¥500／②=¥700</span>
+    </div>
+  </header>
+
+  <section class="howto">
+    <h2>Canvaでの作り方（このテンプレの再現手順）</h2>
+    <ol>
+      <li>新規デザイン →「カスタムサイズ」で <b>1600 × 2560 px</b> を作成（縦長）。</li>
+      <li>背景を <b>クリーム（#FAF9F6）</b>。下から約30%を、その巻の<b>アクセント色で塗った帯</b>に。</li>
+      <li>タイトルは<b>極太の丸ゴシック</b>で特大に。文字の下に、手書き風のギザギザ下線をアクセント色で。</li>
+      <li>帯の上辺にまたがる<b>白い楕円タブ</b>（小見出し）→ 帯の中に<b>サブタイトル</b>（白・太字、キーワードだけ半透明マーカー）→ 最下部に<b>著／軌道キャリ</b>。</li>
+      <li>中央の丸は<b>任意</b>。イラストを置いても、余白のままでも可（ビジネス書はタイプ主体でも売れます）。</li>
+      <li>できたら <b>JPEG（2560×2560以下・RGB）</b> で書き出し → KDPの表紙にアップロード。</li>
+    </ol>
+    <p class="fonts">推奨フォント（Canvaにあり）：タイトル・キャッチ＝<code>Zen Maru Gothic</code>（丸ゴシック太め）／シリーズ名・著者名＝<code>Noto Sans JP</code>。※このプレビューはお使いの端末の丸ゴシックで表示されています（実制作はCanvaの上記フォントでOK）。</p>
+  </section>
+
+  <div class="grid" id="grid"></div>
+</div>
+
+<script>
+const AUTHOR = "軌道キャリ";
+const COVERS = [
+  { n:1, c:"#F0592B", tag:"稼いだ僕の、正直な告白",
+    title:'副業は<br>するな<span class="lt">！</span>', ts:1.02,
+    q:"「稼いだ。そのうえで、", big:'<mark>割に合わなかった。</mark>」',
+    tab:"始める前に、これだけは。",
+    sub:'1000万稼いで<b>700万溶かし</b>、<br>家族まで失いかけた僕が、勧めない理由',
+    subline:"1000万稼いで700万溶かし、家族まで失いかけた僕が、あなたに勧めない理由", price:"¥500" },
+  { n:2, c:"#2E6FB0", tag:"遠回りの果ての、結論",
+    title:'副業<span class="lt">＜</span>転職', ts:1.15,
+    q:"「数千時間より、", big:'<mark>十数時間だった。</mark>」',
+    tab:"いちばん割のいい選択",
+    sub:'数千時間が<b>−100万</b>、<br>十数時間が年収<b>＋300万</b>',
+    subline:"数千時間がマイナス100万、十数時間が年収プラス300万", price:"¥700" },
+  { n:3, c:"#2E9E5B", tag:'昇給の"負け組"が見た景色',
+    title:'地味昇給の<br>ススメ', ts:.92,
+    q:"「頑張りました、では", big:'<mark>上がらない。</mark>」',
+    tab:"静かに上がる人の習慣",
+    sub:'「頑張りました」では上がらない。<br>静かに昇給する人の習慣',
+    subline:"「頑張りました」では、上がらない。静かに昇給する人の習慣", price:"¥500" },
+  { n:4, c:"#D63C4A", tag:"夫婦の、お金と時間の話",
+    title:'副業崩壊', ts:1.18,
+    q:"「家族のため、が", big:'<mark>家族を削る。</mark>」',
+    tab:"副業を足す前に",
+    sub:'「家族のため」はすぐやめろ。<br>夫婦のお金と時間の話',
+    subline:"「家族のため」はすぐやめろ。夫婦のお金と時間の話", price:"¥500" },
+  { n:5, c:"#0E9B94", tag:"損得計算を、始める前に",
+    title:'時給<br>300円', ts:1.12,
+    q:"「その副業、", big:'<mark>時給いくら？</mark>」',
+    tab:"電卓を、一度だけ。",
+    sub:'損をしない副業を始める前の、<br>損得計算',
+    subline:"損をしない副業を始める前の損得計算", price:"¥500" },
+  { n:6, c:"#6C5CE7", tag:"稼いでも、楽にならない",
+    title:'副業の罠', ts:1.18,
+    q:'「"もっと"から、', big:'<mark>降りる。</mark>」',
+    tab:"一生楽にならない理由",
+    sub:'1000万稼いで分かった<br>"一生楽にならない"真実',
+    subline:'1000万稼いで分かった"一生楽にならない"真実', price:"¥500" },
+];
+
+const grid = document.getElementById("grid");
+grid.innerHTML = COVERS.map(v => `
+  <div class="slot">
+    <div class="cover" style="--cv-accent:${v.c};--tscale:${v.ts}">
+      <div class="body">
+        <div class="series"><span class="rule"></span><span>消耗しない所得の増やし方　VOL.${v.n}</span><span class="rule"></span></div>
+        <div class="tag">${v.tag}</div>
+        <h2 class="title"><span class="u">${v.title}</span></h2>
+        <div class="ph">イラスト<br>または余白<br><span style="font-size:.85em;opacity:.8">（任意）</span></div>
+        <div class="catch"><div class="q">${v.q}</div><div class="big">${v.big}</div></div>
+      </div>
+      <div class="obi">
+        <div class="tab">${v.tab}</div>
+        <div class="sub">${v.sub}</div>
+        <div class="author"><em>著</em>${AUTHOR}</div>
+      </div>
+    </div>
+    <div class="meta">
+      <span class="vt">第${v.n}巻　${v.price}</span>
+      <span class="sw" style="background:${v.c}"></span><code>${v.c}</code><br>
+      サブ：${v.subline}
+    </div>
+  </div>`).join("");
+</script>
