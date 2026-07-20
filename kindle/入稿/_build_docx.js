@@ -85,6 +85,8 @@ function parseBody(md) {
     if (t === '' ) continue;
     if (t === '---') continue;
     if (t.startsWith('> ')) continue;
+    // 編集メモ（本番の本には出さない）を除去：QR配置メモ・アセットパス注記など
+    if (t.includes('QRコード画像を配置') || t.includes('kindle/assets') || t.includes('画像＝') || t.includes('画像=`')) continue;
     if (t.startsWith('## ')) {
       const title = clean(t.slice(3).trim());
       const id = `ch${n++}`;
@@ -142,7 +144,7 @@ function build(v) {
   children.push(new Paragraph({ children: [new PageBreak()] }));
   children.push(h1('奥付'));
   children.push(p(`${v.main}──${v.sub}`, { after: 200 }));
-  children.push(p('［発売日を記載］　初版発行', { after: 120 }));
+  children.push(p('2026年　初版発行', { after: 120 }));
   children.push(p(`著　者　${AUTHOR}`, { after: 60 }));
   children.push(p(`発　行　${PUBLISHER}`, { after: 200 }));
   children.push(p('本書の内容の無断転載・複製を禁じます。', { after: 60 }));
