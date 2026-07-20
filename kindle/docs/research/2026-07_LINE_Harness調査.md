@@ -76,3 +76,36 @@
 - セキュリティ: kontaworks.com/line-harness-security/
 - LINE料金: developers.line.biz（Messaging API料金）／ lycbiz.com（公式プラン）／ liskul.com／ line-sm.com（2026-10改定）
 - 比較: lme.jp ／ l-marketing.jp（エルメ/Lステップ）
+
+---
+
+## 6. 別セッションでの構築ハンドオフ（著者判断＝最初から組む）
+> 著者方針（2026-07-19）：立ち上げの配信は素のLINE公式で回すが、**LINE Harnessは最初から別セッションで構築しておく**。以下を新しいセッションの冒頭にそのまま貼れば、文脈ゼロから着手できる。
+
+### 新セッションに渡す指示（コピペ用）
+```
+LINE Harness（OSS: github.com/Shudesu/line-harness-oss）を、当方のCloudflare上に
+npx create-line-harness で構築し、既存のLINE公式アカウントに接続してください。
+目的＝Kindle出版「消耗しない所得の増やし方」(著者:軌道キャリ/法人:CryptoManga Studios)の
+読者リストを、ステップ配信で自動育成すること。配信文面は
+kindle/企画/LINE運用パック(全巻).md をそのまま移植する。
+セキュリティ最優先（トークン/顧客データの扱い）。構築後、MCP経由で私(Claude)から
+運用できる状態にする。
+```
+
+### そのセッションが必要とするもの（著者が用意）
+1. **LINE公式アカウント**（＝素の運用と同一でOK。今の `lin.ee/UB707h4`）
+2. **Messaging APIチャネルの発行**（LINE Developersコンソールで、その公式アカウントにMessaging APIを有効化）→ **チャネルアクセストークン／チャネルシークレット**
+3. **Cloudflareアカウント**（無料枠でOK）＋ログイン
+4. Node.js 22 / pnpm が動く環境（＝Claude Codeセッションの環境で可）
+
+### 注意（セキュリティ）
+- チャネルアクセストークン・Cloudflare認証情報は**機密**。共有はその構築セッション内に限定し、リポジトリにコミットしない（.gitignore徹底）。
+- 顧客（友だち）データは自分のCloudflare上に載る＝**乗っ取り＝情報漏洩**。二段階認証を必ず。
+- **友だちデータの定期エクスポート**をルーティン化（ツール消滅・障害の保険）。
+- まずは**テスト用の別LINEアカウント**で一連の配信を試してから本番接続。
+
+### 本セッション（Kindle制作）とHarnessセッションの分担
+- 本セッション＝原稿・表紙・KDP入稿・note記事・戦略（`docs/10`）。
+- Harnessセッション＝LINE基盤の構築・運用（Phase2で本格化）。
+- 文面は `LINE運用パック(全巻).md` を単一の正として両セッションが参照。
