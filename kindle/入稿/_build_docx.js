@@ -2,7 +2,7 @@ const fs = require('fs');
 const path = require('path');
 const {
   Document, Packer, Paragraph, TextRun, HeadingLevel, AlignmentType,
-  PageBreak, LevelFormat, BorderStyle, Bookmark, InternalHyperlink
+  PageBreak, LevelFormat, BorderStyle, Bookmark, InternalHyperlink, ExternalHyperlink
 } = require('docx');
 
 const BASE = '/home/user/cryptomanga-site/kindle/企画';
@@ -35,9 +35,27 @@ function codeBlocks(md) {
   return blocks;
 }
 
+// テキスト中の https?://… を検出し、TextRun と ExternalHyperlink の配列にする（Kindleでタップして飛べるようにする）
+function runsFromText(text, opts = {}) {
+  const base = { font: opts.font || BODYFONT, size: opts.size || 21, bold: !!opts.bold, color: opts.color };
+  const re = /https?:\/\/[^\s、。）)]+/g;
+  const runs = [];
+  let last = 0, m;
+  while ((m = re.exec(text)) !== null) {
+    if (m.index > last) runs.push(new TextRun({ text: text.slice(last, m.index), ...base }));
+    runs.push(new ExternalHyperlink({
+      link: m[0],
+      children: [new TextRun({ text: m[0], font: base.font, size: base.size, bold: base.bold, color: '0563C1', underline: {} })],
+    }));
+    last = m.index + m[0].length;
+  }
+  if (last < text.length) runs.push(new TextRun({ text: text.slice(last), ...base }));
+  if (!runs.length) runs.push(new TextRun({ text, ...base }));
+  return runs;
+}
 function p(text, opts = {}) {
   return new Paragraph({
-    children: [new TextRun({ text, font: opts.font || BODYFONT, size: opts.size || 21, bold: !!opts.bold, color: opts.color })],
+    children: runsFromText(text, opts),
     alignment: opts.align,
     spacing: { after: opts.after == null ? 160 : opts.after, line: 360, ...(opts.before ? { before: opts.before } : {}) },
   });
@@ -45,7 +63,7 @@ function p(text, opts = {}) {
 function bullet(text) {
   return new Paragraph({
     numbering: { reference: 'b', level: 0 },
-    children: [new TextRun({ text, font: BODYFONT, size: 21 })],
+    children: runsFromText(text),
     spacing: { after: 100, line: 360 },
   });
 }
