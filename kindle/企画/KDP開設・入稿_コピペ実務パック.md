@@ -67,6 +67,38 @@
 - 内容紹介（商品説明）: 各巻の`第N巻_出版パッケージ.md`§2を**そのまま貼る**（冒頭3行がスマホ試し読み範囲）
 - ※禁止語（無料/ベストセラー/必ず等）・商標は使わない
 
+### フリガナ／ローマ字（KDP日本語版が各欄で要求。そのままコピペ）
+> ⚠️ ローマ字欄は **括弧・ピリオド・コンマ・アポストロフィ等の記号NG**。以下は記号（！＜「」。、"）を落として制約クリア済み。フリガナは読点なし・半角スペース区切り。
+
+**全巻共通**
+- 著者名 軌道キャリ → フリガナ `キドウキャリ` ／ ローマ字 `Kidou Kyari`
+- シリーズ名 消耗しない所得の増やし方 → フリガナ `ショウモウシナイショトクノフヤシカタ` ／ ローマ字 `Shomo Shinai Shotoku no Fuyashikata`
+- レーベル：空欄でOK（オプション）
+
+**① 副業はするな！**
+- タイトル：フリガナ `フクギョウハスルナ` ／ ローマ字 `Fukugyo wa Suruna`
+- サブ：フリガナ `センマンカセイデナナヒャクマントカシ カゾクマデウシナイカケタボクガ アナタニフクギョウヲススメナイリユウ` ／ ローマ字 `Senman Kaseide Nanahyakuman Tokashi Kazoku made Ushinaikaketa Boku ga Anata ni Fukugyo o Susumenai Riyu`
+
+**② 副業＜転職**
+- タイトル：フリガナ `フクギョウテンショク` ／ ローマ字 `Fukugyo Tenshoku` ※「＜」は読み・ローマ字では落とす
+- サブ：フリガナ `スウセンジカンガマイナスヒャクマン ジュウスウジカンガネンシュウプラスサンビャクマン` ／ ローマ字 `Susen Jikan ga Mainasu Hyakuman Jusu Jikan ga Nenshu Purasu Sanbyakuman`
+
+**③ 地味昇給のススメ**
+- タイトル：フリガナ `ジミショウキュウノススメ` ／ ローマ字 `Jimi Shokyu no Susume`
+- サブ：フリガナ `ガンバリマシタデハアガラナイ シズカニショウキュウスルヒトノシュウカン` ／ ローマ字 `Ganbarimashita dewa Agaranai Shizuka ni Shokyu suru Hito no Shukan`
+
+**④ 副業崩壊**
+- タイトル：フリガナ `フクギョウホウカイ` ／ ローマ字 `Fukugyo Hokai`
+- サブ：フリガナ `カゾクノタメハスグヤメロ フウフノオカネトジカンノハナシ` ／ ローマ字 `Kazoku no Tame wa Sugu Yamero Fufu no Okane to Jikan no Hanashi`
+
+**⑤ 時給300円**
+- タイトル：フリガナ `ジキュウサンビャクエン` ／ ローマ字 `Jikyu Sanbyaku En`
+- サブ：フリガナ `ソンヲシナイフクギョウヲハジメルマエノソントクケイサン` ／ ローマ字 `Son o Shinai Fukugyo o Hajimeru Mae no Sontoku Keisan`
+
+**⑥ 副業の罠**
+- タイトル：フリガナ `フクギョウノワナ` ／ ローマ字 `Fukugyo no Wana`
+- サブ：フリガナ `センマンカセイデワカッタ イッショウラクニナラナイシンジツ` ／ ローマ字 `Senman Kaseide Wakatta Issho Raku ni Naranai Shinjitsu`
+
 ### 入稿直前チェック（各巻共通・Claudeが原稿側で担保済みの項目含む）
 - [ ] 巻末CTAの［LINE URL/QR］差し込み済みか（lin.ee/UB707h4＋QR画像）
 - [ ] 本文に外部アフィリリンクが無いか（=無し。サービス名のみが正）
