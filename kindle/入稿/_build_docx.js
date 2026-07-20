@@ -2,7 +2,7 @@ const fs = require('fs');
 const path = require('path');
 const {
   Document, Packer, Paragraph, TextRun, HeadingLevel, AlignmentType,
-  PageBreak, LevelFormat, BorderStyle
+  PageBreak, LevelFormat, BorderStyle, Bookmark, InternalHyperlink
 } = require('docx');
 
 const BASE = '/home/user/cryptomanga-site/kindle/企画';
@@ -49,9 +49,22 @@ function bullet(text) {
     spacing: { after: 100, line: 360 },
   });
 }
-function h1(text) {
-  return new Paragraph({ heading: HeadingLevel.HEADING_1, spacing: { before: 480, after: 220 },
-    children: [new TextRun({ text, font: HEADFONT, size: 30, bold: true })] });
+function h1(text, bmId) {
+  const run = new TextRun({ text, font: HEADFONT, size: 30, bold: true });
+  const children = bmId ? [new Bookmark({ id: bmId, children: [run] })] : [run];
+  return new Paragraph({ heading: HeadingLevel.HEADING_1, spacing: { before: 480, after: 220 }, children });
+}
+// クリック可能な目次ページ（KDPの「目次がありません」対策）
+function tocPage(toc) {
+  const out = [];
+  out.push(new Paragraph({ heading: HeadingLevel.HEADING_1, spacing: { before: 240, after: 220 },
+    children: [new TextRun({ text: '目次', font: HEADFONT, size: 30, bold: true })] }));
+  for (const e of toc) {
+    out.push(new Paragraph({ spacing: { after: 120, line: 360 },
+      children: [new InternalHyperlink({ anchor: e.id, children: [new TextRun({ text: e.title, font: BODYFONT, size: 22 })] })] }));
+  }
+  out.push(new Paragraph({ children: [new PageBreak()] }));
+  return out;
 }
 function h2(text) {
   return new Paragraph({ heading: HeadingLevel.HEADING_2, spacing: { before: 300, after: 140 },
@@ -61,6 +74,8 @@ function h2(text) {
 function parseBody(md) {
   const lines = md.split('\n');
   const out = [];
+  const toc = [];
+  let n = 0;
   let started = false;
   for (let i = 1; i < lines.length; i++) {
     const raw = lines[i];
@@ -70,13 +85,19 @@ function parseBody(md) {
     if (t === '' ) continue;
     if (t === '---') continue;
     if (t.startsWith('> ')) continue;
-    if (t.startsWith('## ')) { out.push(h1(clean(t.slice(3).trim()))); continue; }
+    if (t.startsWith('## ')) {
+      const title = clean(t.slice(3).trim());
+      const id = `ch${n++}`;
+      toc.push({ id, title });
+      out.push(h1(title, id));
+      continue;
+    }
     if (t.startsWith('### ')) { out.push(h2(clean(t.slice(4).trim()))); continue; }
     if (t.startsWith('- ')) { out.push(bullet(clean(t.slice(2).trim()))); continue; }
     if (t.startsWith('▶') || t.startsWith('　▶')) { out.push(p(clean(t))); continue; }
     out.push(p(clean(t)));
   }
-  return out;
+  return { children: out, toc };
 }
 
 function titlePage(v) {
@@ -100,6 +121,8 @@ function build(v) {
   const aiNote = fb[4] || [];
   const profile = fb[2] || [];
 
+  const { children: bodyChildren, toc } = parseBody(bodyMd);
+
   const children = [];
   children.push(...titlePage(v));
   // 免責
@@ -107,8 +130,10 @@ function build(v) {
   children.push(...fromBlock(disclaimer.filter(l => !l.startsWith('■'))));
   if (aiNote.length) { children.push(p('', { after: 120 })); children.push(...fromBlock(aiNote)); }
   children.push(new Paragraph({ children: [new PageBreak()] }));
+  // 目次（クリック可能・KDPの「目次がありません」対策）
+  children.push(...tocPage(toc));
   // 本文（まえがき〜おわりに〜出典）
-  children.push(...parseBody(bodyMd));
+  children.push(...bodyChildren);
   // 著者プロフィール
   children.push(new Paragraph({ children: [new PageBreak()] }));
   children.push(h1('著者について'));
