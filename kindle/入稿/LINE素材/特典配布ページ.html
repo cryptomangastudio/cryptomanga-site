@@ -1,0 +1,350 @@
+<title>無料特典パック｜消耗しない所得の増やし方（軌道キャリ）</title>
+<style>
+  :root{
+    --ground:#F7F4EC; --surface:#FFFFFF; --surface-2:#FBF7EE;
+    --ink:#232019; --muted:#6B6456; --gold:#9A7620; --gold-line:#C9A24B;
+    --gold-soft:rgba(154,118,32,.10); --line:#E7E0CD;
+    --navy:#16202E; --navy-2:#1E2F45; --on-navy:#F4EFE6;
+    --font:"Hiragino Kaku Gothic ProN","Hiragino Sans","Yu Gothic",YuGothic,"Noto Sans JP","IPAPGothic",system-ui,sans-serif;
+    --maxw:660px;
+  }
+  @media (prefers-color-scheme:dark){
+    :root{ --ground:#111823; --surface:#18222F; --surface-2:#1C2836;
+      --ink:#ECE6D9; --muted:#9FB0C3; --gold:#D8B65F; --gold-line:#C9A24B;
+      --gold-soft:rgba(216,182,95,.13); --line:#2A3648; }
+  }
+  :root[data-theme="light"]{ --ground:#F7F4EC; --surface:#FFFFFF; --surface-2:#FBF7EE;
+    --ink:#232019; --muted:#6B6456; --gold:#9A7620; --gold-soft:rgba(154,118,32,.10); --line:#E7E0CD; }
+  :root[data-theme="dark"]{ --ground:#111823; --surface:#18222F; --surface-2:#1C2836;
+    --ink:#ECE6D9; --muted:#9FB0C3; --gold:#D8B65F; --gold-soft:rgba(216,182,95,.13); --line:#2A3648; }
+
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--ground);color:var(--ink);font-family:var(--font);
+    line-height:1.85;font-size:16px;-webkit-text-size-adjust:100%;}
+  .wrap{max-width:var(--maxw);margin:0 auto;padding:0 20px 72px;}
+
+  /* ---- header (committed navy, both themes) ---- */
+  header{background:linear-gradient(160deg,var(--navy-2),var(--navy));color:var(--on-navy);
+    padding:44px 20px 40px;position:relative;overflow:hidden;}
+  header .inner{max-width:var(--maxw);margin:0 auto;position:relative;z-index:1;}
+  header svg.crack{position:absolute;inset:0;width:100%;height:100%;z-index:0;opacity:.4}
+  .eyebrow{font-size:12.5px;letter-spacing:.32em;color:var(--gold-line);font-weight:700;
+    text-transform:uppercase;margin:0 0 14px;}
+  header h1{font-size:30px;line-height:1.35;margin:0;font-weight:800;text-wrap:balance;letter-spacing:.01em;}
+  header h1 .g{color:var(--gold-line);}
+  header p.lead{margin:16px 0 0;font-size:15px;color:#cdd8e6;line-height:1.8;}
+  .author-tag{margin-top:22px;font-size:13px;color:#9FB0C3;letter-spacing:.04em;}
+  .author-tag b{color:var(--on-navy);font-weight:700;}
+
+  /* ---- jump nav ---- */
+  nav.jump{display:flex;flex-wrap:wrap;gap:8px;margin:26px 0 6px;}
+  nav.jump a{flex:1 1 160px;text-decoration:none;color:var(--ink);background:var(--surface);
+    border:1px solid var(--line);border-radius:12px;padding:12px 14px;font-size:13.5px;font-weight:700;
+    display:flex;align-items:center;gap:9px;transition:border-color .15s,transform .15s;}
+  nav.jump a:hover{border-color:var(--gold-line);transform:translateY(-1px);}
+  nav.jump a .n{color:var(--gold);font-weight:800;}
+
+  .intro{margin:24px 0 8px;font-size:15.5px;color:var(--ink);}
+  .intro .fine{color:var(--muted);font-size:14px;}
+
+  section.pack{margin-top:38px;}
+  .pack-head{display:flex;align-items:baseline;gap:12px;border-bottom:2px solid var(--gold-soft);
+    padding-bottom:12px;margin-bottom:8px;}
+  .pack-head .badge{font-size:12px;font-weight:800;letter-spacing:.1em;color:var(--gold);
+    border:1.5px solid var(--gold-line);border-radius:999px;padding:3px 11px;white-space:nowrap;}
+  .pack-head h2{font-size:21px;margin:0;font-weight:800;line-height:1.4;text-wrap:balance;}
+  .pack-sub{color:var(--muted);font-size:14px;margin:2px 0 0;}
+
+  .card{background:var(--surface);border:1px solid var(--line);border-radius:16px;
+    padding:22px 20px;margin-top:18px;box-shadow:0 1px 2px rgba(0,0,0,.03);}
+  .card h3{font-size:17px;margin:0 0 4px;font-weight:800;color:var(--ink);line-height:1.5;}
+  .card h3 .step{color:var(--gold);font-weight:800;}
+  .card .cap{color:var(--muted);font-size:13.5px;margin:0 0 14px;}
+  .card p{margin:0 0 12px;font-size:15px;}
+  .card p:last-child{margin-bottom:0;}
+
+  ul.checks{list-style:none;margin:6px 0 0;padding:0;display:flex;flex-direction:column;gap:11px;}
+  ul.checks li{display:flex;gap:12px;align-items:flex-start;}
+  ul.checks input[type=checkbox]{appearance:none;-webkit-appearance:none;flex:0 0 auto;
+    width:22px;height:22px;margin:2px 0 0;border:2px solid var(--gold-line);border-radius:6px;
+    background:transparent;cursor:pointer;position:relative;transition:background .12s;}
+  ul.checks input[type=checkbox]:checked{background:var(--gold-line);}
+  ul.checks input[type=checkbox]:checked::after{content:"";position:absolute;left:6px;top:2px;
+    width:6px;height:11px;border:solid #16202E;border-width:0 2.5px 2.5px 0;transform:rotate(42deg);}
+  ul.checks input[type=checkbox]:focus-visible{outline:2px solid var(--gold);outline-offset:2px;}
+  ul.checks label{font-size:15px;line-height:1.7;cursor:pointer;}
+  ul.checks .sub{display:block;color:var(--muted);font-size:13px;line-height:1.65;margin-top:2px;}
+  ul.checks input:checked + label{color:var(--muted);text-decoration:line-through;text-decoration-color:var(--gold-soft);}
+
+  ol.ranked{counter-reset:r;list-style:none;margin:6px 0 0;padding:0;display:flex;flex-direction:column;gap:14px;}
+  ol.ranked li{counter-increment:r;position:relative;padding-left:46px;font-size:15px;line-height:1.7;}
+  ol.ranked li::before{content:counter(r);position:absolute;left:0;top:-2px;width:32px;height:32px;
+    background:var(--gold-soft);color:var(--gold);border-radius:9px;font-weight:800;font-size:16px;
+    display:flex;align-items:center;justify-content:center;}
+  ol.ranked b{color:var(--ink);}
+  ol.ranked .sub{display:block;color:var(--muted);font-size:13px;margin-top:2px;}
+
+  .arrow{background:var(--gold-soft);border-left:3px solid var(--gold-line);border-radius:0 10px 10px 0;
+    padding:12px 15px;font-size:14px;color:var(--ink);margin:14px 0 0;}
+
+  table{width:100%;border-collapse:collapse;margin:8px 0 0;font-size:14.5px;}
+  table th,table td{border:1px solid var(--line);padding:9px 10px;text-align:left;}
+  table thead th{background:var(--gold-soft);color:var(--ink);font-weight:700;font-size:13.5px;}
+  table td input{width:100%;border:none;background:transparent;color:var(--ink);font-family:var(--font);
+    font-size:15px;text-align:right;font-variant-numeric:tabular-nums;padding:2px 0;}
+  table td input:focus{outline:none;}
+  .tbl-wrap{overflow-x:auto;}
+
+  /* live calc */
+  .calc{margin-top:8px;display:flex;flex-direction:column;gap:12px;}
+  .calc .row{display:flex;align-items:center;gap:10px;flex-wrap:wrap;}
+  .calc label.f{flex:1 1 200px;font-size:14.5px;}
+  .calc input.num{width:130px;border:1px solid var(--line);background:var(--surface-2);border-radius:9px;
+    padding:9px 11px;font-size:16px;color:var(--ink);text-align:right;font-variant-numeric:tabular-nums;
+    font-family:var(--font);}
+  .calc input.num:focus-visible{outline:2px solid var(--gold);outline-offset:1px;border-color:var(--gold-line);}
+  .result{margin-top:4px;background:var(--navy);color:var(--on-navy);border-radius:13px;padding:16px 18px;
+    display:flex;align-items:baseline;justify-content:space-between;gap:12px;flex-wrap:wrap;}
+  .result .lbl{font-size:14px;color:#cdd8e6;}
+  .result .val{font-size:30px;font-weight:800;color:var(--gold-line);font-variant-numeric:tabular-nums;}
+  .result .val small{font-size:15px;color:#cdd8e6;font-weight:600;margin-left:3px;}
+
+  .fill{display:inline-block;min-width:74px;border-bottom:1.5px dashed var(--gold-line);
+    margin:0 3px;height:1.2em;vertical-align:bottom;}
+
+  /* footer / CTA */
+  .book{margin-top:20px;background:var(--surface-2);border:1px solid var(--line);border-radius:14px;padding:18px 18px;}
+  .book h4{margin:0 0 10px;font-size:15px;font-weight:800;}
+  .book .b{display:flex;gap:11px;margin:0 0 10px;font-size:14px;line-height:1.65;}
+  .book .b:last-child{margin-bottom:0;}
+  .book .b .no{flex:0 0 auto;color:var(--gold);font-weight:800;}
+  .ku{margin-top:12px;font-size:13px;color:var(--muted);}
+  .fine-print{margin-top:30px;font-size:12.5px;color:var(--muted);line-height:1.7;border-top:1px solid var(--line);padding-top:18px;}
+  .fine-print p{margin:0 0 7px;}
+  .save-note{margin-top:14px;font-size:13px;color:var(--muted);display:flex;gap:8px;align-items:flex-start;}
+  .save-note b{color:var(--ink);}
+
+  @media (max-width:480px){
+    header h1{font-size:25px;} .result .val{font-size:26px;}
+    nav.jump a{flex:1 1 100%;}
+  }
+</style>
+
+<header>
+  <svg class="crack" viewBox="0 0 660 200" preserveAspectRatio="none" aria-hidden="true">
+    <path d="M-20,60 L150,110 L80,150 L260,175" fill="none" stroke="#C9A24B" stroke-width="2"/>
+    <path d="M680,40 L500,90 L590,130 L430,165" fill="none" stroke="#C9A24B" stroke-width="1.6" opacity=".7"/>
+  </svg>
+  <div class="inner">
+    <p class="eyebrow">消耗しない所得の増やし方</p>
+    <h1>無料特典パック<br><span class="g">副業を足す前に</span>、読むもの</h1>
+    <p class="lead">本を最後まで読んでくれた、あなたへ。本編に書ききれなかった実践ツールを、二つとも置いておきます。必要なほうだけ、使ってください。</p>
+    <p class="author-tag">著　<b>軌道キャリ</b>　／　CryptoManga Studios</p>
+  </div>
+</header>
+
+<div class="wrap">
+  <p class="intro">
+    僕は副業で累計1000万円ほどを稼ぎ、その裏で、仮想通貨のレバレッジ取引で700万円を溶かしました。家族との時間も、なくしかけた。そのうえでたどり着いたのが、「安易に副業を上乗せするより、本業の足場を賭け直したほうがいい」という結論です。<br>
+    <span class="fine">下のチェックは、タップするとこの端末に保存されます。埋まらない項目が、あなたの「次の一歩」です。</span>
+  </p>
+
+  <nav class="jump" aria-label="特典への移動">
+    <a href="#t1"><span class="n">特典1</span>転職・年収交渉チェックリスト</a>
+    <a href="#t2"><span class="n">特典2</span>家計・時給・十分ラインのシート</a>
+  </nav>
+
+  <!-- ===================== 特典1 ===================== -->
+  <section class="pack" id="t1">
+    <div class="pack-head">
+      <span class="badge">特典 1</span>
+      <div>
+        <h2>消耗せずに所得を上げる「最初の1歩」チェックリスト</h2>
+        <p class="pack-sub">①〜③の本の続き。所要3分。上から順に、現状と照らし合わせて。</p>
+      </div>
+    </div>
+
+    <div class="card">
+      <h3><span class="step">STEP 0.</span> その副業、始める前に。3つのセルフチェック</h3>
+      <p class="cap">1つでも「いいえ」なら、その副業は一度保留にしたほうが賢明です。</p>
+      <ul class="checks">
+        <li><input type="checkbox" id="c01"><label for="c01">睡眠や、家族との時間を削る前提になっていないか？<span class="sub">「気合で時間を捻出する」は、3ヶ月以内に破綻します</span></label></li>
+        <li><input type="checkbox" id="c02"><label for="c02">1円にもならない期間が半年続いても、心が折れずに続けられるか？<span class="sub">他人のプラットフォームに依存する副業は、初期の打率が極めて低い</span></label></li>
+        <li><input type="checkbox" id="c03"><label for="c03">その作業は、5年後の履歴書に書ける「実績」になるか？<span class="sub">ただの作業代行でなく、自分の職能を高める投資になっているか</span></label></li>
+      </ul>
+      <div class="arrow">3つすべてに「はい」と言えるものだけが、時間を削る「消耗」でなく、キャリアを創る「投資」になります。</div>
+    </div>
+
+    <div class="card">
+      <h3><span class="step">STEP 1.</span> 所得を増やす「3つの優先順位」</h3>
+      <p class="cap">上にいくほど、かけた労力に対して手元に残るリターンが大きい。</p>
+      <ol class="ranked">
+        <li><b>いまの会社で評価を上げ、昇給を勝ち取る</b><span class="sub">一度ベースが上がれば毎月自動で上乗せ。最も低リスク</span></li>
+        <li><b>年収水準の高い業界・企業へ転職する</b><span class="sub">業界の平均年収に乗るだけで、個人のスキル以上に基本給が変わることがある</span></li>
+        <li><b>副業でスモールビジネスを始める</b><span class="sub">時間を直接切り売りするうえ打率も低い。月1万円すら稼げない人が48.1%という調査も</span></li>
+      </ol>
+      <div class="arrow">多くの人が、いちばん難しい「3」から手をつけて疲弊します。まず「1」「2」が本当に塞がっているか確かめるほうが、圧倒的に近道。</div>
+    </div>
+
+    <div class="card">
+      <h3><span class="step">STEP 2.</span> リスクを最小化する「なだらかな転職」の進め方</h3>
+      <p class="cap">突然辞めたわけじゃない。「副業→業務委託→スカウト」と足場を移した順番です。</p>
+      <ul class="checks">
+        <li><input type="checkbox" id="c11"><label for="c11">自分のスキルを、市場に伝わる「職種名」に翻訳する<span class="sub">例：「SNSを個人でやっている」→「SNS運用・コンテンツ企画・進行管理」</span></label></li>
+        <li><input type="checkbox" id="c12"><label for="c12">知人の仕事や小さな案件を「1つだけ」手伝う<span class="sub">最初は無償でも可。目的はお金でなくポートフォリオ（実績）</span></label></li>
+        <li><input type="checkbox" id="c13"><label for="c13">その成果を、第三者に見せられる「数字と実績」に言語化する<span class="sub">例：売上◯％改善、登録者◯人増加、制作物◯件</span></label></li>
+        <li><input type="checkbox" id="c14"><label for="c14">転職サイト／エージェントに登録し、自分の「現在の市場価値」を測る<span class="sub">応募しなくてよい。相場を知るだけ。総合型なら<b>リクルートエージェント</b>、スカウトを待つなら<b>ビズリーチ</b>あたりが定番。僕も実際に使い、今もスカウトが届きます</span></label></li>
+        <li><input type="checkbox" id="c15"><label for="c15">興味のある企業・個人に「業務委託で手伝えることはないか」と打診する<span class="sub">正社員でなく、週数時間のサポーターとして入口のハードルを下げる</span></label></li>
+        <li><input type="checkbox" id="c16"><label for="c16">スモールスタートで関わり、期待値を120%超える成果で信頼を貯める</label></li>
+        <li><input type="checkbox" id="c17"><label for="c17">先方から「本格的にジョインしてほしい」と打診される状態を作る</label></li>
+        <li><input type="checkbox" id="c18"><label for="c18">交渉では給与を相手の言い値にせず、実績を根拠に希望額をこちらから提示する</label></li>
+      </ul>
+      <div class="arrow">最後の「自分から値決めをする」が、いちばん重要。実績と信頼さえあれば、価格決定権はあなたにあります。僕はこれで年収を300万円引き上げました（正直、半分は運です）。</div>
+    </div>
+
+    <div class="card">
+      <h3><span class="step">STEP 3.</span> 所得を上げる「本当の目的」</h3>
+      <p>お金は、大切な人との時間や、あなた自身の心身の健康を切り売りして得るものではありません。</p>
+      <p><b>「健康な生活を維持したまま、手取りを最大化する」</b>——このルールだけは、絶対に曲げないでほしいと思います。</p>
+    </div>
+  </section>
+
+  <!-- ===================== 特典2 ===================== -->
+  <section class="pack" id="t2">
+    <div class="pack-head">
+      <span class="badge">特典 2</span>
+      <div>
+        <h2>家計・時給・「十分ライン」ワークシート集</h2>
+        <p class="pack-sub">④〜⑥の本の実践ぶん。夫婦の時間・副業の時給・"もっと"から降りる。</p>
+      </div>
+    </div>
+
+    <div class="card">
+      <h3>① 夫婦の「時間の家計簿」（第4巻）</h3>
+      <p class="cap">平日の1日を、夫・妻それぞれ書き出す。犯人探しでなく、二人で同じ表を眺めるのが目的。</p>
+      <div class="tbl-wrap">
+      <table>
+        <thead><tr><th>項目</th><th>夫（時間）</th><th>妻（時間）</th></tr></thead>
+        <tbody>
+          <tr><td>睡眠</td><td><input inputmode="decimal" aria-label="夫 睡眠"></td><td><input inputmode="decimal" aria-label="妻 睡眠"></td></tr>
+          <tr><td>仕事（通勤含む）</td><td><input inputmode="decimal"></td><td><input inputmode="decimal"></td></tr>
+          <tr><td>食事・入浴・身支度</td><td><input inputmode="decimal"></td><td><input inputmode="decimal"></td></tr>
+          <tr><td>家事（名もなき家事も！）</td><td><input inputmode="decimal"></td><td><input inputmode="decimal"></td></tr>
+          <tr><td>育児・子の世話</td><td><input inputmode="decimal"></td><td><input inputmode="decimal"></td></tr>
+          <tr><td><b>自由に使える時間（残り）</b></td><td><input inputmode="decimal"></td><td><input inputmode="decimal"></td></tr>
+        </tbody>
+      </table>
+      </div>
+      <div class="arrow">「自由に使える時間」が二人ともほぼゼロなら、そこに副業を足すのは無理。まず下で家事を分け直す。</div>
+    </div>
+
+    <div class="card">
+      <h3>家事の棚卸し（"名もなき家事"を書き出す）</h3>
+      <p class="cap">「やって当たり前」で見えていない家事を、あえて全部。偏りが"感謝されない疲れ"の正体。</p>
+      <ul class="checks">
+        <li><input type="checkbox" id="h1"><label for="h1">トイレットペーパー等の在庫管理・買い足し</label></li>
+        <li><input type="checkbox" id="h2"><label for="h2">子の服・持ち物のサイズ替え・準備</label></li>
+        <li><input type="checkbox" id="h3"><label for="h3">保育園／学校のお便り確認・行事の把握</label></li>
+        <li><input type="checkbox" id="h4"><label for="h4">献立を考える・食材の段取り</label></li>
+        <li><input type="checkbox" id="h5"><label for="h5">体調の異変にいち早く気づく</label></li>
+        <li><input type="checkbox" id="h6"><label for="h6">ゴミの分別・出す曜日の管理</label></li>
+      </ul>
+      <div class="arrow">チェックが片方に偏っていたら、「手伝う」ではなく「二人の共通の仕事」として、1つでも移す。</div>
+    </div>
+
+    <div class="card">
+      <h3>② 副業の「本当の時給」計算（第5巻）</h3>
+      <p class="cap">始める前に、電卓で1回。数字を入れると自動で出ます。</p>
+      <div class="calc">
+        <div class="row"><label class="f" for="money">ひと月に得た（得られそうな）お金</label><input class="num" id="money" inputmode="numeric" placeholder="0"> 円</div>
+        <div class="row"><label class="f" for="hours">使った時間の合計<br><span style="color:var(--muted);font-size:13px">★手を動かした時間だけでなく、調べた・悩んだ・SNSを気にした時間も全部</span></label><input class="num" id="hours" inputmode="decimal" placeholder="0"> 時間</div>
+        <div class="result"><span class="lbl">表の時給（税・手間を引く前）</span><span class="val" id="wage">—</span></div>
+      </div>
+      <p class="cap" style="margin-top:16px">ここから、さらに引く（隠れコスト）：</p>
+      <ul class="checks">
+        <li><input type="checkbox" id="w1"><label for="w1">税金：所得が増えれば所得税・住民税が引かれる<span class="sub">20万円ルールは所得税の話。住民税は20万円以下でも申告が必要。最新は税務署／税理士へ</span></label></li>
+        <li><input type="checkbox" id="w2"><label for="w2">事務の手間：帳簿・確定申告の時間も、本当は"使った時間"に足す</label></li>
+        <li><input type="checkbox" id="w3"><label for="w3">本業への悪影響：寝不足でパフォーマンスが落ちていないか</label></li>
+      </ul>
+      <p class="cap" style="margin-top:16px">数字に出ない、いちばん大きいコスト（意識に入れる）：</p>
+      <ul class="checks">
+        <li><input type="checkbox" id="w4"><label for="w4">気力（本業のあとの、残り少ないバッテリー）</label></li>
+        <li><input type="checkbox" id="w5"><label for="w5">家族の時間（子が「遊ぼう」と来る時期は、驚くほど短い）</label></li>
+        <li><input type="checkbox" id="w6"><label for="w6">健康・睡眠</label></li>
+      </ul>
+      <div class="arrow">「表の時給」の裏で、これらを差し出して、なお割に合うか？　目的が「お金のためだけ」なら、たいてい本業に賭け直すほうが近道。スキルへの投資／純粋な楽しみなら、時給が安くてもやる意味がある。<br><b>ただし、若くて失うものが無いなら、時給を気にせず今すぐやれ。</b></div>
+    </div>
+
+    <div class="card">
+      <h3>③ 「これで十分」ラインの決め方（第6巻）</h3>
+      <p class="cap">他人（SNS）に決めさせない。自分の生活で、具体的に書く。</p>
+      <p>我が家が普通に暮らして、たまに旅行に行けて、子にやりたいことをやらせてやれる——そのために必要な、月の手取りは <span class="fill"></span> 万円。</p>
+      <p>そのラインを超えたお金で、本当にやりたいことは <span class="fill"></span>。</p>
+      <p>逆に、これ以上の「もっと」のために差し出したくないものは <span class="fill"></span>（例：睡眠・家族の時間・健康）。</p>
+      <div class="arrow">この3つを書けたら、SNSで「月100万」を見ても、「あの人はすごい。でも僕の十分はここ」と言える。</div>
+      <p class="cap" style="margin-top:18px">心の余白（メンパ）チェック — 当てはまるものにチェック：</p>
+      <ul class="checks">
+        <li><input type="checkbox" id="m1"><label for="m1">予定の入っていない時間が、なんだか怖い</label></li>
+        <li><input type="checkbox" id="m2"><label for="m2">動画は倍速、移動中も何か"生産的なこと"で埋めないと落ち着かない</label></li>
+        <li><input type="checkbox" id="m3"><label for="m3">最近、ささいなことで家族にイラッとした</label></li>
+        <li><input type="checkbox" id="m4"><label for="m4">「稼がなきゃ」で、夜、寝つきが悪い</label></li>
+      </ul>
+      <div class="arrow">2つ以上なら、メンパが赤信号。降りるための地味な一歩を1つ：夜の散歩でスマホを置く／止まっている"未完成"を1つ60点で終わらせる／子どもと意味もなくだらだらする。</div>
+    </div>
+  </section>
+
+  <div class="save-note">
+    <span>💾</span><span><b>チェックはこの端末に自動保存されます。</b>あとで見返すときは、この特典ページをブックマークしておいてください（LINEのトーク画面のリンクからも、いつでも開けます）。</span>
+  </div>
+
+  <div class="book">
+    <h4>この話の全部は、本に書きました（Kindle Unlimitedなら追加費用なし）</h4>
+    <div class="b"><span class="no">①</span><span><b>副業はするな！</b>／1000万稼いで700万溶かし、家族まで失いかけた記録。</span></div>
+    <div class="b"><span class="no">②</span><span><b>副業＜転職</b>／副業でなく、年収を400万→700万に上げ直した全手順。</span></div>
+    <div class="b"><span class="no">③〜⑥</span><span>地味昇給／副業崩壊／時給300円／副業の罠。</span></div>
+    <p class="ku">※「STEP 2」を、僕が実際にどんな言葉で打診し、どう金額交渉して300万アップを引き出したか——その具体的な文面と値決めのロジックまで落とし込んだ「転職編」は、いま準備中です。できあがったら、いちばん最初にLINEでお知らせします。</p>
+  </div>
+
+  <div class="fine-print">
+    <p>※各シートに記載した数値は、公的機関や大手調査会社の公開データに基づきます（出典は各巻本編の巻末）。</p>
+    <p>※税のルールは、その年やあなたの状況で変わります。ここにあるのは「そういうコストがある」という目安の話です。最新は税務署・税理士にご確認ください。</p>
+    <p>※本ページで触れた転職サービス（リクルートエージェント・ビズリーチ等）は、登録無料・任意です。使う・使わないは、あなたの自由です。</p>
+  </div>
+</div>
+
+<script>
+  (function(){
+    var KEY="kidokyari_tokuten_v1";
+    var saved={};
+    try{ saved=JSON.parse(localStorage.getItem(KEY)||"{}")||{}; }catch(e){}
+    // checkboxes
+    document.querySelectorAll('input[type=checkbox]').forEach(function(cb){
+      if(saved["cb_"+cb.id]) cb.checked=true;
+      cb.addEventListener('change',function(){ saved["cb_"+cb.id]=cb.checked; persist(); });
+    });
+    // text inputs (time budget table)
+    document.querySelectorAll('table input, .fill').forEach(function(){});
+    var texts=document.querySelectorAll('table input');
+    texts.forEach(function(t,i){
+      var k="tx_"+i;
+      if(saved[k]!=null) t.value=saved[k];
+      t.addEventListener('input',function(){ saved[k]=t.value; persist(); });
+    });
+    // wage calc (also persisted)
+    var money=document.getElementById('money'), hours=document.getElementById('hours'), wage=document.getElementById('wage');
+    if(saved.money!=null) money.value=saved.money;
+    if(saved.hours!=null) hours.value=saved.hours;
+    function calc(){
+      var m=parseFloat((money.value||"").replace(/[^0-9.]/g,''));
+      var h=parseFloat((hours.value||"").replace(/[^0-9.]/g,''));
+      if(m>0 && h>0){
+        var w=Math.round(m/h);
+        wage.innerHTML=w.toLocaleString('ja-JP')+'<small>円／時</small>';
+      }else{ wage.textContent="—"; }
+      saved.money=money.value; saved.hours=hours.value; persist();
+    }
+    money.addEventListener('input',calc); hours.addEventListener('input',calc); calc();
+    var t;
+    function persist(){ clearTimeout(t); t=setTimeout(function(){ try{ localStorage.setItem(KEY,JSON.stringify(saved)); }catch(e){} },200); }
+  })();
+</script>
