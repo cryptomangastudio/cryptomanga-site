@@ -1,23 +1,18 @@
 <!doctype html><html><head><meta charset="utf-8"><style>
   html,body{margin:0;padding:0}
   *{box-sizing:border-box;font-family:'IPAPGothic','IPAGothic',sans-serif}
-  .stage{width:640px;height:640px;position:relative;overflow:hidden;
-    background:radial-gradient(120% 120% at 30% 20%, #1e2f45 0%, #16202e 45%, #0d1521 100%);}
-  .ring{position:absolute;left:50%;top:46%;width:520px;height:300px;margin-left:-260px;margin-top:-150px;
-    border:6px solid rgba(201,162,75,.85);border-radius:50%;transform:rotate(-24deg);
-    box-shadow:0 0 40px rgba(201,162,75,.25);}
-  .planet{position:absolute;left:50%;top:46%;width:34px;height:34px;margin-left:170px;margin-top:-150px;
-    background:#C9A24B;border-radius:50%;transform:rotate(-24deg);box-shadow:0 0 24px rgba(201,162,75,.8);}
-  .txt{position:absolute;left:0;right:0;top:50%;transform:translateY(-50%);text-align:center;
-    color:#F4EFE6;font-weight:800;line-height:1.02;letter-spacing:4px;
-    font-size:150px;text-shadow:0 4px 18px rgba(0,0,0,.5);}
-  .sub{position:absolute;left:0;right:0;bottom:56px;text-align:center;color:#C9A24B;
-    font-size:30px;letter-spacing:10px;font-weight:700;}
+  .stage{width:640px;height:640px;position:relative;overflow:hidden;background:#EFEDE6;color:#26241E;
+    background-image:linear-gradient(#E3E0D6 1px,transparent 1px),linear-gradient(90deg,#E3E0D6 1px,transparent 1px);
+    background-size:53px 53px;}
+  .name{position:absolute;left:0;right:0;top:50%;transform:translateY(-52%);text-align:center;
+    font-size:168px;font-weight:800;line-height:1.0;letter-spacing:6px;}
+  .under{position:absolute;left:110px;right:110px;bottom:150px;height:0;}
+  .under svg{position:absolute;left:0;top:-20px;width:100%;height:60px;overflow:visible;}
 </style></head><body>
   <div class="stage">
-    <div class="ring"></div>
-    <div class="planet"></div>
-    <div class="txt">軌道<br>キャリ</div>
-    <div class="sub">副業やめとけ</div>
+    <div class="name">軌道<br>キャリ</div>
+    <div class="under"><svg viewBox="0 0 420 60" preserveAspectRatio="none">
+      <path d="M6,34 C120,52 300,10 414,30" fill="none" stroke="#B0392C" stroke-width="12" stroke-linecap="round"/>
+    </svg></div>
   </div>
 </body></html>
