@@ -1,29 +1,51 @@
 <!doctype html><html><head><meta charset="utf-8"><style>
   html,body{margin:0;padding:0}
   *{box-sizing:border-box;font-family:'IPAPGothic','IPAGothic',sans-serif}
-  .stage{width:1920px;height:1006px;position:relative;overflow:hidden;color:#F4EFE6;
-    background:linear-gradient(150deg,#1e2f45 0%,#16202e 52%,#0d1521 100%);}
-  .crack{position:absolute;inset:0;width:100%;height:100%;}
-  .eyebrow{position:absolute;top:210px;left:0;right:0;text-align:center;color:#C9A24B;
-    letter-spacing:22px;font-size:40px;font-weight:700;}
-  .main{position:absolute;top:320px;left:120px;right:120px;text-align:center;
-    font-size:118px;font-weight:800;line-height:1.3;text-shadow:0 6px 26px rgba(0,0,0,.5);}
-  .main .g{color:#C9A24B;}
-  .sub{position:absolute;top:640px;left:0;right:0;text-align:center;font-size:40px;
-    color:#cdd8e6;font-weight:600;letter-spacing:2px;line-height:1.6;}
-  .author{position:absolute;bottom:104px;right:120px;font-size:42px;font-weight:800;letter-spacing:4px;}
-  .author small{color:#9FB0C3;font-size:26px;font-weight:600;margin-left:16px;letter-spacing:2px;}
-  /* note左下のアイコン重なり安全域 */
-  .safe{position:absolute;left:0;bottom:0;width:520px;height:300px;}
+  .stage{width:1920px;height:1006px;position:relative;overflow:hidden;
+    background:#EFEDE6;color:#26241E;
+    background-image:linear-gradient(#E3E0D6 1px,transparent 1px),linear-gradient(90deg,#E3E0D6 1px,transparent 1px);
+    background-size:56px 56px;}
+  .stage::after{content:"";position:absolute;inset:0;
+    background:linear-gradient(90deg,rgba(239,237,230,0) 55%,rgba(239,237,230,.9) 100%);}
+  .pad{position:absolute;inset:0;padding:120px 130px;z-index:2;}
+  .kicker{font-size:30px;letter-spacing:14px;color:#8A8474;font-weight:700;}
+  .kicker .b{color:#26241E;}
+  h1{position:absolute;left:130px;top:300px;margin:0;font-size:112px;font-weight:800;
+    line-height:1.32;letter-spacing:.01em;}
+  h1 .r{color:#B0392C;}
+  .byline{position:absolute;left:132px;bottom:120px;font-size:34px;font-weight:800;letter-spacing:3px;}
+  .byline small{color:#8A8474;font-weight:600;font-size:24px;margin-left:14px;letter-spacing:1px;}
+
+  /* 右：収支の明細（通帳/家計簿メタファー） */
+  .ledger{position:absolute;right:130px;top:330px;width:560px;z-index:3;
+    border-top:2px solid #26241E;border-bottom:2px solid #26241E;padding:26px 0;}
+  .ledger .cap{display:flex;align-items:center;gap:14px;font-size:23px;color:#8A8474;
+    letter-spacing:3px;margin-bottom:22px;font-weight:700;}
+  .ledger .cap::before,.ledger .cap::after{content:"";height:2px;background:#C7C2B4;flex:1;}
+  .row{display:flex;align-items:baseline;font-size:30px;margin:0 0 18px;font-weight:600;}
+  .row .lab{white-space:nowrap;}
+  .row .dot{flex:1;border-bottom:2px dotted #B8B3A4;margin:0 12px;transform:translateY(-6px);}
+  .row .num{white-space:nowrap;font-variant-numeric:tabular-nums;font-weight:800;}
+  .row .num.minus{color:#26241E;}
+  .rule{border-top:2px solid #C7C2B4;margin:14px 0 20px;}
+  .total{display:flex;align-items:baseline;justify-content:space-between;font-size:34px;font-weight:800;}
+  .total .aka{color:#B0392C;font-size:52px;position:relative;}
+  .total .aka::after{content:"";position:absolute;left:-14px;right:-14px;top:-10px;bottom:-6px;
+    border:3px solid #B0392C;border-radius:48% 52% 50% 50%/60% 55% 45% 40%;transform:rotate(-3deg);}
 </style></head><body>
   <div class="stage">
-    <svg class="crack" viewBox="0 0 1920 1006" preserveAspectRatio="none" aria-hidden="true">
-      <path d="M-30,260 L360,380 L200,540 L560,660 L400,820" fill="none" stroke="#C9A24B" stroke-width="3.5" opacity=".45"/>
-      <path d="M1950,220 L1560,340 L1720,520 L1420,640 L1600,860" fill="none" stroke="#C9A24B" stroke-width="3" opacity=".33"/>
-    </svg>
-    <div class="eyebrow">消耗しない所得の増やし方</div>
-    <div class="main">副業で1000万稼いで、<br><span class="g">700万</span>溶かした。</div>
-    <div class="sub">その遠回りの全部を、正直に書いています。</div>
-    <div class="author">軌道キャリ<small>CryptoManga Studios</small></div>
+    <div class="pad"><div class="kicker">消耗しない<span class="b">所得</span>の増やし方</div></div>
+    <h1>稼いだ額より、<br>失ったほうが、<br><span class="r">多かった。</span></h1>
+    <div class="byline">軌道キャリ<small>会社員・元副業6年</small></div>
+
+    <div class="ledger">
+      <div class="cap">6年ぶんの収支</div>
+      <div class="row"><span class="lab">副業でかき集めた稼ぎ</span><span class="dot"></span><span class="num">＋1000万</span></div>
+      <div class="row"><span class="lab">仮想通貨のレバレッジ</span><span class="dot"></span><span class="num minus">−700万</span></div>
+      <div class="row"><span class="lab">教材・スクール</span><span class="dot"></span><span class="num minus">−300万超</span></div>
+      <div class="row"><span class="lab">稼いだ分の税金</span><span class="dot"></span><span class="num minus">−……</span></div>
+      <div class="rule"></div>
+      <div class="total"><span class="lab">差引き、手元に</span><span class="aka">赤字</span></div>
+    </div>
   </div>
 </body></html>
