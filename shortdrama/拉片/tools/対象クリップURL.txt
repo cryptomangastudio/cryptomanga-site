@@ -1,0 +1,26 @@
+# 拉片対象の公式クリップURL(2026-07調査時点)
+# 形式: 1行1URL。#で始まる行は無視される。プレイリストは全動画を自動展開。
+
+# 『結婚詐欺師と堕ちる女』
+https://www.youtube.com/watch?v=kQe1vNjZlBs
+# ↑第1話フル「【危険】婚活で人生終了しました」
+https://www.youtube.com/watch?v=0_3wAsELkM0
+# ↑超ダイジェスト#3
+https://www.youtube.com/shorts/wZd_ETb89DU
+# ↑超ダイジェストShorts
+
+# 『タワマン階級戦争』
+https://www.youtube.com/playlist?list=PL-UwHhkbex8pycuDZ2r7GTUV11qX3wXQD
+# ↑公式プレイリスト(全クリップ一括)
+https://www.youtube.com/watch?v=nIVSEXnUFEU
+# ↑1-2話連結
+https://www.youtube.com/watch?v=-jg3RryNJlE
+# ↑3-5話連結
+https://www.youtube.com/watch?v=gyQ7NBzkgdY
+# ↑Shorts「【敗北?】弱みを握られました…」
+
+# 『あざとく、かわいく、したたかに』
+https://www.youtube.com/watch?v=-K61dZYQu6g
+# ↑60秒予告
+https://www.youtube.com/watch?v=PQWei--GfRo
+# ↑シークレットティザー
