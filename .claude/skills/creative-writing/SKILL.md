@@ -23,6 +23,7 @@ description: 小説・マンガシナリオ・WEBTOON原作などの創作支援
 | キャラを作る・キャラが立たない・敵役設計 | `references/character-craft.md` |
 | 世界観・設定・魔法/能力のルール・組織や勢力 | `references/worldbuilding.md` |
 | マンガ/WEBTOONの台本・ネーム・コマ割り指示 | `references/manga-scenario-format.md`(**マンガ案件の最重要ファイル**) |
+| 縦型ショートドラマの原作・脚本、小説の縦型翻案 | `references/vertical-drama.md`(**縦型案件の最重要ファイル**。通常の脚本作法と真逆の点が多いので必読) |
 | 小説本文・地の文・セリフの執筆と改稿 | `references/prose-and-dialogue.md` |
 | ジャンルのお約束・テンプレ回避・差別化 | `references/genre-playbook.md` |
 | 企画書・あらすじ・持ち込み資料・編集フィードバック | `references/pitch-planning.md` |
