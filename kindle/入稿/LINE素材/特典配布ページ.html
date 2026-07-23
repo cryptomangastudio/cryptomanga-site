@@ -1,64 +1,73 @@
 <title>無料特典パック｜消耗しない所得の増やし方（軌道キャリ）</title>
 <style>
   :root{
-    --ground:#F7F4EC; --surface:#FFFFFF; --surface-2:#FBF7EE;
-    --ink:#232019; --muted:#6B6456; --gold:#9A7620; --gold-line:#C9A24B;
-    --gold-soft:rgba(154,118,32,.10); --line:#E7E0CD;
-    --navy:#16202E; --navy-2:#1E2F45; --on-navy:#F4EFE6;
+    --ground:#EFEDE6; --surface:#F8F6EF; --surface-2:#E9E6DB;
+    --ink:#26241E; --muted:#8A8474; --accent:#B0392C; --accent-soft:rgba(176,57,44,.09);
+    --line:#D8D3C2; --grid:#E1DDD0;
     --font:"Hiragino Kaku Gothic ProN","Hiragino Sans","Yu Gothic",YuGothic,"Noto Sans JP","IPAPGothic",system-ui,sans-serif;
     --maxw:660px;
   }
   @media (prefers-color-scheme:dark){
-    :root{ --ground:#111823; --surface:#18222F; --surface-2:#1C2836;
-      --ink:#ECE6D9; --muted:#9FB0C3; --gold:#D8B65F; --gold-line:#C9A24B;
-      --gold-soft:rgba(216,182,95,.13); --line:#2A3648; }
+    :root{ --ground:#1B1916; --surface:#242220; --surface-2:#2C2A26;
+      --ink:#EAE6DC; --muted:#A39C89; --accent:#E1685A; --accent-soft:rgba(225,104,90,.14);
+      --line:#3A362F; --grid:#302D28; }
   }
-  :root[data-theme="light"]{ --ground:#F7F4EC; --surface:#FFFFFF; --surface-2:#FBF7EE;
-    --ink:#232019; --muted:#6B6456; --gold:#9A7620; --gold-soft:rgba(154,118,32,.10); --line:#E7E0CD; }
-  :root[data-theme="dark"]{ --ground:#111823; --surface:#18222F; --surface-2:#1C2836;
-    --ink:#ECE6D9; --muted:#9FB0C3; --gold:#D8B65F; --gold-soft:rgba(216,182,95,.13); --line:#2A3648; }
+  :root[data-theme="light"]{ --ground:#EFEDE6; --surface:#F8F6EF; --surface-2:#E9E6DB;
+    --ink:#26241E; --muted:#8A8474; --accent:#B0392C; --accent-soft:rgba(176,57,44,.09); --line:#D8D3C2; --grid:#E1DDD0; }
+  :root[data-theme="dark"]{ --ground:#1B1916; --surface:#242220; --surface-2:#2C2A26;
+    --ink:#EAE6DC; --muted:#A39C89; --accent:#E1685A; --accent-soft:rgba(225,104,90,.14); --line:#3A362F; --grid:#302D28; }
+  /* committed "stamped ledger" well — same dark-ink block in both themes */
+  :root{ --well:#26241E; --on-well:#EFEDE6; --on-well-muted:#B8B3A4; }
 
   *{box-sizing:border-box}
   body{margin:0;background:var(--ground);color:var(--ink);font-family:var(--font);
-    line-height:1.85;font-size:16px;-webkit-text-size-adjust:100%;}
+    line-height:1.85;font-size:16px;-webkit-text-size-adjust:100%;
+    background-image:linear-gradient(var(--grid) 1px,transparent 1px),linear-gradient(90deg,var(--grid) 1px,transparent 1px);
+    background-size:28px 28px;}
   .wrap{max-width:var(--maxw);margin:0 auto;padding:0 20px 72px;}
 
-  /* ---- header (committed navy, both themes) ---- */
-  header{background:linear-gradient(160deg,var(--navy-2),var(--navy));color:var(--on-navy);
-    padding:44px 20px 40px;position:relative;overflow:hidden;}
-  header .inner{max-width:var(--maxw);margin:0 auto;position:relative;z-index:1;}
-  header svg.crack{position:absolute;inset:0;width:100%;height:100%;z-index:0;opacity:.4}
-  .eyebrow{font-size:12.5px;letter-spacing:.32em;color:var(--gold-line);font-weight:700;
-    text-transform:uppercase;margin:0 0 14px;}
-  header h1{font-size:30px;line-height:1.35;margin:0;font-weight:800;text-wrap:balance;letter-spacing:.01em;}
-  header h1 .g{color:var(--gold-line);}
-  header p.lead{margin:16px 0 0;font-size:15px;color:#cdd8e6;line-height:1.8;}
-  .author-tag{margin-top:22px;font-size:13px;color:#9FB0C3;letter-spacing:.04em;}
-  .author-tag b{color:var(--on-navy);font-weight:700;}
+  /* ---- header (paper ledger, both themes) ---- */
+  header{padding:40px 20px 34px;position:relative;}
+  header .inner{max-width:var(--maxw);margin:0 auto;position:relative;}
+  .eyebrow{font-size:12.5px;letter-spacing:.32em;color:var(--muted);font-weight:700;
+    text-transform:uppercase;margin:0 0 16px;}
+  header h1{font-size:27px;line-height:1.5;margin:0;font-weight:800;text-wrap:balance;letter-spacing:.01em;}
+  header h1 .r{color:var(--accent);}
+  header p.lead{margin:18px 0 0;font-size:15px;color:var(--muted);line-height:1.8;}
+  .author-tag{margin-top:22px;font-size:13px;color:var(--muted);letter-spacing:.04em;
+    border-top:1px solid var(--line);padding-top:14px;}
+  .author-tag b{color:var(--ink);font-weight:700;}
+
+  .ledger-mini{border-top:2px solid var(--ink);border-bottom:2px solid var(--ink);padding:16px 0;margin:22px 0 0;}
+  .ledger-mini .row{display:flex;align-items:baseline;font-size:14.5px;margin:0 0 9px;font-weight:600;}
+  .ledger-mini .row .dot{flex:1;border-bottom:1.5px dotted var(--line);margin:0 8px;transform:translateY(-4px);}
+  .ledger-mini .row .num{font-variant-numeric:tabular-nums;font-weight:800;white-space:nowrap;}
+  .ledger-mini .rule{border-top:1px solid var(--line);margin:8px 0 10px;}
+  .ledger-mini .total{display:flex;align-items:baseline;justify-content:space-between;font-size:15.5px;font-weight:800;}
+  .ledger-mini .aka{color:var(--accent);font-size:22px;position:relative;padding:0 4px;}
+  .ledger-mini .aka::after{content:"";position:absolute;left:-9px;right:-9px;top:-6px;bottom:-3px;
+    border:2.5px solid var(--accent);border-radius:48% 52% 50% 50%/60% 55% 45% 40%;transform:rotate(-3deg);}
 
   /* ---- jump nav ---- */
   nav.jump{display:flex;flex-wrap:wrap;gap:8px;margin:26px 0 6px;}
   nav.jump a{flex:1 1 160px;text-decoration:none;color:var(--ink);background:var(--surface);
-    border:1px solid var(--line);border-radius:12px;padding:12px 14px;font-size:13.5px;font-weight:700;
+    border:1px solid var(--line);border-radius:10px;padding:12px 14px;font-size:13.5px;font-weight:700;
     display:flex;align-items:center;gap:9px;transition:border-color .15s,transform .15s;}
-  nav.jump a:hover{border-color:var(--gold-line);transform:translateY(-1px);}
-  nav.jump a .n{color:var(--gold);font-weight:800;}
-
-  .intro{margin:24px 0 8px;font-size:15.5px;color:var(--ink);}
-  .intro .fine{color:var(--muted);font-size:14px;}
+  nav.jump a:hover{border-color:var(--accent);transform:translateY(-1px);}
+  nav.jump a .n{color:var(--accent);font-weight:800;}
 
   section.pack{margin-top:38px;}
-  .pack-head{display:flex;align-items:baseline;gap:12px;border-bottom:2px solid var(--gold-soft);
+  .pack-head{display:flex;align-items:baseline;gap:12px;border-bottom:2px solid var(--accent-soft);
     padding-bottom:12px;margin-bottom:8px;}
-  .pack-head .badge{font-size:12px;font-weight:800;letter-spacing:.1em;color:var(--gold);
-    border:1.5px solid var(--gold-line);border-radius:999px;padding:3px 11px;white-space:nowrap;}
+  .pack-head .badge{font-size:12px;font-weight:800;letter-spacing:.1em;color:var(--accent);
+    border:1.5px solid var(--accent);border-radius:999px;padding:3px 11px;white-space:nowrap;}
   .pack-head h2{font-size:21px;margin:0;font-weight:800;line-height:1.4;text-wrap:balance;}
   .pack-sub{color:var(--muted);font-size:14px;margin:2px 0 0;}
 
   .card{background:var(--surface);border:1px solid var(--line);border-radius:16px;
     padding:22px 20px;margin-top:18px;box-shadow:0 1px 2px rgba(0,0,0,.03);}
   .card h3{font-size:17px;margin:0 0 4px;font-weight:800;color:var(--ink);line-height:1.5;}
-  .card h3 .step{color:var(--gold);font-weight:800;}
+  .card h3 .step{color:var(--accent);font-weight:800;}
   .card .cap{color:var(--muted);font-size:13.5px;margin:0 0 14px;}
   .card p{margin:0 0 12px;font-size:15px;}
   .card p:last-child{margin-bottom:0;}
@@ -66,30 +75,30 @@
   ul.checks{list-style:none;margin:6px 0 0;padding:0;display:flex;flex-direction:column;gap:11px;}
   ul.checks li{display:flex;gap:12px;align-items:flex-start;}
   ul.checks input[type=checkbox]{appearance:none;-webkit-appearance:none;flex:0 0 auto;
-    width:22px;height:22px;margin:2px 0 0;border:2px solid var(--gold-line);border-radius:6px;
+    width:22px;height:22px;margin:2px 0 0;border:2px solid var(--accent);border-radius:6px;
     background:transparent;cursor:pointer;position:relative;transition:background .12s;}
-  ul.checks input[type=checkbox]:checked{background:var(--gold-line);}
+  ul.checks input[type=checkbox]:checked{background:var(--accent);}
   ul.checks input[type=checkbox]:checked::after{content:"";position:absolute;left:6px;top:2px;
-    width:6px;height:11px;border:solid #16202E;border-width:0 2.5px 2.5px 0;transform:rotate(42deg);}
-  ul.checks input[type=checkbox]:focus-visible{outline:2px solid var(--gold);outline-offset:2px;}
+    width:6px;height:11px;border:solid #fff;border-width:0 2.5px 2.5px 0;transform:rotate(42deg);}
+  ul.checks input[type=checkbox]:focus-visible{outline:2px solid var(--accent);outline-offset:2px;}
   ul.checks label{font-size:15px;line-height:1.7;cursor:pointer;}
   ul.checks .sub{display:block;color:var(--muted);font-size:13px;line-height:1.65;margin-top:2px;}
-  ul.checks input:checked + label{color:var(--muted);text-decoration:line-through;text-decoration-color:var(--gold-soft);}
+  ul.checks input:checked + label{color:var(--muted);text-decoration:line-through;text-decoration-color:var(--accent-soft);}
 
   ol.ranked{counter-reset:r;list-style:none;margin:6px 0 0;padding:0;display:flex;flex-direction:column;gap:14px;}
   ol.ranked li{counter-increment:r;position:relative;padding-left:46px;font-size:15px;line-height:1.7;}
   ol.ranked li::before{content:counter(r);position:absolute;left:0;top:-2px;width:32px;height:32px;
-    background:var(--gold-soft);color:var(--gold);border-radius:9px;font-weight:800;font-size:16px;
+    background:var(--accent-soft);color:var(--accent);border-radius:9px;font-weight:800;font-size:16px;
     display:flex;align-items:center;justify-content:center;}
   ol.ranked b{color:var(--ink);}
   ol.ranked .sub{display:block;color:var(--muted);font-size:13px;margin-top:2px;}
 
-  .arrow{background:var(--gold-soft);border-left:3px solid var(--gold-line);border-radius:0 10px 10px 0;
+  .arrow{background:var(--accent-soft);border-left:3px solid var(--accent);border-radius:0 10px 10px 0;
     padding:12px 15px;font-size:14px;color:var(--ink);margin:14px 0 0;}
 
   table{width:100%;border-collapse:collapse;margin:8px 0 0;font-size:14.5px;}
   table th,table td{border:1px solid var(--line);padding:9px 10px;text-align:left;}
-  table thead th{background:var(--gold-soft);color:var(--ink);font-weight:700;font-size:13.5px;}
+  table thead th{background:var(--accent-soft);color:var(--ink);font-weight:700;font-size:13.5px;}
   table td input{width:100%;border:none;background:transparent;color:var(--ink);font-family:var(--font);
     font-size:15px;text-align:right;font-variant-numeric:tabular-nums;padding:2px 0;}
   table td input:focus{outline:none;}
@@ -102,14 +111,14 @@
   .calc input.num{width:130px;border:1px solid var(--line);background:var(--surface-2);border-radius:9px;
     padding:9px 11px;font-size:16px;color:var(--ink);text-align:right;font-variant-numeric:tabular-nums;
     font-family:var(--font);}
-  .calc input.num:focus-visible{outline:2px solid var(--gold);outline-offset:1px;border-color:var(--gold-line);}
-  .result{margin-top:4px;background:var(--navy);color:var(--on-navy);border-radius:13px;padding:16px 18px;
+  .calc input.num:focus-visible{outline:2px solid var(--accent);outline-offset:1px;border-color:var(--accent);}
+  .result{margin-top:4px;background:var(--well);color:var(--on-well);border-radius:10px;padding:16px 18px;
     display:flex;align-items:baseline;justify-content:space-between;gap:12px;flex-wrap:wrap;}
-  .result .lbl{font-size:14px;color:#cdd8e6;}
-  .result .val{font-size:30px;font-weight:800;color:var(--gold-line);font-variant-numeric:tabular-nums;}
-  .result .val small{font-size:15px;color:#cdd8e6;font-weight:600;margin-left:3px;}
+  .result .lbl{font-size:14px;color:var(--on-well-muted);}
+  .result .val{font-size:30px;font-weight:800;color:#E1685A;font-variant-numeric:tabular-nums;}
+  .result .val small{font-size:15px;color:var(--on-well-muted);font-weight:600;margin-left:3px;}
 
-  .fill{display:inline-block;min-width:74px;border-bottom:1.5px dashed var(--gold-line);
+  .fill{display:inline-block;min-width:74px;border-bottom:1.5px dashed var(--accent);
     margin:0 3px;height:1.2em;vertical-align:bottom;}
 
   /* footer / CTA */
@@ -117,7 +126,7 @@
   .book h4{margin:0 0 10px;font-size:15px;font-weight:800;}
   .book .b{display:flex;gap:11px;margin:0 0 10px;font-size:14px;line-height:1.65;}
   .book .b:last-child{margin-bottom:0;}
-  .book .b .no{flex:0 0 auto;color:var(--gold);font-weight:800;}
+  .book .b .no{flex:0 0 auto;color:var(--accent);font-weight:800;}
   .ku{margin-top:12px;font-size:13px;color:var(--muted);}
   .fine-print{margin-top:30px;font-size:12.5px;color:var(--muted);line-height:1.7;border-top:1px solid var(--line);padding-top:18px;}
   .fine-print p{margin:0 0 7px;}
@@ -131,24 +140,22 @@
 </style>
 
 <header>
-  <svg class="crack" viewBox="0 0 660 200" preserveAspectRatio="none" aria-hidden="true">
-    <path d="M-20,60 L150,110 L80,150 L260,175" fill="none" stroke="#C9A24B" stroke-width="2"/>
-    <path d="M680,40 L500,90 L590,130 L430,165" fill="none" stroke="#C9A24B" stroke-width="1.6" opacity=".7"/>
-  </svg>
   <div class="inner">
     <p class="eyebrow">消耗しない所得の増やし方</p>
-    <h1>無料特典パック<br><span class="g">副業を足す前に</span>、読むもの</h1>
-    <p class="lead">本を最後まで読んでくれた、あなたへ。本編に書ききれなかった実践ツールを、二つとも置いておきます。必要なほうだけ、使ってください。</p>
+    <h1>本を最後まで読んでくれた、あなたへ。<br>書ききれなかった実践ぶんを、<span class="r">二つとも</span>置いておきます。</h1>
+    <p class="lead">必要なほうだけ、使ってください。下のチェックはタップするとこの端末に保存されます。埋まらない項目が、あなたの「次の一歩」です。</p>
+    <div class="ledger-mini">
+      <div class="row"><span>副業でかき集めた稼ぎ</span><span class="dot"></span><span class="num">＋1000万</span></div>
+      <div class="row"><span>仮想通貨のレバレッジ</span><span class="dot"></span><span class="num">−700万</span></div>
+      <div class="row"><span>教材・スクール</span><span class="dot"></span><span class="num">−300万超</span></div>
+      <div class="rule"></div>
+      <div class="total"><span>差引き、手元に</span><span class="aka">赤字</span></div>
+    </div>
     <p class="author-tag">著　<b>軌道キャリ</b>　／　CryptoManga Studios</p>
   </div>
 </header>
 
 <div class="wrap">
-  <p class="intro">
-    僕は副業で累計1000万円ほどを稼ぎ、その裏で、仮想通貨のレバレッジ取引で700万円を溶かしました。家族との時間も、なくしかけた。そのうえでたどり着いたのが、「安易に副業を上乗せするより、本業の足場を賭け直したほうがいい」という結論です。<br>
-    <span class="fine">下のチェックは、タップするとこの端末に保存されます。埋まらない項目が、あなたの「次の一歩」です。</span>
-  </p>
-
   <nav class="jump" aria-label="特典への移動">
     <a href="#t1"><span class="n">特典1</span>転職・年収交渉チェックリスト</a>
     <a href="#t2"><span class="n">特典2</span>家計・時給・十分ラインのシート</a>
