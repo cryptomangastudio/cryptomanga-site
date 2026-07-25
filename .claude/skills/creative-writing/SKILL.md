@@ -25,6 +25,8 @@ description: 小説・マンガシナリオ・WEBTOON原作などの創作支援
 | マンガ/WEBTOONの台本・ネーム・コマ割り指示 | `references/manga-scenario-format.md`(**マンガ案件の最重要ファイル**) |
 | 縦型ショートドラマの原作・脚本、小説の縦型翻案 | `references/vertical-drama.md`(**縦型案件の最重要ファイル**。通常の脚本作法と真逆の点が多いので必読) |
 | 小説本文・地の文・セリフの執筆と改稿 | `references/prose-and-dialogue.md` |
+| キャラの外見描写・初登場の描き方／場面の物理的グラウンディング・ブロッキング(白い部屋回避・立ち位置/視線の一貫性・五感・action beats) | `references/character-description-and-staging.md`(**キャラを絵として立て、空間矛盾を防ぐ基礎**) |
+| 映像/絵に起こせる原作にする(動作で見せる・アクションライン・シルエットで描き分け・作画/キャストへの人物ビジュアル受け渡し) | `references/visual-storytelling.md`(**原作を"撮れる/描ける"状態にする基礎**) |
 | ジャンルのお約束・テンプレ回避・差別化 | `references/genre-playbook.md` |
 | 企画書・あらすじ・持ち込み資料・編集フィードバック | `references/pitch-planning.md` |
 | 書き上げた後の推敲・レビュー依頼 | `references/editing-checklist.md` |
@@ -34,7 +36,8 @@ description: 小説・マンガシナリオ・WEBTOON原作などの創作支援
 
 - **新規マンガ企画**:pitch-planning + story-structure + character-craft + genre-playbook
 - **第1話の台本執筆**:manga-scenario-format + story-structure(掴みと引き)
-- **小説の新作**:story-structure + character-craft + prose-and-dialogue
+- **小説の新作**:story-structure + character-craft + prose-and-dialogue + character-description-and-staging(初登場・空間)
+- **縦型ショートドラマ原作の本文**:vertical-drama + character-description-and-staging + visual-storytelling(絵に起こせる状態で書く)
 - **原稿への編集レビュー**:editing-checklist + pitch-planning(フィードバックの書き方)
 
 ## 進め方の型
