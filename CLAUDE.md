@@ -27,6 +27,7 @@
 |---|---|
 | タイトルの分布(実在80本の実測) | `webtoon/docs/タイトル分布調査.md` |
 | 導入と命名の分布 | `webtoon/docs/導入と命名の分布調査.md` |
+| 溺愛(糖度)の置き方 | `webtoon/docs/溺愛の出し方調査.md` |
 | ロマファンのベンチマークと韓国トレンド | `webtoon/docs/ベンチマーク分析.md` |
 | コピー・タイトル・ログラインの作法 | `.claude/skills/creative-writing/references/copywriting.md` |
 | 散文のAI臭対策(10ルール) | `kindle/docs/09_脱AI文体ルール.md` |
