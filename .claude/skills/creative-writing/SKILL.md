@@ -31,7 +31,8 @@ description: 小説・マンガシナリオ・WEBTOON原作などの創作支援
 | タイトル・キャッチコピー・キャラ紹介の一行 | `references/copywriting.md` |
 | **ログライン**(4要素が揃っているかの検査を含む) | `references/logline.md` |
 | 書き上げた後の推敲・レビュー依頼 | `references/editing-checklist.md` |
-| 「AIっぽい」「整いすぎ」と言われた・納品前の最終パス | `references/anti-ai-tells.md`(**すべての納品物に最後に必ずかける**) |
+| 「AIっぽい」「整いすぎ」と言われた | `references/anti-ai-tells.md`(**すべての納品物にかける**) |
+| **日本語の壊れ検査**(造語・使役の誤り・係り受けのねじれ) | `references/japanese-check.md`(**納品直前。anti-ai-tellsの後**) |
 
 複合的な依頼(「新連載の企画を丸ごと」等)は複数ファイルを組み合わせる。典型的な組み合わせ:
 
