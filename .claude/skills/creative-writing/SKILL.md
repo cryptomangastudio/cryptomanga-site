@@ -27,7 +27,8 @@ description: 小説・マンガシナリオ・WEBTOON原作などの創作支援
 | 小説本文・地の文・セリフの執筆と改稿 | `references/prose-and-dialogue.md` |
 | ジャンルのお約束・テンプレ回避・差別化 | `references/genre-playbook.md` |
 | 企画書・あらすじ・持ち込み資料・編集フィードバック | `references/pitch-planning.md` |
-| タイトル・キャッチコピー・ログライン・キャラ紹介の一行 | `references/copywriting.md` |
+| タイトル・キャッチコピー・キャラ紹介の一行 | `references/copywriting.md` |
+| **ログライン**(4要素が揃っているかの検査を含む) | `references/logline.md` |
 | 書き上げた後の推敲・レビュー依頼 | `references/editing-checklist.md` |
 | 「AIっぽい」「整いすぎ」と言われた・納品前の最終パス | `references/anti-ai-tells.md`(**すべての納品物に最後に必ずかける**) |
 
