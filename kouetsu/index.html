@@ -28,13 +28,14 @@
     line-height: 1.7;
     font-size: 15px;
   }
-  .wrap { max-width: 940px; margin: 0 auto; padding: 32px 20px 80px; }
+  .wrap { max-width: 1080px; margin: 0 auto; padding: 32px 20px 80px; }
   header { border-bottom: 1px solid var(--line); padding-bottom: 16px; margin-bottom: 28px; }
   h1 { font-size: 22px; margin: 0 0 4px; letter-spacing: .02em; }
   .sub { color: var(--muted); font-size: 13px; margin: 0; }
   section { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 20px 22px; margin-bottom: 18px; }
   h2 { font-size: 15px; margin: 0 0 14px; letter-spacing: .03em; }
   h2 .step { display: inline-block; background: var(--ink); color: #fff; border-radius: 50%; width: 21px; height: 21px; line-height: 21px; text-align: center; font-size: 12px; margin-right: 8px; }
+  .note-inline { font-weight: 400; font-size: 12px; color: var(--muted); margin-left: 12px; }
   label { display: block; font-size: 13px; color: var(--muted); margin-bottom: 5px; }
   input[type=text], input[type=password], select {
     width: 100%; padding: 9px 11px; border: 1px solid var(--line); border-radius: 6px;
@@ -64,7 +65,8 @@
   .log { font-size: 12px; color: var(--muted); max-height: 150px; overflow-y: auto; font-variant-numeric: tabular-nums; }
   .log div { padding: 1px 0; }
   .log .err { color: var(--danger); }
-  .finding { border: 1px solid var(--line); border-left-width: 4px; border-radius: 6px; padding: 12px 14px; margin-bottom: 10px; background: #fff; }
+  .finding { border: 1px solid var(--line); border-left-width: 4px; border-radius: 6px; padding: 12px 14px; margin-bottom: 10px; background: #fff; cursor: pointer; }
+  .finding:hover { border-color: #b9b9b3; border-left-width: 4px; }
   .finding.sev-指摘 { border-left-color: var(--danger); }
   .finding.sev-要確認 { border-left-color: var(--warn); }
   .finding.sev-申し送り { border-left-color: var(--muted); }
@@ -79,6 +81,25 @@
   .hidden { display: none; }
   ul.plain { padding-left: 18px; margin: 6px 0; font-size: 13px; color: var(--muted); }
   .cost { font-size: 12px; color: var(--muted); text-align: right; }
+
+  /* ---------- ビューア ---------- */
+  .panes { display: flex; gap: 12px; }
+  .pane { flex: 1; min-width: 0; border: 1px solid var(--line); border-radius: 8px; overflow: hidden; background: #f2f2ef; }
+  .pane-head { font-size: 12px; color: var(--muted); padding: 6px 12px; border-bottom: 1px solid var(--line); background: #fff; }
+  .pane-scroll { position: relative; height: 72vh; overflow-y: auto; padding: 10px; }
+  .vpage { position: relative; margin: 0 auto 12px; background: #fff; border: 1px solid var(--line); overflow: hidden; }
+  .vpage.flash { outline: 3px solid var(--accent); outline-offset: -1px; }
+  .vpage-label {
+    position: absolute; top: 6px; left: 6px; z-index: 2;
+    background: rgba(31,35,40,.72); color: #fff; font-size: 11px; padding: 1px 8px; border-radius: 3px;
+  }
+  .vbadge {
+    position: absolute; top: 6px; right: 6px; z-index: 2;
+    background: var(--danger); color: #fff; font-size: 11px; padding: 1px 8px; border-radius: 3px;
+  }
+  .vpage .wait { position: absolute; inset: 0; display: flex; align-items: flex-start; justify-content: center; padding-top: 60px; color: #c9c9c4; font-size: 13px; }
+  .band { overflow: hidden; }
+  .band img { width: 100%; display: block; user-select: none; -webkit-user-drag: none; }
 </style>
 </head>
 <body>
@@ -171,6 +192,23 @@
   </div>
 </section>
 
+<section id="viewer" class="hidden">
+  <h2>原稿ビューア
+    <span class="note-inline"><label style="display:inline;font-size:12px"><input type="checkbox" id="synctoggle" checked> スクロール同期</label></span>
+    <span class="note-inline">指摘カードをクリックすると該当ページに移動します</span>
+  </h2>
+  <div class="panes">
+    <div class="pane">
+      <div class="pane-head" id="head-main">本稿</div>
+      <div class="pane-scroll" id="scroll-main"></div>
+    </div>
+    <div class="pane hidden" id="pane-name">
+      <div class="pane-head" id="head-name">ネーム</div>
+      <div class="pane-scroll" id="scroll-name"></div>
+    </div>
+  </div>
+</section>
+
 <section id="result" class="hidden">
   <h2><span class="step">4</span>結果</h2>
   <div class="summary">
@@ -199,14 +237,15 @@ const $ = (id) => document.getElementById(id);
 const LS = 'cm_kouetsu_';
 const API_URL = 'https://api.anthropic.com/v1/messages';
 const CONCURRENCY = 3;
-const TILE_H = 1600;        // タイル分割の高さ
-const TILE_OVERLAP = 200;   // タイルの重なり
-const SEAM_STRIP = 420;     // シームレス確認で切り出す上下の高さ
+const TILE_H = 1600;        // 帯(タイル)の高さ(描画px)
+const TILE_OVERLAP = 200;   // 帯同士の重なり
+const SEAM_STRIP = 420;     // シームレス確認で使う上下の帯
+const NAME_WIDTH = 800;     // ネームの描画幅(抜け確認用なので低解像度で十分)
 
-let mainDoc = null, nameDoc = null;
-let mainName = '', nameName = '';
 let abort = false;
+let running = false;
 let lastReport = null;
+let usageIn = 0, usageOut = 0;
 
 // ---------- 設定の保存 ----------
 for (const k of ['apikey', 'model', 'effort', 'quality', 'seamless']) {
@@ -223,6 +262,123 @@ $('clearkey').addEventListener('click', () => {
   $('apikey').value = '';
   alert('APIキーを消去しました。');
 });
+
+// ==========================================================
+// 帯ストア
+//
+// メモリ方針: フルページのcanvasは決して作らない。
+// ページを帯単位で描画 → 即JPEG(blob)化 → canvasは幅0にして解放。
+// ビューアは <img src=blobURL>(画面外のデコード済みビットマップは
+// ブラウザが自動破棄する)、APIには同じblobをbase64化して送る。
+// ==========================================================
+
+function makeQueue() {
+  // PDF.jsの描画をドキュメントごとに直列化する(同時描画の負荷とエラーを避ける)
+  let chain = Promise.resolve();
+  return (fn) => {
+    const p = chain.then(fn);
+    chain = p.then(() => {}, () => {});
+    return p;
+  };
+}
+
+const store = {
+  main: { doc: null, file: '', pages: new Map(), enqueue: makeQueue() },
+  name: { doc: null, file: '', pages: new Map(), enqueue: makeQueue() },
+};
+
+function clearStore(kind) {
+  const s = store[kind];
+  for (const pr of s.pages.values()) {
+    pr.then((d) => d.bands.forEach((b) => URL.revokeObjectURL(b.url))).catch(() => {});
+  }
+  s.pages = new Map();
+}
+
+function canvasToBlob(canvas) {
+  return new Promise((res) => canvas.toBlob(res, 'image/jpeg', 0.9));
+}
+
+function blobToB64(blob) {
+  return new Promise((res, rej) => {
+    const fr = new FileReader();
+    fr.onload = () => res(fr.result.split(',')[1]);
+    fr.onerror = rej;
+    fr.readAsDataURL(blob);
+  });
+}
+
+// canvasの一部を小さなcanvasに切り出す
+function crop(canvas, y, h) {
+  const c = document.createElement('canvas');
+  c.width = canvas.width;
+  c.height = h;
+  c.getContext('2d').drawImage(canvas, 0, y, canvas.width, h, 0, 0, canvas.width, h);
+  return c;
+}
+
+// ページを帯単位で描画する。フルページのcanvasは一度も作らない。
+async function renderBands(doc, pageNo, width) {
+  const page = await doc.getPage(pageNo);
+  const base = page.getViewport({ scale: 1 });
+  const scale = width / base.width;
+  const viewport = page.getViewport({ scale });
+  const W = Math.round(viewport.width);
+  const H = Math.round(viewport.height);
+  const step = TILE_H - TILE_OVERLAP;
+
+  const bands = [];
+  let topStrip = null, bottomStrip = null;
+  let top = 0;
+  while (true) {
+    const h = Math.min(TILE_H, H - top);
+    const canvas = document.createElement('canvas');
+    canvas.width = W;
+    canvas.height = h;
+    const ctx = canvas.getContext('2d', { alpha: false });
+    ctx.fillStyle = '#fff';
+    ctx.fillRect(0, 0, W, h);
+    // transform でページの top 位置から下を帯に描く(PDF.jsのタイル描画の定石)
+    await page.render({
+      canvasContext: ctx,
+      viewport,
+      transform: [1, 0, 0, 1, 0, -top],
+    }).promise;
+
+    const isLast = top + h >= H;
+    if (top === 0) {
+      const sh = Math.min(SEAM_STRIP, h);
+      const c = crop(canvas, 0, sh);
+      topStrip = { blob: await canvasToBlob(c), w: W, h: sh };
+      c.width = c.height = 0;
+    }
+    if (isLast) {
+      const sh = Math.min(SEAM_STRIP, h);
+      const c = crop(canvas, h - sh, sh);
+      bottomStrip = { blob: await canvasToBlob(c), w: W, h: sh };
+      c.width = c.height = 0;
+    }
+
+    const blob = await canvasToBlob(canvas);
+    canvas.width = canvas.height = 0; // 描画バッファを即解放
+    bands.push({ top, h, blob, url: URL.createObjectURL(blob) });
+    if (isLast) break;
+    top += step;
+  }
+  return { W, H, bands, topStrip, bottomStrip };
+}
+
+function getPageData(kind, pageNo) {
+  const s = store[kind];
+  const w = kind === 'main' ? +$('quality').value : NAME_WIDTH;
+  const key = pageNo + '@' + w;
+  if (!s.pages.has(key)) {
+    const p = s.enqueue(() => renderBands(s.doc, pageNo, w));
+    p.catch(() => s.pages.delete(key));
+    s.pages.set(key, p);
+  }
+  return s.pages.get(key);
+}
 
 // ---------- ファイル読み込み ----------
 function wireDrop(dropId, inputId, kind) {
@@ -241,78 +397,178 @@ function wireDrop(dropId, inputId, kind) {
 }
 
 async function loadPdf(file, kind, drop) {
-  drop.innerHTML = '<strong>読み込み中…</strong><span>' + file.name + '</span>';
+  drop.innerHTML = '<strong>読み込み中…</strong><span>' + esc(file.name) + '</span>';
   try {
     const buf = await file.arrayBuffer();
     const doc = await pdfjsLib.getDocument({ data: buf }).promise;
-    if (kind === 'main') { mainDoc = doc; mainName = file.name; }
-    else { nameDoc = doc; nameName = file.name; }
+    const s = store[kind];
+    if (s.doc) { clearStore(kind); s.doc.destroy(); }
+    s.doc = doc;
+    s.file = file.name;
     drop.classList.add('loaded');
-    drop.innerHTML = '<strong>' + file.name + '</strong><span>' + doc.numPages + 'ページ / クリックで差し替え</span>';
+    drop.innerHTML = '<strong>' + esc(file.name) + '</strong><span>' + doc.numPages + 'ページ / クリックで差し替え</span>';
+    await buildPane(kind);
+    updateViewerLayout();
   } catch (err) {
     drop.classList.remove('loaded');
-    drop.innerHTML = '<strong style="color:#b3261e">読み込めませんでした</strong><span>' + err.message + '</span>';
+    drop.innerHTML = '<strong style="color:#b3261e">読み込めませんでした</strong><span>' + esc(err.message) + '</span>';
   }
-  $('run').disabled = !mainDoc;
+  $('run').disabled = !store.main.doc;
 }
 wireDrop('drop-main', 'file-main', 'main');
 wireDrop('drop-name', 'file-name', 'name');
 
-// ---------- PDF → 画像 ----------
-async function renderPage(doc, pageNo, targetWidth) {
-  const page = await doc.getPage(pageNo);
-  const base = page.getViewport({ scale: 1 });
-  const viewport = page.getViewport({ scale: targetWidth / base.width });
-  const canvas = document.createElement('canvas');
-  canvas.width = Math.round(viewport.width);
-  canvas.height = Math.round(viewport.height);
-  const ctx = canvas.getContext('2d', { alpha: false });
-  ctx.fillStyle = '#fff';
-  ctx.fillRect(0, 0, canvas.width, canvas.height);
-  await page.render({ canvasContext: ctx, viewport }).promise;
-  return canvas;
+// ==========================================================
+// ビューア(遅延描画+同時スクロール)
+// ==========================================================
+
+function paneScroll(kind) {
+  return $(kind === 'main' ? 'scroll-main' : 'scroll-name');
 }
 
-function toB64(canvas) {
-  return canvas.toDataURL('image/jpeg', 0.9).split(',')[1];
+function updateViewerLayout() {
+  $('viewer').classList.toggle('hidden', !store.main.doc);
+  $('pane-name').classList.toggle('hidden', !store.name.doc);
+  $('head-main').textContent = '本稿' + (store.main.file ? ' — ' + store.main.file : '');
+  $('head-name').textContent = 'ネーム' + (store.name.file ? ' — ' + store.name.file : '');
 }
 
-// 縦長ページをオーバーラップ付きタイルに分割
-function tile(canvas) {
-  if (canvas.height <= TILE_H) return [canvas];
-  const out = [];
-  const step = TILE_H - TILE_OVERLAP;
-  for (let top = 0; top < canvas.height; top += step) {
-    const h = Math.min(TILE_H, canvas.height - top);
-    const c = document.createElement('canvas');
-    c.width = canvas.width;
-    c.height = h;
-    c.getContext('2d').drawImage(canvas, 0, top, canvas.width, h, 0, 0, canvas.width, h);
-    out.push(c);
-    if (top + TILE_H >= canvas.height) break;
+const observers = { main: null, name: null };
+
+async function buildPane(kind) {
+  const s = store[kind];
+  const scroll = paneScroll(kind);
+  scroll.innerHTML = '';
+  if (observers[kind]) { observers[kind].disconnect(); observers[kind] = null; }
+  if (!s.doc) return;
+
+  // ページの縦横比だけ先に取り、実寸プレースホルダを並べる(描画はまだしない)
+  for (let p = 1; p <= s.doc.numPages; p++) {
+    const page = await s.doc.getPage(p);
+    const vp = page.getViewport({ scale: 1 });
+    const div = document.createElement('div');
+    div.className = 'vpage';
+    div.dataset.page = p;
+    div.style.aspectRatio = vp.width + ' / ' + vp.height;
+    div.innerHTML = '<div class="vpage-label">P' + p + '</div><div class="wait">P' + p + ' 読み込み待ち</div>';
+    scroll.appendChild(div);
   }
-  return out;
+
+  // 画面に近づいたページだけ帯を描画して埋める
+  const io = new IntersectionObserver((entries) => {
+    for (const e of entries) {
+      if (!e.isIntersecting) continue;
+      io.unobserve(e.target);
+      fillPage(kind, e.target);
+    }
+  }, { root: scroll, rootMargin: '1500px 0px' });
+  scroll.querySelectorAll('.vpage').forEach((el) => io.observe(el));
+  observers[kind] = io;
+
+  if (lastReport && kind === 'main') addBadges(lastReport);
 }
 
-// 前ページ下端 + 次ページ上端 を実際に連結した画像を作る
-function stitch(prevCanvas, nextCanvas) {
-  const w = Math.min(prevCanvas.width, nextCanvas.width);
-  const topH = Math.min(SEAM_STRIP, prevCanvas.height);
-  const botH = Math.min(SEAM_STRIP, nextCanvas.height);
-  const c = document.createElement('canvas');
-  c.width = w;
-  c.height = topH + botH + 3;
-  const ctx = c.getContext('2d', { alpha: false });
-  ctx.fillStyle = '#fff';
-  ctx.fillRect(0, 0, c.width, c.height);
-  ctx.drawImage(prevCanvas, 0, prevCanvas.height - topH, w, topH, 0, 0, w, topH);
-  ctx.fillStyle = '#e11';
-  ctx.fillRect(0, topH, w, 3);
-  ctx.drawImage(nextCanvas, 0, 0, w, botH, 0, topH + 3, w, botH);
-  return c;
+async function fillPage(kind, el) {
+  const p = +el.dataset.page;
+  try {
+    const pd = await getPageData(kind, p);
+    el.querySelector('.wait')?.remove();
+    const frag = document.createDocumentFragment();
+    pd.bands.forEach((b, i) => {
+      const wrap = document.createElement('div');
+      wrap.className = 'band';
+      const dispH = i === 0 ? b.h : b.h - TILE_OVERLAP;
+      wrap.style.aspectRatio = pd.W + ' / ' + dispH;
+      const img = document.createElement('img');
+      img.src = b.url;
+      img.loading = 'lazy';
+      // 帯は解析用に上下200px重ねてあるので、表示では重なり分をCSSで切る
+      // (%マージンは幅基準なので、幅が変わっても正しく追従する)
+      if (i > 0) img.style.marginTop = (-TILE_OVERLAP / pd.W * 100) + '%';
+      wrap.appendChild(img);
+      frag.appendChild(wrap);
+    });
+    el.appendChild(frag);
+  } catch (err) {
+    const w = el.querySelector('.wait');
+    if (w) w.textContent = '描画エラー: ' + err.message;
+  }
 }
 
-// ---------- Claude API ----------
+// --- 同時スクロール(ページ比率ベース) ---
+// ピクセル同期だとページ高さの違いで下に行くほどズレるため、
+// 「いま本稿のPページ目の f 割地点」→「相手側のPページ目の f 割地点」で合わせる。
+const ignoreScroll = { main: 0, name: 0 };
+
+function wireSync(kind) {
+  const src = paneScroll(kind);
+  src.addEventListener('scroll', () => {
+    if (ignoreScroll[kind] > 0) { ignoreScroll[kind]--; return; }
+    if (!$('synctoggle').checked) return;
+    const other = kind === 'main' ? 'name' : 'main';
+    if (!store[other].doc) return;
+    const dst = paneScroll(other);
+    const srcPages = src.querySelectorAll('.vpage');
+    const dstPages = dst.querySelectorAll('.vpage');
+    if (!srcPages.length || !dstPages.length) return;
+
+    const y = src.scrollTop;
+    let el = srcPages[srcPages.length - 1];
+    for (const e of srcPages) {
+      if (e.offsetTop + e.offsetHeight > y) { el = e; break; }
+    }
+    const f = Math.max(0, Math.min(1, (y - el.offsetTop) / el.offsetHeight));
+    const idx = Math.min(+el.dataset.page - 1, dstPages.length - 1);
+    const dEl = dstPages[idx];
+    let target = Math.round(dEl.offsetTop + f * dEl.offsetHeight);
+    target = Math.max(0, Math.min(target, dst.scrollHeight - dst.clientHeight));
+    if (Math.abs(dst.scrollTop - target) > 2) {
+      ignoreScroll[other]++;
+      dst.scrollTop = target;
+    }
+  }, { passive: true });
+}
+wireSync('main');
+wireSync('name');
+
+function jumpToPage(p) {
+  const el = paneScroll('main').querySelector('.vpage[data-page="' + p + '"]');
+  if (!el) return;
+  $('viewer').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  paneScroll('main').scrollTo({ top: Math.max(0, el.offsetTop - 8), behavior: 'smooth' });
+  paneScroll('main').querySelectorAll('.vpage.flash').forEach((e) => e.classList.remove('flash'));
+  el.classList.add('flash');
+  setTimeout(() => el.classList.remove('flash'), 1800);
+}
+
+function addBadges(r) {
+  const scroll = paneScroll('main');
+  scroll.querySelectorAll('.vbadge').forEach((e) => e.remove());
+  const byPage = {};
+  for (const f of r.findings) (byPage[f.page] ||= []).push(f);
+  for (const [p, list] of Object.entries(byPage)) {
+    const el = scroll.querySelector('.vpage[data-page="' + p + '"]');
+    if (!el) continue;
+    const n1 = list.filter((f) => f.severity === '指摘').length;
+    const n2 = list.filter((f) => f.severity === '要確認').length;
+    const chip = document.createElement('div');
+    chip.className = 'vbadge';
+    chip.textContent = (n1 ? '指摘' + n1 : '') + (n1 && n2 ? '・' : '') + (n2 ? '要確認' + n2 : '') || '申し送り';
+    el.appendChild(chip);
+  }
+}
+
+// 解像度を変えたら本稿の帯を作り直す(実行中は不可)
+$('quality').addEventListener('change', () => {
+  if (running || !store.main.doc) return;
+  clearStore('main');
+  buildPane('main');
+});
+
+// ==========================================================
+// Claude API
+// ==========================================================
+
 const SCHEMA = {
   type: 'object',
   properties: {
@@ -335,8 +591,6 @@ const SCHEMA = {
   required: ['findings'],
   additionalProperties: false
 };
-
-let usageIn = 0, usageOut = 0;
 
 async function callClaude(systemPrompt, images, instruction) {
   const body = {
@@ -386,7 +640,34 @@ async function callClaude(systemPrompt, images, instruction) {
   return JSON.parse(textBlock.text);
 }
 
-// ---------- 実行 ----------
+// シームレス確認用: 前ページ下端と次ページ上端を連結した画像のbase64を作る
+async function stitchSeam(botStrip, topStrip) {
+  const [bi, ti] = await Promise.all([
+    createImageBitmap(botStrip.blob),
+    createImageBitmap(topStrip.blob)
+  ]);
+  const w = Math.min(bi.width, ti.width);
+  const c = document.createElement('canvas');
+  c.width = w;
+  c.height = bi.height + ti.height + 3;
+  const ctx = c.getContext('2d', { alpha: false });
+  ctx.fillStyle = '#fff';
+  ctx.fillRect(0, 0, c.width, c.height);
+  ctx.drawImage(bi, 0, 0, w, bi.height, 0, 0, w, bi.height);
+  ctx.fillStyle = '#e11';
+  ctx.fillRect(0, bi.height, w, 3);
+  ctx.drawImage(ti, 0, 0, w, ti.height, 0, bi.height + 3, w, ti.height);
+  bi.close();
+  ti.close();
+  const b64 = c.toDataURL('image/jpeg', 0.9).split(',')[1];
+  c.width = c.height = 0;
+  return b64;
+}
+
+// ==========================================================
+// 実行
+// ==========================================================
+
 function parseRange(str, max) {
   if (!str.trim()) return Array.from({ length: max }, (_, i) => i + 1);
   const set = new Set();
@@ -429,15 +710,18 @@ $('stop').addEventListener('click', () => { abort = true; log('中止してい�
 $('run').addEventListener('click', async () => {
   if (!$('apikey').value.trim()) { alert('APIキーを入力してください。'); return; }
   abort = false;
+  running = true;
   usageIn = 0; usageOut = 0;
   $('run').disabled = true;
+  $('quality').disabled = true;
   $('stop').classList.remove('hidden');
   $('progress').classList.remove('hidden');
   $('result').classList.add('hidden');
   $('log').innerHTML = '';
   $('barfill').style.width = '0';
 
-  const width = +$('quality').value;
+  const mainDoc = store.main.doc;
+  const nameDoc = store.name.doc;
   const pages = parseRange($('range').value, mainDoc.numPages);
   const useName = !!nameDoc;
   const nameAligned = useName && nameDoc.numPages === mainDoc.numPages;
@@ -453,28 +737,20 @@ $('run').addEventListener('click', async () => {
     log('ネームPDFなし: 描き文字の抜け・ネーム相違は未確認になります');
   }
 
-  // ページ画像をキャッシュ(シームレス確認で再利用)
-  const canvasCache = new Map();
-  const getCanvas = async (p) => {
-    if (!canvasCache.has(p)) canvasCache.set(p, await renderPage(mainDoc, p, width));
-    return canvasCache.get(p);
-  };
-
   // --- ページごとの校閲 ---
   const sysPage = KOUETSU_DEFINITION + '\n\n' + CHECKLIST_PAGE;
   await pool(pages, async (p) => {
     if (abort) return;
-    const canvas = await getCanvas(p);
-    const tiles = tile(canvas);
-    const imgs = tiles.map(toB64);
+    const pd = await getPageData('main', p);
+    const imgs = await Promise.all(pd.bands.map((b) => blobToB64(b.blob)));
     let instruction = '仕上げ原稿の ' + p + 'ページ目です。';
-    if (tiles.length > 1) instruction += '縦長のため上から順に' + tiles.length + '枚に分割しています(各画像は少し重なっています)。';
+    if (pd.bands.length > 1) instruction += '縦長のため上から順に' + pd.bands.length + '枚に分割しています(各画像は少し重なっています)。';
     if (useName) {
       const np = Math.min(p, nameDoc.numPages);
-      // ネームは「描き文字があるか」を見るだけなので低解像度で十分(トークン節約)
-      const nameTiles = tile(await renderPage(nameDoc, np, Math.min(width, 800)));
-      imgs.push(...nameTiles.map(toB64));
-      instruction += '\n最後の' + nameTiles.length + '枚は対応するネーム(' + np + 'ページ目)です。'
+      const nd = await getPageData('name', np);
+      const nameImgs = await Promise.all(nd.bands.map((b) => blobToB64(b.blob)));
+      imgs.push(...nameImgs);
+      instruction += '\n最後の' + nameImgs.length + '枚は対応するネーム(' + np + 'ページ目)です。'
         + '描き文字・漫符の抜け、指示との齟齬を突き合わせてください。ネーム自体の粗は指摘しないでください。';
     }
     instruction += '\nチェックリストに沿って間違いを探し、findings を返してください。問題がなければ空配列で構いません。';
@@ -495,7 +771,8 @@ $('run').addEventListener('click', async () => {
       const sysSeam = KOUETSU_DEFINITION + '\n\n' + CHECKLIST_SEAMLESS;
       await pool(pairs, async ([a, b]) => {
         if (abort) return;
-        const img = toB64(stitch(await getCanvas(a), await getCanvas(b)));
+        const [pdA, pdB] = await Promise.all([getPageData('main', a), getPageData('main', b)]);
+        const img = await stitchSeam(pdA.bottomStrip, pdB.topStrip);
         const out = await callClaude(sysSeam, [img],
           'P' + a + 'の下端とP' + b + 'の上端を連結した画像です。境界で繋がりが破綻していないか確認してください。');
         for (const f of out.findings) {
@@ -509,14 +786,17 @@ $('run').addEventListener('click', async () => {
   // --- 集計 ---
   findings.sort((x, y) => x.page - y.page);
   lastReport = {
-    file: mainName, pages, findings,
-    nameFile: useName ? nameName : null, nameAligned, doSeam, aborted: abort,
+    file: store.main.file, pages, findings,
+    nameFile: useName ? store.name.file : null, nameAligned, doSeam, aborted: abort,
     model: $('model').value, effort: $('effort').value
   };
   render(lastReport);
+  addBadges(lastReport);
 
   $('stop').classList.add('hidden');
   $('run').disabled = false;
+  $('quality').disabled = false;
+  running = false;
   log(abort ? '中止しました' : '完了しました');
 });
 
@@ -546,11 +826,13 @@ function render(r) {
     for (const f of r.findings) {
       const d = document.createElement('div');
       d.className = 'finding sev-' + f.severity;
+      d.title = 'クリックで該当ページを表示';
       d.innerHTML =
         '<div class="head"><span class="tag ' + f.severity + '">' + esc(f.severity) + '</span>'
         + 'P' + f.page + ' / ' + esc(f.location) + ' — ' + esc(f.category)
         + (f.needs_clip ? ' <span style="color:var(--warn)">※クリスタ要確認</span>' : '')
         + '</div><div>' + esc(f.body) + '</div>';
+      d.addEventListener('click', () => jumpToPage(f.page));
       box.appendChild(d);
     }
   }
