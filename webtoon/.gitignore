@@ -4,6 +4,11 @@
 comps/*/企画/*
 !comps/*/企画/README.md
 
+# 自社の本命企画も同じ扱い(持ち込み前に他社に読まれるのを避ける)
+# 方針の詳細: projects/README.md
+projects/*/企画/*
+!projects/*/企画/README.md
+
 # 公式配布物(企画書フォーマット等)も再配布を避けるため除外
 *.docx
 *.doc
