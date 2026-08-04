@@ -1,0 +1,623 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>仕上げ校閲ツール | CryptoManga Studios</title>
+<style>
+  :root {
+    --bg: #f7f7f5;
+    --panel: #ffffff;
+    --ink: #1f2328;
+    --muted: #6b7280;
+    --line: #e3e3df;
+    --accent: #2f6f4e;
+    --accent-weak: #eaf3ee;
+    --warn: #b45309;
+    --warn-weak: #fdf4e7;
+    --danger: #b3261e;
+    --danger-weak: #fdeceb;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--ink);
+    font-family: "Hiragino Kaku Gothic ProN", "Yu Gothic", "Noto Sans JP", system-ui, sans-serif;
+    line-height: 1.7;
+    font-size: 15px;
+  }
+  .wrap { max-width: 940px; margin: 0 auto; padding: 32px 20px 80px; }
+  header { border-bottom: 1px solid var(--line); padding-bottom: 16px; margin-bottom: 28px; }
+  h1 { font-size: 22px; margin: 0 0 4px; letter-spacing: .02em; }
+  .sub { color: var(--muted); font-size: 13px; margin: 0; }
+  section { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 20px 22px; margin-bottom: 18px; }
+  h2 { font-size: 15px; margin: 0 0 14px; letter-spacing: .03em; }
+  h2 .step { display: inline-block; background: var(--ink); color: #fff; border-radius: 50%; width: 21px; height: 21px; line-height: 21px; text-align: center; font-size: 12px; margin-right: 8px; }
+  label { display: block; font-size: 13px; color: var(--muted); margin-bottom: 5px; }
+  input[type=text], input[type=password], select {
+    width: 100%; padding: 9px 11px; border: 1px solid var(--line); border-radius: 6px;
+    font-size: 14px; font-family: inherit; background: #fff; color: var(--ink);
+  }
+  .row { display: flex; gap: 14px; flex-wrap: wrap; }
+  .row > div { flex: 1 1 180px; }
+  .note { font-size: 12px; color: var(--muted); margin-top: 8px; }
+  .drop {
+    border: 2px dashed var(--line); border-radius: 8px; padding: 22px; text-align: center;
+    cursor: pointer; transition: .15s; background: #fcfcfb;
+  }
+  .drop:hover, .drop.over { border-color: var(--accent); background: var(--accent-weak); }
+  .drop.loaded { border-style: solid; border-color: var(--accent); background: var(--accent-weak); text-align: left; }
+  .drop strong { display: block; font-size: 14px; }
+  .drop span { font-size: 12px; color: var(--muted); }
+  .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+  @media (max-width: 640px) { .grid2 { grid-template-columns: 1fr; } }
+  button {
+    font-family: inherit; font-size: 14px; padding: 11px 22px; border-radius: 6px;
+    border: 1px solid var(--ink); background: var(--ink); color: #fff; cursor: pointer;
+  }
+  button:disabled { opacity: .4; cursor: not-allowed; }
+  button.ghost { background: #fff; color: var(--ink); }
+  .bar { height: 6px; background: var(--line); border-radius: 3px; overflow: hidden; margin: 14px 0 8px; }
+  .bar > i { display: block; height: 100%; background: var(--accent); width: 0; transition: width .3s; }
+  .log { font-size: 12px; color: var(--muted); max-height: 150px; overflow-y: auto; font-variant-numeric: tabular-nums; }
+  .log div { padding: 1px 0; }
+  .log .err { color: var(--danger); }
+  .finding { border: 1px solid var(--line); border-left-width: 4px; border-radius: 6px; padding: 12px 14px; margin-bottom: 10px; background: #fff; }
+  .finding.sev-指摘 { border-left-color: var(--danger); }
+  .finding.sev-要確認 { border-left-color: var(--warn); }
+  .finding.sev-申し送り { border-left-color: var(--muted); }
+  .finding .head { font-size: 12px; color: var(--muted); margin-bottom: 4px; }
+  .tag { display: inline-block; font-size: 11px; padding: 1px 7px; border-radius: 3px; margin-right: 6px; }
+  .tag.指摘 { background: var(--danger-weak); color: var(--danger); }
+  .tag.要確認 { background: var(--warn-weak); color: var(--warn); }
+  .tag.申し送り { background: #eee; color: var(--muted); }
+  .summary { display: flex; gap: 22px; flex-wrap: wrap; padding: 14px 0; border-bottom: 1px solid var(--line); margin-bottom: 16px; }
+  .summary b { display: block; font-size: 24px; font-weight: 600; }
+  .summary span { font-size: 12px; color: var(--muted); }
+  .hidden { display: none; }
+  ul.plain { padding-left: 18px; margin: 6px 0; font-size: 13px; color: var(--muted); }
+  .cost { font-size: 12px; color: var(--muted); text-align: right; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header>
+  <h1>仕上げ校閲ツール</h1>
+  <p class="sub">WithLinks基準の間違い探し / 原稿PDFはこの端末から外に出ません(画像はClaude APIにのみ送信されます)</p>
+</header>
+
+<section>
+  <h2><span class="step">1</span>設定</h2>
+  <div class="row">
+    <div style="flex:2 1 320px">
+      <label for="apikey">Anthropic APIキー</label>
+      <input type="password" id="apikey" placeholder="sk-ant-..." autocomplete="off">
+    </div>
+    <div>
+      <label for="model">モデル</label>
+      <select id="model">
+        <option value="claude-opus-5">Claude Opus 5(推奨・高精度)</option>
+        <option value="claude-sonnet-5">Claude Sonnet 5(低コスト)</option>
+      </select>
+    </div>
+    <div>
+      <label for="effort">思考の深さ</label>
+      <select id="effort">
+        <option value="high">高(推奨)</option>
+        <option value="medium">中</option>
+        <option value="low">低(速い・安い)</option>
+      </select>
+    </div>
+  </div>
+  <p class="note">APIキーはこの端末のブラウザにのみ保存され、サーバーには送信されません。共用PCでは使用後に「キーを消去」してください。
+    <button class="ghost" id="clearkey" style="padding:3px 10px;font-size:12px;margin-left:6px">キーを消去</button>
+  </p>
+</section>
+
+<section>
+  <h2><span class="step">2</span>原稿を入れる</h2>
+  <div class="grid2">
+    <div>
+      <div class="drop" id="drop-main">
+        <strong>本稿PDF(必須)</strong>
+        <span>クリック、またはドラッグ&amp;ドロップ</span>
+      </div>
+    </div>
+    <div>
+      <div class="drop" id="drop-name">
+        <strong>ネームPDF(任意)</strong>
+        <span>入れると描き文字の抜け・ネーム相違も見ます</span>
+      </div>
+    </div>
+  </div>
+  <input type="file" id="file-main" accept="application/pdf" class="hidden">
+  <input type="file" id="file-name" accept="application/pdf" class="hidden">
+  <p class="note">容量制限はありません。ページ数が多い場合は下でページ範囲を指定できます。</p>
+</section>
+
+<section>
+  <h2><span class="step">3</span>実行</h2>
+  <div class="row">
+    <div>
+      <label for="range">ページ範囲(空欄で全ページ)</label>
+      <input type="text" id="range" placeholder="例: 1-10, 15">
+    </div>
+    <div>
+      <label for="seamless">ページ境界のシームレス確認</label>
+      <select id="seamless">
+        <option value="1">する(推奨)</option>
+        <option value="0">しない</option>
+      </select>
+    </div>
+    <div>
+      <label for="quality">解像度</label>
+      <select id="quality">
+        <option value="1200">標準(幅1200px)</option>
+        <option value="1600">高(幅1600px・低速)</option>
+        <option value="900">低(幅900px・安い)</option>
+      </select>
+    </div>
+  </div>
+  <div style="margin-top:16px">
+    <button id="run" disabled>校閲を開始</button>
+    <button class="ghost hidden" id="stop">中止</button>
+  </div>
+  <div id="progress" class="hidden">
+    <div class="bar"><i id="barfill"></i></div>
+    <div class="log" id="log"></div>
+  </div>
+</section>
+
+<section id="result" class="hidden">
+  <h2><span class="step">4</span>結果</h2>
+  <div class="summary">
+    <div><b id="n-shiteki">0</b><span>指摘</span></div>
+    <div><b id="n-kakunin">0</b><span>要確認</span></div>
+    <div><b id="n-okuri">0</b><span>申し送り</span></div>
+    <div><b id="n-pages">0</b><span>確認ページ</span></div>
+  </div>
+  <div id="conditions" class="note" style="margin-bottom:16px"></div>
+  <div id="findings"></div>
+  <div style="margin-top:18px">
+    <button class="ghost" id="download">Markdownでダウンロード</button>
+  </div>
+  <div class="cost" id="cost"></div>
+</section>
+
+</div>
+
+<script type="module">
+import { KOUETSU_DEFINITION, CHECKLIST_PAGE, CHECKLIST_SEAMLESS, CLIP_ONLY_ITEMS } from './knowledge.js';
+import * as pdfjsLib from './vendor/pdf.min.js';
+
+pdfjsLib.GlobalWorkerOptions.workerSrc = './vendor/pdf.worker.min.js';
+
+const $ = (id) => document.getElementById(id);
+const LS = 'cm_kouetsu_';
+const API_URL = 'https://api.anthropic.com/v1/messages';
+const CONCURRENCY = 3;
+const TILE_H = 1600;        // タイル分割の高さ
+const TILE_OVERLAP = 200;   // タイルの重なり
+const SEAM_STRIP = 420;     // シームレス確認で切り出す上下の高さ
+
+let mainDoc = null, nameDoc = null;
+let mainName = '', nameName = '';
+let abort = false;
+let lastReport = null;
+
+// ---------- 設定の保存 ----------
+for (const k of ['apikey', 'model', 'effort', 'quality', 'seamless']) {
+  const el = $(k);
+  const saved = localStorage.getItem(LS + k);
+  if (saved !== null) el.value = saved;
+  el.addEventListener('change', () => localStorage.setItem(LS + k, el.value));
+  if (el.type === 'password' || el.type === 'text') {
+    el.addEventListener('input', () => localStorage.setItem(LS + k, el.value));
+  }
+}
+$('clearkey').addEventListener('click', () => {
+  localStorage.removeItem(LS + 'apikey');
+  $('apikey').value = '';
+  alert('APIキーを消去しました。');
+});
+
+// ---------- ファイル読み込み ----------
+function wireDrop(dropId, inputId, kind) {
+  const drop = $(dropId), input = $(inputId);
+  drop.addEventListener('click', () => input.click());
+  drop.addEventListener('dragover', (e) => { e.preventDefault(); drop.classList.add('over'); });
+  drop.addEventListener('dragleave', () => drop.classList.remove('over'));
+  drop.addEventListener('drop', (e) => {
+    e.preventDefault();
+    drop.classList.remove('over');
+    if (e.dataTransfer.files[0]) loadPdf(e.dataTransfer.files[0], kind, drop);
+  });
+  input.addEventListener('change', () => {
+    if (input.files[0]) loadPdf(input.files[0], kind, drop);
+  });
+}
+
+async function loadPdf(file, kind, drop) {
+  drop.innerHTML = '<strong>読み込み中…</strong><span>' + file.name + '</span>';
+  try {
+    const buf = await file.arrayBuffer();
+    const doc = await pdfjsLib.getDocument({ data: buf }).promise;
+    if (kind === 'main') { mainDoc = doc; mainName = file.name; }
+    else { nameDoc = doc; nameName = file.name; }
+    drop.classList.add('loaded');
+    drop.innerHTML = '<strong>' + file.name + '</strong><span>' + doc.numPages + 'ページ / クリックで差し替え</span>';
+  } catch (err) {
+    drop.classList.remove('loaded');
+    drop.innerHTML = '<strong style="color:#b3261e">読み込めませんでした</strong><span>' + err.message + '</span>';
+  }
+  $('run').disabled = !mainDoc;
+}
+wireDrop('drop-main', 'file-main', 'main');
+wireDrop('drop-name', 'file-name', 'name');
+
+// ---------- PDF → 画像 ----------
+async function renderPage(doc, pageNo, targetWidth) {
+  const page = await doc.getPage(pageNo);
+  const base = page.getViewport({ scale: 1 });
+  const viewport = page.getViewport({ scale: targetWidth / base.width });
+  const canvas = document.createElement('canvas');
+  canvas.width = Math.round(viewport.width);
+  canvas.height = Math.round(viewport.height);
+  const ctx = canvas.getContext('2d', { alpha: false });
+  ctx.fillStyle = '#fff';
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+  await page.render({ canvasContext: ctx, viewport }).promise;
+  return canvas;
+}
+
+function toB64(canvas) {
+  return canvas.toDataURL('image/jpeg', 0.9).split(',')[1];
+}
+
+// 縦長ページをオーバーラップ付きタイルに分割
+function tile(canvas) {
+  if (canvas.height <= TILE_H) return [canvas];
+  const out = [];
+  const step = TILE_H - TILE_OVERLAP;
+  for (let top = 0; top < canvas.height; top += step) {
+    const h = Math.min(TILE_H, canvas.height - top);
+    const c = document.createElement('canvas');
+    c.width = canvas.width;
+    c.height = h;
+    c.getContext('2d').drawImage(canvas, 0, top, canvas.width, h, 0, 0, canvas.width, h);
+    out.push(c);
+    if (top + TILE_H >= canvas.height) break;
+  }
+  return out;
+}
+
+// 前ページ下端 + 次ページ上端 を実際に連結した画像を作る
+function stitch(prevCanvas, nextCanvas) {
+  const w = Math.min(prevCanvas.width, nextCanvas.width);
+  const topH = Math.min(SEAM_STRIP, prevCanvas.height);
+  const botH = Math.min(SEAM_STRIP, nextCanvas.height);
+  const c = document.createElement('canvas');
+  c.width = w;
+  c.height = topH + botH + 3;
+  const ctx = c.getContext('2d', { alpha: false });
+  ctx.fillStyle = '#fff';
+  ctx.fillRect(0, 0, c.width, c.height);
+  ctx.drawImage(prevCanvas, 0, prevCanvas.height - topH, w, topH, 0, 0, w, topH);
+  ctx.fillStyle = '#e11';
+  ctx.fillRect(0, topH, w, 3);
+  ctx.drawImage(nextCanvas, 0, 0, w, botH, 0, topH + 3, w, botH);
+  return c;
+}
+
+// ---------- Claude API ----------
+const SCHEMA = {
+  type: 'object',
+  properties: {
+    findings: {
+      type: 'array',
+      items: {
+        type: 'object',
+        properties: {
+          location: { type: 'string', description: '原稿内の位置。「3コマ目」「ページ下部の窓」など担当者が探せる粒度で' },
+          severity: { type: 'string', enum: ['指摘', '要確認', '申し送り'] },
+          category: { type: 'string', enum: ['シームレス', '加工・マスク', '描き文字・漫符', '文字まわり', '左右反転', 'ネーム相違', '全体'] },
+          body: { type: 'string', description: '何がどうおかしいか。事実ベースで簡潔に' },
+          needs_clip: { type: 'boolean', description: 'PDFでは断定できずクリスタ上での確認が必要ならtrue' }
+        },
+        required: ['location', 'severity', 'category', 'body', 'needs_clip'],
+        additionalProperties: false
+      }
+    }
+  },
+  required: ['findings'],
+  additionalProperties: false
+};
+
+let usageIn = 0, usageOut = 0;
+
+async function callClaude(systemPrompt, images, instruction) {
+  const body = {
+    model: $('model').value,
+    max_tokens: 8000,
+    system: [{ type: 'text', text: systemPrompt, cache_control: { type: 'ephemeral' } }],
+    output_config: {
+      effort: $('effort').value,
+      format: { type: 'json_schema', schema: SCHEMA }
+    },
+    messages: [{
+      role: 'user',
+      content: [
+        ...images.map((b64) => ({
+          type: 'image',
+          source: { type: 'base64', media_type: 'image/jpeg', data: b64 }
+        })),
+        { type: 'text', text: instruction }
+      ]
+    }]
+  };
+
+  const res = await fetch(API_URL, {
+    method: 'POST',
+    headers: {
+      'content-type': 'application/json',
+      'x-api-key': $('apikey').value.trim(),
+      'anthropic-version': '2023-06-01',
+      'anthropic-dangerous-direct-browser-access': 'true'
+    },
+    body: JSON.stringify(body)
+  });
+
+  if (!res.ok) {
+    let msg = res.status + ' ' + res.statusText;
+    try { const e = await res.json(); if (e.error?.message) msg = e.error.message; } catch {}
+    throw new Error(msg);
+  }
+  const data = await res.json();
+  if (data.usage) {
+    usageIn += (data.usage.input_tokens || 0) + (data.usage.cache_read_input_tokens || 0) + (data.usage.cache_creation_input_tokens || 0);
+    usageOut += data.usage.output_tokens || 0;
+  }
+  if (data.stop_reason === 'refusal') throw new Error('モデルが応答を拒否しました');
+  const textBlock = data.content.find((b) => b.type === 'text');
+  if (!textBlock) throw new Error('応答が空でした(max_tokens不足の可能性)');
+  return JSON.parse(textBlock.text);
+}
+
+// ---------- 実行 ----------
+function parseRange(str, max) {
+  if (!str.trim()) return Array.from({ length: max }, (_, i) => i + 1);
+  const set = new Set();
+  for (const part of str.split(',')) {
+    const m = part.trim().match(/^(\d+)\s*-\s*(\d+)$/);
+    if (m) {
+      for (let i = +m[1]; i <= +m[2]; i++) if (i >= 1 && i <= max) set.add(i);
+    } else {
+      const n = +part.trim();
+      if (n >= 1 && n <= max) set.add(n);
+    }
+  }
+  return [...set].sort((a, b) => a - b);
+}
+
+function log(msg, isErr) {
+  const d = document.createElement('div');
+  if (isErr) d.className = 'err';
+  d.textContent = msg;
+  $('log').appendChild(d);
+  $('log').scrollTop = $('log').scrollHeight;
+}
+
+async function pool(items, worker) {
+  let idx = 0, done = 0;
+  const total = items.length;
+  const runners = Array.from({ length: Math.min(CONCURRENCY, total) }, async () => {
+    while (idx < total && !abort) {
+      const i = idx++;
+      try { await worker(items[i], i); } catch (e) { log('  ! ' + e.message, true); }
+      done++;
+      $('barfill').style.width = (done / total * 100) + '%';
+    }
+  });
+  await Promise.all(runners);
+}
+
+$('stop').addEventListener('click', () => { abort = true; log('中止しています…'); });
+
+$('run').addEventListener('click', async () => {
+  if (!$('apikey').value.trim()) { alert('APIキーを入力してください。'); return; }
+  abort = false;
+  usageIn = 0; usageOut = 0;
+  $('run').disabled = true;
+  $('stop').classList.remove('hidden');
+  $('progress').classList.remove('hidden');
+  $('result').classList.add('hidden');
+  $('log').innerHTML = '';
+  $('barfill').style.width = '0';
+
+  const width = +$('quality').value;
+  const pages = parseRange($('range').value, mainDoc.numPages);
+  const useName = !!nameDoc;
+  const nameAligned = useName && nameDoc.numPages === mainDoc.numPages;
+  const doSeam = $('seamless').value === '1';
+  const findings = [];
+
+  log('本稿 ' + mainDoc.numPages + 'ページ中 ' + pages.length + 'ページを校閲します');
+  if (useName) {
+    log(nameAligned
+      ? 'ネームPDFをページ番号で突き合わせます'
+      : 'ネームPDFのページ数が本稿と異なります(' + nameDoc.numPages + 'p)。番号順に突き合わせますが、ズレる可能性があります');
+  } else {
+    log('ネームPDFなし: 描き文字の抜け・ネーム相違は未確認になります');
+  }
+
+  // ページ画像をキャッシュ(シームレス確認で再利用)
+  const canvasCache = new Map();
+  const getCanvas = async (p) => {
+    if (!canvasCache.has(p)) canvasCache.set(p, await renderPage(mainDoc, p, width));
+    return canvasCache.get(p);
+  };
+
+  // --- ページごとの校閲 ---
+  const sysPage = KOUETSU_DEFINITION + '\n\n' + CHECKLIST_PAGE;
+  await pool(pages, async (p) => {
+    if (abort) return;
+    const canvas = await getCanvas(p);
+    const tiles = tile(canvas);
+    const imgs = tiles.map(toB64);
+    let instruction = '仕上げ原稿の ' + p + 'ページ目です。';
+    if (tiles.length > 1) instruction += '縦長のため上から順に' + tiles.length + '枚に分割しています(各画像は少し重なっています)。';
+    if (useName) {
+      const np = Math.min(p, nameDoc.numPages);
+      // ネームは「描き文字があるか」を見るだけなので低解像度で十分(トークン節約)
+      const nameTiles = tile(await renderPage(nameDoc, np, Math.min(width, 800)));
+      imgs.push(...nameTiles.map(toB64));
+      instruction += '\n最後の' + nameTiles.length + '枚は対応するネーム(' + np + 'ページ目)です。'
+        + '描き文字・漫符の抜け、指示との齟齬を突き合わせてください。ネーム自体の粗は指摘しないでください。';
+    }
+    instruction += '\nチェックリストに沿って間違いを探し、findings を返してください。問題がなければ空配列で構いません。';
+
+    const out = await callClaude(sysPage, imgs, instruction);
+    for (const f of out.findings) findings.push({ ...f, page: p });
+    log('P' + p + ' 完了(' + out.findings.length + '件)');
+  });
+
+  // --- シームレス確認 ---
+  if (doSeam && !abort) {
+    const pairs = [];
+    for (let i = 0; i < pages.length - 1; i++) {
+      if (pages[i + 1] === pages[i] + 1) pairs.push([pages[i], pages[i + 1]]);
+    }
+    if (pairs.length) {
+      log('ページ境界 ' + pairs.length + '箇所のシームレスを確認します');
+      const sysSeam = KOUETSU_DEFINITION + '\n\n' + CHECKLIST_SEAMLESS;
+      await pool(pairs, async ([a, b]) => {
+        if (abort) return;
+        const img = toB64(stitch(await getCanvas(a), await getCanvas(b)));
+        const out = await callClaude(sysSeam, [img],
+          'P' + a + 'の下端とP' + b + 'の上端を連結した画像です。境界で繋がりが破綻していないか確認してください。');
+        for (const f of out.findings) {
+          findings.push({ ...f, page: a, category: 'シームレス', location: 'P' + a + '→P' + b + ' 境界 / ' + f.location });
+        }
+        log('P' + a + '→P' + b + ' 境界 完了(' + out.findings.length + '件)');
+      });
+    }
+  }
+
+  // --- 集計 ---
+  findings.sort((x, y) => x.page - y.page);
+  lastReport = {
+    file: mainName, pages, findings,
+    nameFile: useName ? nameName : null, nameAligned, doSeam, aborted: abort,
+    model: $('model').value, effort: $('effort').value
+  };
+  render(lastReport);
+
+  $('stop').classList.add('hidden');
+  $('run').disabled = false;
+  log(abort ? '中止しました' : '完了しました');
+});
+
+// ---------- 結果表示 ----------
+function render(r) {
+  const cnt = (s) => r.findings.filter((f) => f.severity === s).length;
+  $('n-shiteki').textContent = cnt('指摘');
+  $('n-kakunin').textContent = cnt('要確認');
+  $('n-okuri').textContent = cnt('申し送り');
+  $('n-pages').textContent = r.pages.length;
+
+  const cond = [];
+  cond.push('本稿: ' + r.file + '(' + r.pages.length + 'ページを確認)');
+  cond.push(r.nameFile
+    ? 'ネーム比較: ' + r.nameFile + (r.nameAligned ? '' : '(ページ数が不一致・順番でのみ突き合わせ)')
+    : 'ネーム比較: 未実施(描き文字の抜け・ネーム相違は確認できていません)');
+  cond.push('シームレス確認: ' + (r.doSeam ? '実施' : '未実施'));
+  cond.push('モデル: ' + r.model + ' / 思考の深さ: ' + r.effort);
+  if (r.aborted) cond.push('※ 途中で中止したため、全ページを確認できていません');
+  $('conditions').innerHTML = cond.map((c) => '・' + esc(c)).join('<br>');
+
+  const box = $('findings');
+  box.innerHTML = '';
+  if (!r.findings.length) {
+    box.innerHTML = '<p style="color:var(--muted)">指摘はありませんでした。</p>';
+  } else {
+    for (const f of r.findings) {
+      const d = document.createElement('div');
+      d.className = 'finding sev-' + f.severity;
+      d.innerHTML =
+        '<div class="head"><span class="tag ' + f.severity + '">' + esc(f.severity) + '</span>'
+        + 'P' + f.page + ' / ' + esc(f.location) + ' — ' + esc(f.category)
+        + (f.needs_clip ? ' <span style="color:var(--warn)">※クリスタ要確認</span>' : '')
+        + '</div><div>' + esc(f.body) + '</div>';
+      box.appendChild(d);
+    }
+  }
+
+  const clip = document.createElement('div');
+  clip.innerHTML = '<h3 style="font-size:14px;margin:22px 0 6px">クリスタ上で要確認(PDFでは判定できない項目)</h3>'
+    + '<ul class="plain">' + CLIP_ONLY_ITEMS.map((i) => '<li>' + esc(i) + '</li>').join('') + '</ul>';
+  box.appendChild(clip);
+
+  const inCost = usageIn / 1e6 * (r.model === 'claude-opus-5' ? 5 : 3);
+  const outCost = usageOut / 1e6 * (r.model === 'claude-opus-5' ? 25 : 15);
+  $('cost').textContent = '入力 ' + usageIn.toLocaleString() + ' / 出力 ' + usageOut.toLocaleString()
+    + ' トークン(概算 $' + (inCost + outCost).toFixed(2) + ')';
+
+  $('result').classList.remove('hidden');
+  $('result').scrollIntoView({ behavior: 'smooth' });
+}
+
+function esc(s) {
+  return String(s).replace(/[&<>]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c]));
+}
+
+// ---------- Markdown 出力 ----------
+$('download').addEventListener('click', () => {
+  const r = lastReport;
+  if (!r) return;
+  const L = [];
+  L.push('# ' + r.file.replace(/\.pdf$/i, '') + ' 仕上げ校閲レポート');
+  L.push('');
+  L.push('## 実行条件');
+  L.push('- 本稿: ' + r.file + '(' + r.pages.length + 'ページを確認)');
+  L.push('- ネーム比較: ' + (r.nameFile
+    ? r.nameFile + (r.nameAligned ? '' : '(ページ数が不一致・順番でのみ突き合わせ)')
+    : '未実施(描き文字の抜け・ネーム相違は確認できていません)'));
+  L.push('- シームレス確認: ' + (r.doSeam ? '実施' : '未実施'));
+  L.push('- モデル: ' + r.model + ' / 思考の深さ: ' + r.effort);
+  if (r.aborted) L.push('- ※ 途中で中止したため、全ページを確認できていません');
+  L.push('');
+
+  const groups = [['指摘', '## 指摘'], ['要確認', '## 要確認'], ['申し送り', '## 申し送り(クオリティ面・参考)']];
+  for (const [sev, head] of groups) {
+    const list = r.findings.filter((f) => f.severity === sev);
+    L.push(head);
+    if (!list.length) { L.push(''); L.push('問題なし'); L.push(''); continue; }
+    L.push('');
+    for (const f of list) {
+      L.push('- **【P' + f.page + ' / ' + f.location + '】(' + f.category + ')**'
+        + (f.needs_clip ? ' ※クリスタ要確認' : ''));
+      L.push('  ' + f.body);
+    }
+    L.push('');
+  }
+
+  L.push('## クリスタ上で要確認(PDFでは判定できない項目)');
+  L.push('');
+  for (const i of CLIP_ONLY_ITEMS) L.push('- ' + i);
+  L.push('');
+  L.push('---');
+  L.push('※ このレポートはドラフトです。クリエイターに送る前に校閲担当が必ず目を通してください。');
+
+  const blob = new Blob([L.join('\n')], { type: 'text/markdown;charset=utf-8' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = r.file.replace(/\.pdf$/i, '') + '_校閲レポート.md';
+  a.click();
+  URL.revokeObjectURL(a.href);
+});
+</script>
+</body>
+</html>
