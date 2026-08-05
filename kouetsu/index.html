@@ -67,14 +67,22 @@
   .log .err { color: var(--danger); }
   .finding { border: 1px solid var(--line); border-left-width: 4px; border-radius: 6px; padding: 12px 14px; margin-bottom: 10px; background: #fff; cursor: pointer; }
   .finding:hover { border-color: #b9b9b3; border-left-width: 4px; }
-  .finding.sev-指摘 { border-left-color: var(--danger); }
-  .finding.sev-要確認 { border-left-color: var(--warn); }
-  .finding.sev-申し送り { border-left-color: var(--muted); }
+  .finding.sev-指摘, .finding.sev-修正依頼 { border-left-color: var(--danger); }
+  .finding.sev-要確認, .finding.sev-相談 { border-left-color: var(--warn); }
+  .finding.sev-申し送り, .finding.sev-参考 { border-left-color: var(--muted); }
   .finding .head { font-size: 12px; color: var(--muted); margin-bottom: 4px; }
   .tag { display: inline-block; font-size: 11px; padding: 1px 7px; border-radius: 3px; margin-right: 6px; }
-  .tag.指摘 { background: var(--danger-weak); color: var(--danger); }
-  .tag.要確認 { background: var(--warn-weak); color: var(--warn); }
-  .tag.申し送り { background: #eee; color: var(--muted); }
+  .tag.指摘, .tag.修正依頼 { background: var(--danger-weak); color: var(--danger); }
+  .tag.要確認, .tag.相談 { background: var(--warn-weak); color: var(--warn); }
+  .tag.申し送り, .tag.参考 { background: #eee; color: var(--muted); }
+  .modebar { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 4px; }
+  .modebar label {
+    flex: 1 1 200px; margin: 0; padding: 12px 14px; border: 1px solid var(--line); border-radius: 8px;
+    cursor: pointer; background: #fcfcfb; color: var(--ink); font-size: 14px;
+  }
+  .modebar label:has(input:checked) { border-color: var(--accent); background: var(--accent-weak); }
+  .modebar label span { display: block; font-size: 12px; color: var(--muted); margin-top: 2px; }
+  .modebar input { margin-right: 6px; }
   .summary { display: flex; gap: 22px; flex-wrap: wrap; padding: 14px 0; border-bottom: 1px solid var(--line); margin-bottom: 16px; }
   .summary b { display: block; font-size: 24px; font-weight: 600; }
   .summary span { font-size: 12px; color: var(--muted); }
@@ -106,12 +114,23 @@
 <div class="wrap">
 
 <header>
-  <h1>仕上げ校閲ツール</h1>
-  <p class="sub">WithLinks基準の間違い探し / 原稿PDFはこの端末から外に出ません(画像はClaude APIにのみ送信されます)</p>
+  <h1>Webtoon原稿チェックツール</h1>
+  <p class="sub">WithLinks基準 / 原稿PDFはこの端末から外に出ません(画像はClaude APIにのみ送信されます)</p>
 </header>
 
 <section>
-  <h2><span class="step">1</span>設定</h2>
+  <h2><span class="step">1</span>モードを選ぶ</h2>
+  <div class="modebar" id="modebar">
+    <label><input type="radio" name="mode" value="shiage_kouetsu" checked>仕上げ校閲
+      <span>間違い探し。シームレス・マスク抜け・誤字など</span></label>
+    <label><input type="radio" name="mode" value="chakusai_check">着彩チェック
+      <span>監修FB。塗りの穴・色の一致・光源など</span></label>
+  </div>
+  <p class="note" id="modenote"></p>
+</section>
+
+<section>
+  <h2><span class="step">2</span>設定</h2>
   <div class="row">
     <div style="flex:2 1 320px">
       <label for="apikey">Anthropic APIキー</label>
@@ -139,7 +158,7 @@
 </section>
 
 <section>
-  <h2><span class="step">2</span>原稿を入れる</h2>
+  <h2><span class="step">3</span>原稿を入れる</h2>
   <div class="grid2">
     <div>
       <div class="drop" id="drop-main">
@@ -149,8 +168,8 @@
     </div>
     <div>
       <div class="drop" id="drop-name">
-        <strong>ネームPDF(任意)</strong>
-        <span>入れると描き文字の抜け・ネーム相違も見ます</span>
+        <strong id="ref-label">ネームPDF(任意)</strong>
+        <span id="ref-hint">入れると描き文字の抜け・ネーム相違も見ます</span>
       </div>
     </div>
   </div>
@@ -160,13 +179,13 @@
 </section>
 
 <section>
-  <h2><span class="step">3</span>実行</h2>
+  <h2><span class="step">4</span>実行</h2>
   <div class="row">
     <div>
       <label for="range">ページ範囲(空欄で全ページ)</label>
       <input type="text" id="range" placeholder="例: 1-10, 15">
     </div>
-    <div>
+    <div id="seamless-wrap">
       <label for="seamless">ページ境界のシームレス確認</label>
       <select id="seamless">
         <option value="1">する(推奨)</option>
@@ -203,18 +222,18 @@
       <div class="pane-scroll" id="scroll-main"></div>
     </div>
     <div class="pane hidden" id="pane-name">
-      <div class="pane-head" id="head-name">ネーム</div>
+      <div class="pane-head" id="head-name">参考</div>
       <div class="pane-scroll" id="scroll-name"></div>
     </div>
   </div>
 </section>
 
 <section id="result" class="hidden">
-  <h2><span class="step">4</span>結果</h2>
+  <h2><span class="step">5</span>結果</h2>
   <div class="summary">
-    <div><b id="n-shiteki">0</b><span>指摘</span></div>
-    <div><b id="n-kakunin">0</b><span>要確認</span></div>
-    <div><b id="n-okuri">0</b><span>申し送り</span></div>
+    <div><b id="n-0">0</b><span id="l-0">指摘</span></div>
+    <div><b id="n-1">0</b><span id="l-1">要確認</span></div>
+    <div><b id="n-2">0</b><span id="l-2">申し送り</span></div>
     <div><b id="n-pages">0</b><span>確認ページ</span></div>
   </div>
   <div id="conditions" class="note" style="margin-bottom:16px"></div>
@@ -228,7 +247,7 @@
 </div>
 
 <script type="module">
-import { KOUETSU_DEFINITION, CHECKLIST_PAGE, CHECKLIST_SEAMLESS, CLIP_ONLY_ITEMS } from './knowledge.js';
+import { MODES, DEFAULT_MODE } from './knowledge.js';
 import * as pdfjsLib from './vendor/pdf.min.js';
 
 pdfjsLib.GlobalWorkerOptions.workerSrc = './vendor/pdf.worker.min.js';
@@ -246,6 +265,34 @@ let abort = false;
 let running = false;
 let lastReport = null;
 let usageIn = 0, usageOut = 0;
+
+// ---------- モード ----------
+function currentMode() {
+  const v = document.querySelector('input[name=mode]:checked')?.value || DEFAULT_MODE;
+  return MODES[v] || MODES[DEFAULT_MODE];
+}
+
+function applyMode() {
+  const m = currentMode();
+  $('modenote').textContent = m.kind === 'kouetsu'
+    ? '校閲モード: 間違い探しに徹します。演出やクオリティの提案はしません(タグは 指摘 / 要確認 / 申し送り)。'
+    : '監修FBモード: クオリティを引き上げるためのフィードバックを返します(タグは 修正依頼 / 相談 / 参考)。';
+  $('ref-label').textContent = m.refLabel;
+  $('ref-hint').textContent = m.refHint;
+  $('seamless-wrap').classList.toggle('hidden', !m.seamless);
+  $('run').textContent = (m.kind === 'kouetsu' ? '校閲' : 'チェック') + 'を開始';
+  m.severities.forEach((s, i) => { $('l-' + i).textContent = s; });
+  $('head-name').textContent = m.refName + (store.name.file ? ' — ' + store.name.file : '');
+}
+
+document.querySelectorAll('input[name=mode]').forEach((el) => {
+  const saved = localStorage.getItem(LS + 'mode');
+  if (saved && el.value === saved) el.checked = true;
+  el.addEventListener('change', () => {
+    localStorage.setItem(LS + 'mode', el.value);
+    applyMode();
+  });
+});
 
 // ---------- 設定の保存 ----------
 for (const k of ['apikey', 'model', 'effort', 'quality', 'seamless']) {
@@ -430,7 +477,7 @@ function updateViewerLayout() {
   $('viewer').classList.toggle('hidden', !store.main.doc);
   $('pane-name').classList.toggle('hidden', !store.name.doc);
   $('head-main').textContent = '本稿' + (store.main.file ? ' — ' + store.main.file : '');
-  $('head-name').textContent = 'ネーム' + (store.name.file ? ' — ' + store.name.file : '');
+  $('head-name').textContent = currentMode().refName + (store.name.file ? ' — ' + store.name.file : '');
 }
 
 const observers = { main: null, name: null };
@@ -549,11 +596,12 @@ function addBadges(r) {
   for (const [p, list] of Object.entries(byPage)) {
     const el = scroll.querySelector('.vpage[data-page="' + p + '"]');
     if (!el) continue;
-    const n1 = list.filter((f) => f.severity === '指摘').length;
-    const n2 = list.filter((f) => f.severity === '要確認').length;
+    const [s0, s1, s2] = r.mode.severities;
+    const n1 = list.filter((f) => f.severity === s0).length;
+    const n2 = list.filter((f) => f.severity === s1).length;
     const chip = document.createElement('div');
     chip.className = 'vbadge';
-    chip.textContent = (n1 ? '指摘' + n1 : '') + (n1 && n2 ? '・' : '') + (n2 ? '要確認' + n2 : '') || '申し送り';
+    chip.textContent = (n1 ? s0 + n1 : '') + (n1 && n2 ? '・' : '') + (n2 ? s1 + n2 : '') || s2;
     el.appendChild(chip);
   }
 }
@@ -569,30 +617,38 @@ $('quality').addEventListener('change', () => {
 // Claude API
 // ==========================================================
 
-const SCHEMA = {
-  type: 'object',
-  properties: {
-    findings: {
-      type: 'array',
-      items: {
-        type: 'object',
-        properties: {
-          location: { type: 'string', description: '原稿内の位置。「3コマ目」「ページ下部の窓」など担当者が探せる粒度で' },
-          severity: { type: 'string', enum: ['指摘', '要確認', '申し送り'] },
-          category: { type: 'string', enum: ['シームレス', '加工・マスク', '描き文字・漫符', '文字まわり', '左右反転', 'ネーム相違', '全体'] },
-          body: { type: 'string', description: '何がどうおかしいか。事実ベースで簡潔に' },
-          needs_clip: { type: 'boolean', description: 'PDFでは断定できずクリスタ上での確認が必要ならtrue' }
-        },
-        required: ['location', 'severity', 'category', 'body', 'needs_clip'],
-        additionalProperties: false
+function buildSchema(mode) {
+  return {
+    type: 'object',
+    properties: {
+      findings: {
+        type: 'array',
+        items: {
+          type: 'object',
+          properties: {
+            location: { type: 'string', description: '原稿内の位置。「3コマ目」「ページ下部の窓」など担当者が探せる粒度で' },
+            severity: { type: 'string', enum: mode.severities },
+            category: { type: 'string', enum: mode.categories },
+            body: {
+              type: 'string',
+              description: mode.kind === 'kouetsu'
+                ? '何がどうおかしいか。事実ベースで簡潔に'
+                : 'クリエイターに送る文章。依頼形・相談形で、理由と具体案を添えて'
+            },
+            needs_clip: { type: 'boolean', description: 'PDFでは断定できずクリスタ上での確認が必要ならtrue' }
+          },
+          required: ['location', 'severity', 'category', 'body', 'needs_clip'],
+          additionalProperties: false
+        }
       }
-    }
-  },
-  required: ['findings'],
-  additionalProperties: false
-};
+    },
+    required: ['findings'],
+    additionalProperties: false
+  };
+}
 
 async function callClaude(systemPrompt, images, instruction) {
+  const SCHEMA = buildSchema(currentMode());
   const body = {
     model: $('model').value,
     max_tokens: 8000,
@@ -720,42 +776,44 @@ $('run').addEventListener('click', async () => {
   $('log').innerHTML = '';
   $('barfill').style.width = '0';
 
+  const mode = currentMode();
   const mainDoc = store.main.doc;
   const nameDoc = store.name.doc;
   const pages = parseRange($('range').value, mainDoc.numPages);
   const useName = !!nameDoc;
   const nameAligned = useName && nameDoc.numPages === mainDoc.numPages;
-  const doSeam = $('seamless').value === '1';
+  const doSeam = mode.seamless && $('seamless').value === '1';
   const findings = [];
 
-  log('本稿 ' + mainDoc.numPages + 'ページ中 ' + pages.length + 'ページを校閲します');
+  log('[' + mode.label + '] 本稿 ' + mainDoc.numPages + 'ページ中 ' + pages.length + 'ページを確認します');
   if (useName) {
     log(nameAligned
-      ? 'ネームPDFをページ番号で突き合わせます'
-      : 'ネームPDFのページ数が本稿と異なります(' + nameDoc.numPages + 'p)。番号順に突き合わせますが、ズレる可能性があります');
+      ? mode.refName + 'をページ番号で突き合わせます'
+      : mode.refName + 'のページ数が本稿と異なります(' + nameDoc.numPages + 'p)。番号順に突き合わせますが、ズレる可能性があります');
   } else {
-    log('ネームPDFなし: 描き文字の抜け・ネーム相違は未確認になります');
+    log(mode.refName + 'なし: ' + mode.refMissingNote);
   }
 
-  // --- ページごとの校閲 ---
-  const sysPage = KOUETSU_DEFINITION + '\n\n' + CHECKLIST_PAGE;
+  // --- ページごとの確認 ---
   await pool(pages, async (p) => {
     if (abort) return;
     const pd = await getPageData('main', p);
     const imgs = await Promise.all(pd.bands.map((b) => blobToB64(b.blob)));
-    let instruction = '仕上げ原稿の ' + p + 'ページ目です。';
+    let instruction = mode.stageNoun + 'の ' + p + 'ページ目です。';
     if (pd.bands.length > 1) instruction += '縦長のため上から順に' + pd.bands.length + '枚に分割しています(各画像は少し重なっています)。';
     if (useName) {
       const np = Math.min(p, nameDoc.numPages);
       const nd = await getPageData('name', np);
       const nameImgs = await Promise.all(nd.bands.map((b) => blobToB64(b.blob)));
       imgs.push(...nameImgs);
-      instruction += '\n最後の' + nameImgs.length + '枚は対応するネーム(' + np + 'ページ目)です。'
-        + '描き文字・漫符の抜け、指示との齟齬を突き合わせてください。ネーム自体の粗は指摘しないでください。';
+      instruction += '\n最後の' + nameImgs.length + '枚は対応する' + mode.refName + '(' + np + 'ページ目)です。'
+        + mode.refInstruction;
     }
-    instruction += '\nチェックリストに沿って間違いを探し、findings を返してください。問題がなければ空配列で構いません。';
+    instruction += mode.kind === 'kouetsu'
+      ? '\nチェックリストに沿って間違いを探し、findings を返してください。問題がなければ空配列で構いません。'
+      : '\n観点に沿ってフィードバックを返してください。問題がなければ空配列で構いません。';
 
-    const out = await callClaude(sysPage, imgs, instruction);
+    const out = await callClaude(mode.system, imgs, instruction);
     for (const f of out.findings) findings.push({ ...f, page: p });
     log('P' + p + ' 完了(' + out.findings.length + '件)');
   });
@@ -768,12 +826,11 @@ $('run').addEventListener('click', async () => {
     }
     if (pairs.length) {
       log('ページ境界 ' + pairs.length + '箇所のシームレスを確認します');
-      const sysSeam = KOUETSU_DEFINITION + '\n\n' + CHECKLIST_SEAMLESS;
       await pool(pairs, async ([a, b]) => {
         if (abort) return;
         const [pdA, pdB] = await Promise.all([getPageData('main', a), getPageData('main', b)]);
         const img = await stitchSeam(pdA.bottomStrip, pdB.topStrip);
-        const out = await callClaude(sysSeam, [img],
+        const out = await callClaude(mode.seamlessSystem, [img],
           'P' + a + 'の下端とP' + b + 'の上端を連結した画像です。境界で繋がりが破綻していないか確認してください。');
         for (const f of out.findings) {
           findings.push({ ...f, page: a, category: 'シームレス', location: 'P' + a + '→P' + b + ' 境界 / ' + f.location });
@@ -786,7 +843,7 @@ $('run').addEventListener('click', async () => {
   // --- 集計 ---
   findings.sort((x, y) => x.page - y.page);
   lastReport = {
-    file: store.main.file, pages, findings,
+    mode, file: store.main.file, pages, findings,
     nameFile: useName ? store.name.file : null, nameAligned, doSeam, aborted: abort,
     model: $('model').value, effort: $('effort').value
   };
@@ -802,18 +859,18 @@ $('run').addEventListener('click', async () => {
 
 // ---------- 結果表示 ----------
 function render(r) {
+  const m = r.mode;
   const cnt = (s) => r.findings.filter((f) => f.severity === s).length;
-  $('n-shiteki').textContent = cnt('指摘');
-  $('n-kakunin').textContent = cnt('要確認');
-  $('n-okuri').textContent = cnt('申し送り');
+  m.severities.forEach((s, i) => { $('l-' + i).textContent = s; $('n-' + i).textContent = cnt(s); });
   $('n-pages').textContent = r.pages.length;
 
   const cond = [];
+  cond.push('モード: ' + m.label);
   cond.push('本稿: ' + r.file + '(' + r.pages.length + 'ページを確認)');
   cond.push(r.nameFile
-    ? 'ネーム比較: ' + r.nameFile + (r.nameAligned ? '' : '(ページ数が不一致・順番でのみ突き合わせ)')
-    : 'ネーム比較: 未実施(描き文字の抜け・ネーム相違は確認できていません)');
-  cond.push('シームレス確認: ' + (r.doSeam ? '実施' : '未実施'));
+    ? m.refName + '比較: ' + r.nameFile + (r.nameAligned ? '' : '(ページ数が不一致・順番でのみ突き合わせ)')
+    : m.refName + '比較: 未実施(' + m.refMissingNote + ')');
+  if (m.seamless) cond.push('シームレス確認: ' + (r.doSeam ? '実施' : '未実施'));
   cond.push('モデル: ' + r.model + ' / 思考の深さ: ' + r.effort);
   if (r.aborted) cond.push('※ 途中で中止したため、全ページを確認できていません');
   $('conditions').innerHTML = cond.map((c) => '・' + esc(c)).join('<br>');
@@ -839,7 +896,7 @@ function render(r) {
 
   const clip = document.createElement('div');
   clip.innerHTML = '<h3 style="font-size:14px;margin:22px 0 6px">クリスタ上で要確認(PDFでは判定できない項目)</h3>'
-    + '<ul class="plain">' + CLIP_ONLY_ITEMS.map((i) => '<li>' + esc(i) + '</li>').join('') + '</ul>';
+    + '<ul class="plain">' + m.clipItems.map((i) => '<li>' + esc(i) + '</li>').join('') + '</ul>';
   box.appendChild(clip);
 
   const inCost = usageIn / 1e6 * (r.model === 'claude-opus-5' ? 5 : 3);
@@ -859,23 +916,24 @@ function esc(s) {
 $('download').addEventListener('click', () => {
   const r = lastReport;
   if (!r) return;
+  const m = r.mode;
   const L = [];
-  L.push('# ' + r.file.replace(/\.pdf$/i, '') + ' 仕上げ校閲レポート');
+  L.push('# ' + r.file.replace(/\.pdf$/i, '') + ' ' + m.label + 'レポート');
   L.push('');
   L.push('## 実行条件');
+  L.push('- モード: ' + m.label);
   L.push('- 本稿: ' + r.file + '(' + r.pages.length + 'ページを確認)');
-  L.push('- ネーム比較: ' + (r.nameFile
+  L.push('- ' + m.refName + '比較: ' + (r.nameFile
     ? r.nameFile + (r.nameAligned ? '' : '(ページ数が不一致・順番でのみ突き合わせ)')
-    : '未実施(描き文字の抜け・ネーム相違は確認できていません)'));
-  L.push('- シームレス確認: ' + (r.doSeam ? '実施' : '未実施'));
+    : '未実施(' + m.refMissingNote + ')'));
+  if (m.seamless) L.push('- シームレス確認: ' + (r.doSeam ? '実施' : '未実施'));
   L.push('- モデル: ' + r.model + ' / 思考の深さ: ' + r.effort);
   if (r.aborted) L.push('- ※ 途中で中止したため、全ページを確認できていません');
   L.push('');
 
-  const groups = [['指摘', '## 指摘'], ['要確認', '## 要確認'], ['申し送り', '## 申し送り(クオリティ面・参考)']];
-  for (const [sev, head] of groups) {
+  for (const sev of m.severities) {
     const list = r.findings.filter((f) => f.severity === sev);
-    L.push(head);
+    L.push('## ' + sev);
     if (!list.length) { L.push(''); L.push('問題なし'); L.push(''); continue; }
     L.push('');
     for (const f of list) {
@@ -888,18 +946,22 @@ $('download').addEventListener('click', () => {
 
   L.push('## クリスタ上で要確認(PDFでは判定できない項目)');
   L.push('');
-  for (const i of CLIP_ONLY_ITEMS) L.push('- ' + i);
+  for (const i of m.clipItems) L.push('- ' + i);
   L.push('');
   L.push('---');
-  L.push('※ このレポートはドラフトです。クリエイターに送る前に校閲担当が必ず目を通してください。');
+  L.push('※ このレポートはドラフトです。クリエイターに送る前に'
+    + (m.kind === 'kouetsu' ? '校閲担当' : '監修担当') + 'が必ず目を通してください。');
 
   const blob = new Blob([L.join('\n')], { type: 'text/markdown;charset=utf-8' });
   const a = document.createElement('a');
   a.href = URL.createObjectURL(blob);
-  a.download = r.file.replace(/\.pdf$/i, '') + '_校閲レポート.md';
+  a.download = r.file.replace(/\.pdf$/i, '') + '_' + m.label + 'レポート.md';
   a.click();
   URL.revokeObjectURL(a.href);
 });
+
+// ---------- 初期化 ----------
+applyMode();
 </script>
 </body>
 </html>
