@@ -53,7 +53,7 @@ out = []
 out.append('')
 out.append('---')
 out.append('')
-out.append('## 集計（この節は `build/tally.py` が上の表から生成する。手で書かない）')
+out.append('## 集計（この節は `webtoon/docs/build/tally.py` が上の表から生成する。手で書かない）')
 out.append('')
 out.append('- 収集できた作品数: **%d本**' % len(names))
 out.append('- うち「1話の切れ方」まで取れた本数: **%d本**（取れなかった%d本 %s は集計から外した）'
@@ -88,5 +88,16 @@ out.append('')
 out.append('E に入った%d本の内訳: %s'
            % (cnt['E'], '／'.join(names[i] for i in sorted(CLS) if CLS[i]=='E')))
 
-io.open(DOC, 'a', encoding='utf-8').write('\n'.join(out) + '\n')
+# 追記ではなく置換する。二度走らせても同じ結果になるようにする。
+MARK = '\n---\n\n## 集計（この節は'
+src = io.open(DOC, encoding='utf-8').read()
+i = src.find(MARK)
+assert src.count(MARK) <= 1, '集計節が二つある'
+if i >= 0:
+    j = src.find('\n---\n', i + len(MARK))   # 集計節の直後の区切り
+    assert j > 0, '集計節の終わりが見つからない'
+    src = src[:i] + '\n'.join(out) + '\n' + src[j:]
+else:
+    src = src.rstrip('\n') + '\n' + '\n'.join(out) + '\n'
+io.open(DOC, 'w', encoding='utf-8').write(src)
 print('\n'.join(out))
