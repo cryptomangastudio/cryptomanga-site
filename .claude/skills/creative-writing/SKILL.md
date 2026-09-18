@@ -21,6 +21,7 @@ description: 小説・マンガシナリオ・WEBTOON原作などの創作支援
 |---|---|
 | 話の骨組み・プロット・話数構成・引きが弱い | `references/story-structure.md` |
 | キャラを作る・キャラが立たない・敵役設計 | `references/character-craft.md` |
+| キャラクター設定を書き出す・設定資料を作る | `references/キャラクターシート.md`(**フォーマット**) |
 | 世界観・設定・魔法/能力のルール・組織や勢力 | `references/worldbuilding.md` |
 | マンガ/WEBTOONの台本・ネーム・コマ割り指示 | `references/manga-scenario-format.md`(**マンガ案件の最重要ファイル**) |
 | 小説本文・地の文・セリフの執筆と改稿 | `references/prose-and-dialogue.md` |
