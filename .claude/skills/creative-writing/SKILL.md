@@ -21,12 +21,14 @@ description: 小説・マンガシナリオ・WEBTOON原作などの創作支援
 |---|---|
 | 話の骨組み・プロット・話数構成・引きが弱い | `references/story-structure.md` |
 | キャラを作る・キャラが立たない・敵役設計 | `references/character-craft.md` |
+| キャラクター設定を書き出す・設定資料を作る | `references/キャラクターシート.md`(**フォーマット**) |
 | 世界観・設定・魔法/能力のルール・組織や勢力 | `references/worldbuilding.md` |
 | マンガ/WEBTOONの台本・ネーム・コマ割り指示 | `references/manga-scenario-format.md`(**マンガ案件の最重要ファイル**) |
 | 小説本文・地の文・セリフの執筆と改稿 | `references/prose-and-dialogue.md` |
 | ジャンルのお約束・テンプレ回避・差別化 | `references/genre-playbook.md` |
 | 企画書・あらすじ・持ち込み資料・編集フィードバック | `references/pitch-planning.md` |
 | 書き上げた後の推敲・レビュー依頼 | `references/editing-checklist.md` |
+| **企画をゼロから立ち上げる・新規企画の相談** | `references/企画立ち上げ手順.md`(**失敗パターンを先に読む**) |
 | 「AIっぽい」「整いすぎ」と言われた・納品前の最終パス | `references/anti-ai-tells.md`(**すべての納品物に最後に必ずかける**) |
 
 複合的な依頼(「新連載の企画を丸ごと」等)は複数ファイルを組み合わせる。典型的な組み合わせ:
@@ -35,6 +37,7 @@ description: 小説・マンガシナリオ・WEBTOON原作などの創作支援
 - **第1話の台本執筆**:manga-scenario-format + story-structure(掴みと引き)
 - **小説の新作**:story-structure + character-craft + prose-and-dialogue
 - **原稿への編集レビュー**:editing-checklist + pitch-planning(フィードバックの書き方)
+- **新規企画をゼロから**:企画立ち上げ手順 + genre-playbook + pitch-planning
 
 ## 進め方の型
 
