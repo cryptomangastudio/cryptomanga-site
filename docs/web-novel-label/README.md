@@ -10,7 +10,9 @@ Drive ルート: https://drive.google.com/drive/folders/1qn8Xkh-PqnoJ0k6_7H2M8ru
 
 | ドキュメント | 中身 |
 |---|---|
-| [33_企画在庫 12案採点 2026-09-27](https://docs.google.com/document/d/16_ZQj-6mUuzccNV_MUZIc0WY6ZBuBy_VE9VWZSIibVQ/edit) | 12案をA〜E＋減点で採点。1軍＝代筆（大正）／2軍＝顔の設計図（現代）／控え＝弁士（大正） |
+| [12_男女両読と市場リサーチ 2026-09-27](https://docs.google.com/document/d/1nTOFZ8r7QsE6zxYdhhCciwJUkjKelzS810XHuIN63CY/edit) | カクヨムは男性66.4%。薬屋は女7：男3。「バトル」の7型、設計の原則7つ、補助軸F |
+| [34_企画在庫v2 F軸と衝突確認 2026-09-27](https://docs.google.com/document/d/1d1oixR2cey1p796kAjz3oRUbX8sS-PGzybu6kIHcRq8/edit) | **最新。** 1軍＝筆跡（大正×筆跡鑑定）／2軍＝贋作（ロマファン×絵画修復）。v1の代筆・顔の設計図・家政婦潜入は既存作と衝突 |
+| [33_企画在庫 12案採点 2026-09-27](https://docs.google.com/document/d/16_ZQj-6mUuzccNV_MUZIc0WY6ZBuBy_VE9VWZSIibVQ/edit) | v1。34に置き換え済み（衝突確認前の採点） |
 
 ## 旧ドライブに残っている12文書（会社ドライブへ作り直し中）
 
