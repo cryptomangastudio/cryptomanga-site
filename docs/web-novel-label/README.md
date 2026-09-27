@@ -3,10 +3,20 @@
 自社でWEB小説（原作）を書いて数字を作り、最短でコミカライズに繋げるプロジェクトの索引。
 **正本はGoogleドライブ**（社内で編集するため）。このファイルは索引と、変更履歴を追いたい要点の控え。
 
-Drive ルート: https://drive.google.com/drive/folders/1Bx8GLYQ_h4OWaLkwSIffwu6_m5aMtpGH
-（`00_WL企画アイデアシート/03_WEB小説原作レーベル_カクヨム＆note`）
+Drive ルート: https://drive.google.com/drive/folders/1qn8Xkh-PqnoJ0k6_7H2M8ruH-d-xc-d9
+場所：共有ドライブ `0AN7lT8_lgMorUk9PVA` → クリプトマンガスタジオ → 原作スタジオ → `08_WEB小説レーベル_カクヨム＆note`
 
-## ドキュメント一覧
+## 現在のドキュメント（会社ドライブ）
+
+| ドキュメント | 中身 |
+|---|---|
+| [33_企画在庫 12案採点 2026-09-27](https://docs.google.com/document/d/16_ZQj-6mUuzccNV_MUZIc0WY6ZBuBy_VE9VWZSIibVQ/edit) | 12案をA〜E＋減点で採点。1軍＝代筆（大正）／2軍＝顔の設計図（現代）／控え＝弁士（大正） |
+
+## 旧ドライブに残っている12文書（会社ドライブへ作り直し中）
+
+2026-09-27、これらが**会社のドライブではない別のドライブ**に置かれていたことが判明した。
+中川様の判断で、会社ドライブに作り直す方針。下の一覧は再生成の元になる索引として残す。
+旧ルート: https://drive.google.com/drive/folders/1Bx8GLYQ_h4OWaLkwSIffwu6_m5aMtpGH
 
 | ドキュメント | 中身 |
 |---|---|
