@@ -137,3 +137,9 @@
 - 大正時代に創業した金庫店が現存する（墨田区・杉山金庫店、現「金庫と鍵の博物館」）
 - 出典：[鍵屋ブログ](https://www.saitama-lock.com/blog/safe-key-opening-torouble/takeuti/)、[価格.comマガジン](https://kakakumag.com/money/?id=14216)
 - 要確認：大正期に女性が錠前・金庫の仕事に就いた例
+
+### 洋式錠前の国産化
+- 堀商店は明治23年（1890）創業。当初は欧米の錠前・建具金物を輸入販売し、**大正の初めには錠前の自社製造を始めた**
+- 和錠は江戸時代、刀鍛冶などの金属職人が転じて作るようになった
+- → 大正は、江戸以来の和錠（蔵・箪笥）と新しい洋錠（洋館の扉・金庫）が混在していた時期。毎話ちがう錠を出せる
+- 出典：[堀商店 Wikipedia](https://ja.wikipedia.org/wiki/%E5%A0%80%E5%95%86%E5%BA%97)、[ロックシステム 鍵・錠ものがたり](https://locksystem.co.jp/news/column-kagijyoumonogatari_5/)
