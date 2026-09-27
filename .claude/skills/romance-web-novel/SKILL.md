@@ -28,6 +28,7 @@ description: 女性向けWEB小説（ロマンスファンタジー・現代も�
 
 依頼が「企画を作る」に近いほど、この順で進める。
 
+0. **ベンチマークを2作に固める**（`references/benchmarks.md`。構造を借りる1作・棚と情緒を借りる1作。企画ごとに変えない）
 1. **企画の骨組み**（ログライン → ヘイト役と呪縛 → ヒーローの執着の理由 → 接点 → 見せ場6種）
    - **恋愛以外の軸を1つ（多くて2つ）決める。**「バトル」の7型（`references/crossover.md`）から選ぶ
    - A〜Eに加えて**補助軸F（男女両読）**を採点する
@@ -52,7 +53,7 @@ description: 女性向けWEB小説（ロマンスファンタジー・現代も�
 | `references/japanese-quality.md` | **何かを出す直前に必ず。** 本文も説明文も対象 |
 | `references/prose-profile.md` | 本文を書くとき。実測した文体の数値を置く場所 |
 | `references/house-rubric.md` | 企画を採点するとき。通すか落とすかの判断 |
-| `references/benchmarks.md` | 企画を作るとき。何を真似て何を真似ないかの固定 |
+| `references/benchmarks.md` | **企画を作る前に必ず。** 絞る基準と、何を借りて何を借りないかの固定 |
 | `references/crossover.md` | **企画を作るとき必ず。** 男性にも読める設計の原則と、補助軸F（男女両読）の採点 |
 | `references/research-procedure.md` | 調べ物をするとき。結果を `data/` に残す手順 |
 | `data/works.csv` | 作品カタログ（出典・時点つき）。企画の衝突確認と、型の実例探しに使う |
