@@ -60,6 +60,7 @@ description: 女性向けWEB小説（ロマンスファンタジー・現代も�
 | `references/benchmarks.md` | **企画を作る前に必ず。** 絞る基準と、何を借りて何を借りないかの固定 |
 | `references/crossover.md` | **企画を作るとき必ず。** 男性にも読める設計の原則と、補助軸F（男女両読）の採点 |
 | `references/subvert-expectations.md` | 話を考えるとき。読者の予想を10個出させて、避ける・ずらす・残すを決めるとき |
+| `references/hundred-episodes.md` | 100話の長編にするとき。三部構成、巻割り、査読5名の手順 |
 | `references/thirty-episodes.md` | イベントマップの次。出来事を話に割り振り、冒頭／山場／ヒキで書くとき |
 | `references/event-map.md` | あらすじの次、30話構成の前。出来事を「見出し＋具体的な一場面」の2行で並べ、感情の山谷とタグを一覧にするとき |
 | `references/research-procedure.md` | 調べ物をするとき。結果を `data/` に残す手順 |
