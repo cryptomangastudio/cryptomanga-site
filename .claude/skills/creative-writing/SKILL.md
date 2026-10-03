@@ -28,6 +28,7 @@ description: 小説・マンガシナリオ・WEBTOON原作などの創作支援
 | 企画書・あらすじ・持ち込み資料・編集フィードバック | `references/pitch-planning.md` |
 | 書き上げた後の推敲・レビュー依頼 | `references/editing-checklist.md` |
 | 「AIっぽい」「整いすぎ」と言われた・納品前の最終パス | `references/anti-ai-tells.md`(**すべての納品物に最後に必ずかける**) |
+| ロマンスファンタジー・悪役令嬢・婚約破棄・転生令嬢もの | `.claude/skills/romance-fantasy/SKILL.md`(このジャンル専門の別スキル。ジャンルの成り立ち・トロープ・アーキタイプ・プラットフォーム作法まで扱う) |
 
 複合的な依頼(「新連載の企画を丸ごと」等)は複数ファイルを組み合わせる。典型的な組み合わせ:
 
