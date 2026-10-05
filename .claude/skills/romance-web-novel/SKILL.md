@@ -63,6 +63,7 @@ description: 女性向けWEB小説（ロマンスファンタジー・現代も�
 | `references/hundred-episodes.md` | 100話の長編にするとき。三部構成、巻割り、査読5名の手順 |
 | `references/thirty-episodes.md` | イベントマップの次。出来事を話に割り振り、冒頭／山場／ヒキで書くとき |
 | `references/gap-research.md` | 主人公・ヒーローの人物像を作るとき、本文でギャップを見せるとき。種類、効く仕組み、見せる順番、志乃の候補 |
+| `references/kakuyomu-notation.md` | 本文をカクヨムに投稿するための、ルビ付きのコピペ版を作るとき |
 | `references/event-map.md` | あらすじの次、30話構成の前。出来事を「見出し＋具体的な一場面」の2行で並べ、感情の山谷とタグを一覧にするとき |
 | `references/research-procedure.md` | 調べ物をするとき。結果を `data/` に残す手順 |
 | `data/works.csv` | 作品カタログ（出典・時点つき）。企画の衝突確認と、型の実例探しに使う |
