@@ -64,6 +64,7 @@ description: 女性向けWEB小説（ロマンスファンタジー・現代も�
 | `references/thirty-episodes.md` | イベントマップの次。出来事を話に割り振り、冒頭／山場／ヒキで書くとき |
 | `references/gap-research.md` | 主人公・ヒーローの人物像を作るとき、本文でギャップを見せるとき。種類、効く仕組み、見せる順番、志乃の候補 |
 | `references/hearty-episodic.md` | ほっこり連作（扉を開けて、思い出を届ける）の型。縦糸2〜3割。『錠前』の方針転換の記録 |
+| `references/open-things-casebook.md` | 「開ける」話の事例集（実話・番組・報道17件と出典）、感情の型（感動／悲しい／胸クソ／スカッと）、開ける物の幅、誘拐・引きこもり・窓などの展開の型 |
 | `references/kakuyomu-notation.md` | 本文をカクヨムに投稿するための、ルビ付きのコピペ版を作るとき |
 | `references/event-map.md` | あらすじの次、30話構成の前。出来事を「見出し＋具体的な一場面」の2行で並べ、感情の山谷とタグを一覧にするとき |
 | `references/research-procedure.md` | 調べ物をするとき。結果を `data/` に残す手順 |
