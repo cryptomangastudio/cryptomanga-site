@@ -41,7 +41,7 @@ description: 女性向けWEB小説（ロマンスファンタジー・現代も�
    - 書き方は `references/title-and-catch.md` の「全体あらすじの書き方」
 6. **イベントマップ**（`references/event-map.md`。作った後に、**予想10個を再度出させ、当たりが減ったか確かめる**。出来事の見出し＋具体的な一場面の2行で書く。感情の山谷と、繰り返し要素のタグを一覧にする ── 中川様、2026-09-29）
 7. **30話構成**（`references/thirty-episodes.md`。冒頭／山場／ヒキ。型崩し4種を配置し、予想役と整合性の査読者に通す）。**中川様の許可を得てから進める**
-8. **本文執筆**（ドライブの `21_執筆スタイルガイド` に従う）
+8. **本文執筆**（ドライブの `21_執筆スタイルガイド` に従う）。**出す前に、必ず `references/prose-checklist.md` の確認（空間と動作／会話／体温／主人公と設定の味／話の面白さ）を通す ── 中川様、2026-10-19**
 9. **日本語の検査**（`references/japanese-quality.md`）
 10. **AIらしさの除去**（`creative-writing/references/anti-ai-tells.md`）
 
@@ -55,6 +55,7 @@ description: 女性向けWEB小説（ロマンスファンタジー・現代も�
 | `references/logic-audit.md` | 設定を固めたあと、文章を書く前 |
 | `references/title-and-catch.md` | タイトル・キャッチフレーズ・紹介文を作るとき |
 | `references/japanese-quality.md` | **何かを出す直前に必ず。** 本文も説明文も対象 |
+| `references/prose-checklist.md` | **本文（試し書きを含む）を出す前に必ず。** 空間と動作、会話、体温、主人公と設定の味、話の面白さの確認項目。恒久ルール |
 | `references/prose-profile.md` | 本文を書くとき。実測した文体の数値を置く場所 |
 | `references/house-rubric.md` | 企画を採点するとき。通すか落とすかの判断 |
 | `references/benchmarks.md` | **企画を作る前に必ず。** 絞る基準と、何を借りて何を借りないかの固定 |
