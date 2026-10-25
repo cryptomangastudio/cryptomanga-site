@@ -1,0 +1,9 @@
+{
+  "narrator_pronoun": "僕",
+  "forbidden_in_narration": ["私", "俺", "わたし"],
+  "spelling": {
+    "正しい表記の例": ["誤表記の例1", "誤表記の例2"]
+  },
+  "forbidden_words": [],
+  "forbidden_phrases": []
+}
