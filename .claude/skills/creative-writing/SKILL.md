@@ -24,6 +24,7 @@ description: 小説・マンガシナリオ・WEBTOON原作などの創作支援
 | 世界観・設定・魔法/能力のルール・組織や勢力 | `references/worldbuilding.md` |
 | マンガ/WEBTOONの台本・ネーム・コマ割り指示 | `references/manga-scenario-format.md`(**マンガ案件の最重要ファイル**) |
 | 小説本文・地の文・セリフの執筆と改稿 | `references/prose-and-dialogue.md` |
+| 会話が噛み合わない・説明っぽい・言わされている感・モノローグが薄い・キャラに厚みがない・字コンテやネームのセリフを書く前 | `references/dialogue-and-depth.md`(**セリフやモノローグを書く前に必ず読む**) |
 | ジャンルのお約束・テンプレ回避・差別化 | `references/genre-playbook.md` |
 | 企画書・あらすじ・持ち込み資料・編集フィードバック | `references/pitch-planning.md` |
 | 書き上げた後の推敲・レビュー依頼 | `references/editing-checklist.md` |
