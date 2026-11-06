@@ -25,7 +25,7 @@ description: 小説・マンガシナリオ・WEBTOON原作などの創作支援
 | マンガ/WEBTOONの台本・ネーム・コマ割り指示 | `references/manga-scenario-format.md`(**マンガ案件の最重要ファイル**) |
 | 小説本文・地の文・セリフの執筆と改稿 | `references/prose-and-dialogue.md` |
 | 会話が噛み合わない・説明っぽい・言わされている感・モノローグが薄い・キャラに厚みがない・字コンテやネームのセリフを書く前 | `references/dialogue-and-depth.md`(**セリフやモノローグを書く前に必ず読む**) |
-| セリフ・モノローグ・キャラの癖・笑い・感情の出し方・世界設定の説明を書く前後(実作品93件の分析。数値とチェックリストつき) | `references/benchmark-analysis.md`(**セリフを書く前に必ず読む。dialogue-and-depth / natural-japanese-dialogue と併用**) |
+| セリフ・モノローグ・キャラの癖・笑い・感情の出し方・世界設定の説明を書く前後(ジャンル小説約104作品を第10話まで読んだ分析。数値・連載で崩れる点・チェックリストつき) | `references/benchmark-analysis.md`(**セリフを書く前に必ず読む。dialogue-and-depth / natural-japanese-dialogue と併用**) |
 | 第1話の冒頭のフック・第1話の引き・掴みが弱いと言われた・他作品のつかみ方を知りたい | `references/episode1-hooks-and-endings.md`(サンプル27件+型。確度つき) |
 | 「AIっぽい」「温度を感じない」「文章としておかしい」と言われたセリフ・語尾や口調の書き分け・気遣いや友情を温かく見せたい | `references/natural-japanese-dialogue.md`(`dialogue-and-depth.md` と併用) |
 | ジャンルのお約束・テンプレ回避・差別化 | `references/genre-playbook.md` |
